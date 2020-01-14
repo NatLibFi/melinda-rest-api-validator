@@ -1,4 +1,4 @@
-# Service for queuing import records from melinda-rest-api
+# Service for validating and queuing import records from melinda-rest-api
 
 ## License and copyright
 
