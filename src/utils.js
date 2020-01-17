@@ -8,5 +8,8 @@ export function logError(err) {
 		logger.log('error', err);
 	} else {
 		logger.log('error', 'stack' in err ? err.stack : err);
+		if (err.validationResults) {
+			logger.log('error', `ValidationResults: ${JSON.stringify(err.validationResults)}`);
+		}
 	}
 }

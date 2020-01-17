@@ -1,12 +1,13 @@
 import {Json, MARCXML, AlephSequential, ISO2709} from '@natlibfi/marc-record-serializers';
-import {logError} from '../utils';
 import {Utils} from '@natlibfi/melinda-commons';
+import queueFactory from './rabbit';
 
 const {createLogger, toAlephId} = Utils;
 
-export async function streamToMarcRecords(contentType, stream, operation) {
+export async function streamToMarcRecords({id, cataloger, contentType, stream, operation}) {
 	const logger = createLogger();
-	let records = [];
+	const queueOperator = await queueFactory();
+	let recordNumber = 0;
 	let promises = [];
 	let reader;
 
@@ -26,30 +27,28 @@ export async function streamToMarcRecords(contentType, stream, operation) {
 		reader = new ISO2709.Reader(stream);
 	}
 
-	await new Promise((res, rej) => {
-		reader.on('data', record => {
-			promises.push(transform(record));
-			async function transform(value) {
+	await new Promise((resolve, reject) => {
+		reader.on('error', err => {
+			reject(err);
+		}).on('data', data => {
+			promises.push(transform(data));
+			async function transform(record) {
 				// Operation Create -> f001 new value
-				if (operation.toLowerCase() === 'create') {
+				recordNumber++;
+				if (operation === 'create') {
 					// Field 001 value -> 000000000, 000000001, 000000002....
-					updateField001ToParamId(`${records.length + 1}`, value);
+					updateField001ToParamId(`${recordNumber}`, record);
 				}
 
-				records.push(value.toObject());
+				await queueOperator.pushToQueue({id, cataloger, operation, record});
 			}
 		}).on('end', async () => {
-			logger.log('debug', `Readed ${promises.length} records from stream`);
+			logger.log('debug', `Read ${promises.length} records from stream`);
 			await Promise.all(promises);
 			logger.log('info', 'Request handling done!');
-			res();
-		}).on('error', err => {
-			logError(err);
-			rej(err);
+			resolve();
 		});
 	});
-
-	return records;
 }
 
 function updateField001ToParamId(id, record) {
