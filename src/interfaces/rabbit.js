@@ -87,7 +87,7 @@ export default async function () {
 			// logger.log('debug', `Record operation ${operation}`);
 
 			if (queue) {
-				logger.log('debug', `Handling ${correlationId} to ${queue}`);
+				// Spams! logger.log('debug', `Handling ${correlationId} to ${queue}`);
 				await channel.assertQueue(queue, {durable: true});
 				channel.sendToQueue(
 					queue,

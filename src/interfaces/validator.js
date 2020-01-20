@@ -54,12 +54,14 @@ export default async function () {
 			}
 		}
 
+		// Needed?
 		logger.log('debug', 'Validating the record');
 		const validationResults = await ValidationService.validate(record);
 
 		if (noop) {
 			return validationResults;
 		}
+		// ****
 
 		if (operation === 'update') {
 			updateField001ToParamId(id, record);
