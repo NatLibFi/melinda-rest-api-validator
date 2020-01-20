@@ -1,5 +1,5 @@
 import {MARCXML} from '@natlibfi/marc-record-serializers';
-import ServiceError, {Utils, RecordMatching, OwnAuthorization} from '@natlibfi/melinda-commons';
+import ValidationError, {Utils, RecordMatching, OwnAuthorization} from '@natlibfi/melinda-commons';
 import createSruClient from '@natlibfi/sru-client';
 import HttpStatus from 'http-status';
 import deepEqual from 'deep-eql';
@@ -39,7 +39,6 @@ export default async function () {
 			const existingRecord = await getRecord(id);
 			logger.log('debug', 'Checking LOW-tag authorization');
 			OwnAuthorization.validateChanges(cataloger.authorization, record, existingRecord);
-			console.log(existingRecord);
 			validateRecordState(record, existingRecord);
 		} else {
 			logger.log('debug', 'Checking LOW-tag authorization');
@@ -51,7 +50,7 @@ export default async function () {
 			const matchingIds = await RecordMatchingService.find(record);
 
 			if (matchingIds.length > 0) {
-				throw new ServiceError(HttpStatus.CONFLICT, matchingIds);
+				throw new ValidationError(HttpStatus.CONFLICT, matchingIds);
 			}
 		}
 
@@ -68,7 +67,7 @@ export default async function () {
 			updateField001ToParamId('1', record);
 		}
 
-		return {operation, cataloger: cataloger.id, record: record.toObject()};
+		return {operation, cataloger: cataloger.id, data: record.toObject()};
 	}
 
 	// Checks that the modification history is identical

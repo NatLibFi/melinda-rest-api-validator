@@ -3,16 +3,19 @@
 import {MongoClient, GridFSBucket} from 'mongodb';
 import DatabaseError, {Utils} from '@natlibfi/melinda-commons';
 import {QUEUE_ITEM_STATE} from '@natlibfi/melinda-record-import-commons';
-import {MONGO_URI} from '../config';
+import {MONGO_URI, POLL_WAIT_TIME} from '../config';
 import {streamToMarcRecords} from './toMarcRecords';
 import {logError} from '../utils';
 import moment from 'moment';
 import queueFactory from './rabbit';
+import {promisify} from 'util';
 
 const {createLogger} = Utils;
+const setTimeoutPromise = promisify(setTimeout);
+
 /* QueueItem:
 {
-	"id":"test",
+	"correlationId":"test",
 	"cataloger":"xxx0000",
 	"operation":"update",
 	"contentType":"application/json",
@@ -44,18 +47,20 @@ export default async function () {
 				result = await db.collection('queue-items').findOne({queueItemState: QUEUE_ITEM_STATE.PENDING_QUEUING});
 			} else {
 				// TODO Clear queue and continue to readcontent
-				queueOperator.clearQeueu(result.id);
+				queueOperator.clearQeueu(result.correlationId);
 			}
 		} catch (error) {
 			logError(error);
-			setTimeout(checkDB, 3000);
+			await setTimeoutPromise(POLL_WAIT_TIME);
+			checkDB();
 		} finally {
 			client.close();
 
 			if (result === null) {
 				// Back to loop
 				logger.log('debug', 'No Pending queue items found!');
-				setTimeout(checkDB, 3000);
+				await setTimeoutPromise(POLL_WAIT_TIME);
+				checkDB();
 			} else {
 				// Read content (MONGO)
 				logger.log('debug', `Result from mongo: ${JSON.stringify(result)}`);
@@ -65,12 +70,12 @@ export default async function () {
 	}
 
 	// Transform content to MarcRecords (MONGO -> SERIALIZERS)
-	async function readContentToMarcRecords({id, cataloger, operation, contentType}) {
+	async function readContentToMarcRecords({correlationId, cataloger, operation, contentType}) {
 		let client;
 		logger.log('debug', 'Making stream from content');
 
 		// Set queue item state QUEUING_IN_PROGRESS
-		await setState({id, cataloger, operation, state: QUEUE_ITEM_STATE.QUEUING_IN_PROGRESS});
+		await setState({correlationId, cataloger, operation, state: QUEUE_ITEM_STATE.QUEUING_IN_PROGRESS});
 
 		try {
 			client = await MongoClient.connect(MONGO_URI, {useNewUrlParser: true, useUnifiedTopology: true});
@@ -78,33 +83,33 @@ export default async function () {
 			const gridFSBucket = new GridFSBucket(db, {bucketName: 'queueItems'});
 
 			// Check that content is there
-			await getFileMetadata({gridFSBucket, filename: id});
+			await getFileMetadata({gridFSBucket, filename: correlationId});
 
 			// Transform gridFSBucket stream to MarcRecords -> to queue
-			await streamToMarcRecords({id, cataloger, operation, contentType, stream: gridFSBucket.openDownloadStreamByName(id)});
+			await streamToMarcRecords({correlationId, cataloger, operation, contentType, stream: gridFSBucket.openDownloadStreamByName(correlationId)});
 			// Set queue item state IN_QUEUE
-			const result = await setState({id, cataloger, operation, state: QUEUE_ITEM_STATE.IN_QUEUE});
+			const result = await setState({correlationId, cataloger, operation, state: QUEUE_ITEM_STATE.IN_QUEUE});
 			logger.log('debug', JSON.stringify(result));
 		} catch (error) {
 			logger.log('error', 'Error while reading content to marcRecords');
 			logError(error);
 
 			// Set queue item state ERROR
-			await setState({id, cataloger, operation, state: QUEUE_ITEM_STATE.ERROR});
-			queueOperator.clearQeueu(id);
+			await setState({correlationId, cataloger, operation, state: QUEUE_ITEM_STATE.ERROR});
+			queueOperator.clearQeueu(correlationId);
 		} finally {
 			client.close();
 			checkDB();
 		}
 	}
 
-	async function setState({id, cataloger, operation, state}) {
+	async function setState({correlationId, cataloger, operation, state}) {
 		logger.log('debug', 'Setting queue item state');
 		const client = await MongoClient.connect(MONGO_URI, {useNewUrlParser: true});
 		const db = client.db('rest-api');
 		await db.collection('queue-items').updateOne({
 			cataloger,
-			id,
+			correlationId,
 			operation
 		}, {
 			$set: {
@@ -114,7 +119,7 @@ export default async function () {
 		});
 		const result = await db.collection('queue-items').findOne({
 			cataloger,
-			id,
+			correlationId,
 			operation
 		}, {projection: {_id: 0}});
 		client.close();

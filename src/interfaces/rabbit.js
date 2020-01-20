@@ -3,9 +3,11 @@ import amqplib from 'amqplib';
 import {Utils} from '@natlibfi/melinda-commons';
 import {PRIO_IMPORT_QUEUES} from '@natlibfi/melinda-record-import-commons';
 import validatorFactory from './validator';
-import {AMQP_URL} from '../config';
+import {AMQP_URL, POLL_WAIT_TIME} from '../config';
 import {logError} from '../utils';
+import {promisify} from 'util';
 
+const setTimeoutPromise = promisify(setTimeout);
 const {createLogger} = Utils;
 
 export default async function () {
@@ -29,7 +31,8 @@ export default async function () {
 		const channelInfo = await channel.checkQueue(REQUESTS);
 		logger.log('debug', `${REQUESTS} queue: ${channelInfo.messageCount} messages`);
 		if (channelInfo.messageCount < 1) {
-			return setTimeout(checkQueue, 1000);
+			await setTimeoutPromise(POLL_WAIT_TIME);
+			return checkQueue();
 		}
 
 		consume();
@@ -43,12 +46,23 @@ export default async function () {
 				const correlationId = queData.properties.correlationId;
 				const content = JSON.parse(queData.content.toString());
 
-				logger.log('debug', `Reading request: ${correlationId}, ${JSON.stringify(content)}`);
+				// Logger.log('debug', `Reading request: ${correlationId}, ${JSON.stringify(content)}`);
 
-				// TODO: Validation
+				// Validation: Returns validationResults if noop
 				const valid = await validator.process(queData.properties.headers, content.data);
+				if (queData.properties.headers.noop) {
+					// Send validation back to REPLY
+					const reply = {
+						correlationId,
+						catalogger: queData.properties.headers.cataloger,
+						operation: queData.properties.headers.operation,
+						data: valid
+					};
+					pushToQueue(reply, 'REPLY');
+				}
+
 				// Send to realQueue (pass headers and correlationId)
-				valid.id = correlationId;
+				valid.correlationId = correlationId;
 				const queue = (valid.operation === 'update') ? PRIO_IMPORT_QUEUES.UPDATE : PRIO_IMPORT_QUEUES.CREATE;
 				await pushToQueue(valid, queue);
 
@@ -63,7 +77,8 @@ export default async function () {
 		}
 	}
 
-	async function pushToQueue({id, cataloger, operation, record}, queue = false) {
+	// Data: record, validationResults or error
+	async function pushToQueue({correlationId, cataloger, operation, data}, queue = false) {
 		try {
 			// Logger.log('debug', `Record queue ${queue}`);
 			// logger.log('debug', `Record cataloger ${cataloger}`)
@@ -72,14 +87,14 @@ export default async function () {
 			// logger.log('debug', `Record operation ${operation}`);
 
 			if (queue) {
-				console.log(id);
+				logger.log('debug', `Handling ${correlationId} to ${queue}`);
 				await channel.assertQueue(queue, {durable: true});
 				channel.sendToQueue(
 					queue,
-					Buffer.from(JSON.stringify({record})),
+					Buffer.from(JSON.stringify({data})),
 					{
 						persistent: true,
-						correlationId: id,
+						correlationId,
 						headers: {
 							cataloger,
 							operation
@@ -87,12 +102,14 @@ export default async function () {
 					}
 				);
 			} else {
-				await channel.assertQueue(id, {durable: true});
+				logger.log('debug', `Handling ${correlationId} to Queue`);
+				await channel.assertQueue(correlationId, {durable: true});
 				channel.sendToQueue(
-					id,
-					Buffer.from(JSON.stringify({record}),
+					correlationId,
+					Buffer.from(JSON.stringify({data}),
 						{
 							persistent: true,
+							correlationId,
 							headers: {
 								cataloger,
 								operation
@@ -105,10 +122,10 @@ export default async function () {
 		}
 	}
 
-	async function clearQeueu(id) {
-		logger.log('info', `Clearing queue ${id}`);
+	async function clearQeueu(queue) {
+		logger.log('info', `Clearing queue ${queue}`);
 		try {
-			await channel.deleteQueue(id);
+			await channel.deleteQueue(queue);
 		} catch (err) {
 			logError(err);
 		}

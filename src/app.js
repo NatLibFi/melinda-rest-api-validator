@@ -11,7 +11,7 @@
 
 import {Utils} from '@natlibfi/melinda-commons';
 import {logError} from './utils';
-import {PRIORITY} from './config';
+import {POLL_RABBIT} from './config';
 import {mongoFactory, rabbitFactory} from './interfaces';
 
 const {createLogger} = Utils;
@@ -27,7 +27,7 @@ async function run() {
 
 	try {
 		// Loop
-		if (PRIORITY) {
+		if (POLL_RABBIT) {
 			rabbitOperator.checkQueue(true, false);
 		} else {
 			mongoOperator.checkDB();

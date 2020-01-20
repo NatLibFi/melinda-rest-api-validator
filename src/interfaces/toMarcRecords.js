@@ -4,7 +4,7 @@ import queueFactory from './rabbit';
 
 const {createLogger, toAlephId} = Utils;
 
-export async function streamToMarcRecords({id, cataloger, contentType, stream, operation}) {
+export async function streamToMarcRecords({correlationId, cataloger, contentType, stream, operation}) {
 	const logger = createLogger();
 	const queueOperator = await queueFactory();
 	let recordNumber = 0;
@@ -32,6 +32,7 @@ export async function streamToMarcRecords({id, cataloger, contentType, stream, o
 			reject(err);
 		}).on('data', data => {
 			promises.push(transform(data));
+
 			async function transform(record) {
 				// Operation Create -> f001 new value
 				recordNumber++;
@@ -40,7 +41,7 @@ export async function streamToMarcRecords({id, cataloger, contentType, stream, o
 					updateField001ToParamId(`${recordNumber}`, record);
 				}
 
-				await queueOperator.pushToQueue({id, cataloger, operation, record});
+				await queueOperator.pushToQueue({correlationId, cataloger, operation, data: record});
 			}
 		}).on('end', async () => {
 			logger.log('debug', `Read ${promises.length} records from stream`);
