@@ -5,23 +5,20 @@ import HttpStatus from 'http-status';
 import deepEqual from 'deep-eql';
 import {isArray} from 'util';
 import {SRU_URL_BIB, SRU_URL_BIBPRV} from '../config';
-import createValidationService from '../helppers/validation';
-import createConversionService from '../helppers/conversion';
+import {validations, conversions} from '@natlibfi/melinda-rest-api-commons';
 
 const {createLogger, toAlephId} = Utils;
 
 export default async function () {
 	const logger = createLogger();
-	const ValidationService = await createValidationService();
-	const ConversionService = createConversionService();
+	const ValidationService = await validations();
+	const ConversionService = conversions();
 	const RecordMatchingService = RecordMatching.createBibService({SRU_URL_BIB});
 	const sruClient = createSruClient({serverUrl: SRU_URL_BIBPRV, version: '2.0', maximumRecords: '1'});
 
 	return {process};
 
 	async function process(headers, data) {
-		// TODO: Error handling!
-
 		const {
 			operation,
 			format,
@@ -69,7 +66,7 @@ export default async function () {
 			updateField001ToParamId('1', record);
 		}
 
-		return {operation, cataloger: cataloger.id, data: record.toObject()};
+		return {headers: {operation, cataloger: cataloger.id}, data: record.toObject()};
 	}
 
 	// Checks that the modification history is identical
@@ -83,10 +80,8 @@ export default async function () {
 
 		const existingModificationHistory = existingRecord.get(/^CAT$/);
 		if (!deepEqual(incomingModificationHistory, existingModificationHistory)) {
-			return false;
+			throw new ValidationError(409, 'Modification history mismatch');
 		}
-
-		return true;
 	}
 
 	async function getRecord(id) {

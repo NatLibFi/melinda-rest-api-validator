@@ -1,31 +1,17 @@
 import {Json, MARCXML, AlephSequential, ISO2709} from '@natlibfi/marc-record-serializers';
 import {Utils} from '@natlibfi/melinda-commons';
-import queueFactory from './rabbit';
+import {amqpFactory} from '@natlibfi/melinda-rest-api-commons';
+import {AMQP_URL} from '../config';
 
 const {createLogger, toAlephId} = Utils;
 
-export async function streamToMarcRecords({correlationId, cataloger, contentType, stream, operation}) {
+export async function streamToMarcRecords({correlationId, headers, stream}) {
+	const {operation, contentType} = headers;
 	const logger = createLogger();
-	const queueOperator = await queueFactory();
+	const amqpOperator = await amqpFactory(AMQP_URL);
 	let recordNumber = 0;
 	let promises = [];
-	let reader;
-
-	if (contentType === 'application/alephseq') {
-		reader = new AlephSequential.Reader(stream);
-	}
-
-	if (contentType === 'application/json') {
-		reader = new Json.Reader(stream);
-	}
-
-	if (contentType === 'application/xml') {
-		reader = new MARCXML.Reader(stream);
-	}
-
-	if (contentType === 'application/marc') {
-		reader = new ISO2709.Reader(stream);
-	}
+	const reader = chooseAndInitReader();
 
 	await new Promise((resolve, reject) => {
 		reader.on('error', err => {
@@ -41,7 +27,8 @@ export async function streamToMarcRecords({correlationId, cataloger, contentType
 					updateField001ToParamId(`${recordNumber}`, record);
 				}
 
-				await queueOperator.pushToQueue({correlationId, cataloger, operation, data: record});
+				// Needs {queue, correlationId, headers, data} 'in-' separates
+				await amqpOperator.sendToQueue({queue: correlationId, correlationId, headers, data: record});
 			}
 		}).on('end', async () => {
 			logger.log('debug', `Read ${promises.length} records from stream`);
@@ -50,6 +37,24 @@ export async function streamToMarcRecords({correlationId, cataloger, contentType
 			resolve();
 		});
 	});
+
+	function chooseAndInitReader() {
+		if (contentType === 'application/alephseq') {
+			return new AlephSequential.Reader(stream);
+		}
+
+		if (contentType === 'application/json') {
+			return new Json.Reader(stream);
+		}
+
+		if (contentType === 'application/xml') {
+			return new MARCXML.Reader(stream);
+		}
+
+		if (contentType === 'application/marc') {
+			return new ISO2709.Reader(stream);
+		}
+	}
 }
 
 function updateField001ToParamId(id, record) {
