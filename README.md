@@ -24,7 +24,7 @@ Queue-item schema:
 {
 	"correlationId":"FOO",
 	"cataloger":"xxx0000",
-	"operation":"update",
+	"operation":"UPDATE",
 	"contentType":"application/json",
 	"queueItemState":"PENDING_QUEUING",
 	"creationTime":"2020-01-01T00:00:00.000Z",

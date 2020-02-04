@@ -1,6 +1,6 @@
 import {Json, MARCXML, AlephSequential, ISO2709} from '@natlibfi/marc-record-serializers';
 import {Utils} from '@natlibfi/melinda-commons';
-import {amqpFactory} from '@natlibfi/melinda-rest-api-commons';
+import {amqpFactory, OPERATIONS} from '@natlibfi/melinda-rest-api-commons';
 import {AMQP_URL} from '../config';
 
 const {createLogger, toAlephId} = Utils;
@@ -20,15 +20,16 @@ export async function streamToMarcRecords({correlationId, headers, stream}) {
 			promises.push(transform(data));
 
 			async function transform(record) {
-				// Operation Create -> f001 new value
+				// Operation CREATE -> f001 new value
 				recordNumber++;
-				if (operation === 'create') {
+				if (operation === OPERATIONS.CREATE) {
 					// Field 001 value -> 000000000, 000000001, 000000002....
 					updateField001ToParamId(`${recordNumber}`, record);
 				}
 
+				console.log(JSON.stringify(record.toObject()));
 				// Needs {queue, correlationId, headers, data} 'in-' separates
-				await amqpOperator.sendToQueue({queue: correlationId, correlationId, headers, data: record});
+				await amqpOperator.sendToQueue({queue: correlationId, correlationId, headers, data: record.toObject()});
 			}
 		}).on('end', async () => {
 			logger.log('debug', `Read ${promises.length} records from stream`);

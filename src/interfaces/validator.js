@@ -5,7 +5,7 @@ import HttpStatus from 'http-status';
 import deepEqual from 'deep-eql';
 import {isArray} from 'util';
 import {SRU_URL_BIB, SRU_URL_BIBPRV} from '../config';
-import {validations, conversions} from '@natlibfi/melinda-rest-api-commons';
+import {validations, conversions, OPERATIONS} from '@natlibfi/melinda-rest-api-commons';
 
 const {createLogger, toAlephId} = Utils;
 
@@ -13,7 +13,7 @@ export default async function () {
 	const logger = createLogger();
 	const ValidationService = await validations();
 	const ConversionService = conversions();
-	const RecordMatchingService = RecordMatching.createBibService({SRU_URL_BIB});
+	const RecordMatchingService = RecordMatching.createBibService({sruURL: SRU_URL_BIB});
 	const sruClient = createSruClient({serverUrl: SRU_URL_BIBPRV, version: '2.0', maximumRecords: '1'});
 
 	return {process};
@@ -31,15 +31,15 @@ export default async function () {
 		logger.log('debug', 'Unserializing record');
 		const record = ConversionService.unserialize(data, format);
 
-		if (operation === 'update' && id) {
+		if (operation === OPERATIONS.UPDATE && id) {
 			logger.log('debug', `Reading record ${id} from datastore`);
 			const existingRecord = await getRecord(id);
 			logger.log('debug', 'Checking LOW-tag authorization');
-			OwnAuthorization.validateChanges(cataloger.authorization, record, existingRecord);
+			await OwnAuthorization.validateChanges(cataloger.authorization, record, existingRecord);
 			validateRecordState(record, existingRecord);
 		} else {
 			logger.log('debug', 'Checking LOW-tag authorization');
-			OwnAuthorization.validateChanges(cataloger.authorization, record);
+			await OwnAuthorization.validateChanges(cataloger.authorization, record);
 		}
 
 		if (unique) {
@@ -60,7 +60,7 @@ export default async function () {
 		}
 		// ****
 
-		if (operation === 'update') {
+		if (operation === OPERATIONS.UPDATE) {
 			updateField001ToParamId(id, record);
 		} else {
 			updateField001ToParamId('1', record);

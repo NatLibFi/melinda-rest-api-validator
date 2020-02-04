@@ -24,9 +24,14 @@ async function run() {
 		check();
 	} catch (error) {
 		logError(error);
+		check();
 	}
 
-	async function check() {
+	async function check(wait) {
+		if (wait) {
+			await setTimeoutPromise(POLL_WAIT_TIME);
+		}
+
 		// Loop
 		if (POLL_REQUEST) {
 			// Check amqp queue
@@ -54,12 +59,13 @@ async function run() {
 					await amqpOperator.ackMessages([message]);
 					return check();
 				} catch (error) {
+					logError(error);
 					await amqpOperator.ackNReplyMessages({
 						status: error.status || 500,
 						messages: [message],
 						payloads: [error.payload]
 					});
-					throw error;
+					check(true);
 				}
 			}
 		} else {
@@ -94,7 +100,6 @@ async function run() {
 		}
 
 		// No job found
-		await setTimeoutPromise(POLL_WAIT_TIME);
-		return check();
+		return check(true);
 	}
 }
