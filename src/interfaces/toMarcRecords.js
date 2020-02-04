@@ -27,8 +27,6 @@ export async function streamToMarcRecords({correlationId, headers, stream}) {
 					updateField001ToParamId(`${recordNumber}`, record);
 				}
 
-				console.log(JSON.stringify(record.toObject()));
-				// Needs {queue, correlationId, headers, data} 'in-' separates
 				await amqpOperator.sendToQueue({queue: correlationId, correlationId, headers, data: record.toObject()});
 			}
 		}).on('end', async () => {
