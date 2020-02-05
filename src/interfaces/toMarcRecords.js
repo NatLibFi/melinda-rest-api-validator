@@ -20,8 +20,8 @@ export async function streamToMarcRecords({correlationId, headers, stream}) {
 			promises.push(transform(data));
 
 			async function transform(record) {
-				// Operation CREATE -> f001 new value
 				recordNumber++;
+				// Operation CREATE -> f001 new value
 				if (operation === OPERATIONS.CREATE) {
 					// Field 001 value -> 000000000, 000000001, 000000002....
 					updateField001ToParamId(`${recordNumber}`, record);

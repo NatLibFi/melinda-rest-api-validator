@@ -1,11 +1,11 @@
+import deepEqual from 'deep-eql';
+import HttpStatus from 'http-status';
+import {isArray} from 'util';
 import {MARCXML} from '@natlibfi/marc-record-serializers';
 import ValidationError, {Utils, RecordMatching, OwnAuthorization} from '@natlibfi/melinda-commons';
-import createSruClient from '@natlibfi/sru-client';
-import HttpStatus from 'http-status';
-import deepEqual from 'deep-eql';
-import {isArray} from 'util';
-import {SRU_URL_BIB, SRU_URL_BIBPRV} from '../config';
 import {validations, conversions, OPERATIONS} from '@natlibfi/melinda-rest-api-commons';
+import createSruClient from '@natlibfi/sru-client';
+import {SRU_URL_BIB, SRU_URL_BIBPRV} from '../config';
 
 const {createLogger, toAlephId} = Utils;
 

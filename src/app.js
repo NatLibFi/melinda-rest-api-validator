@@ -1,5 +1,3 @@
-/* eslint-disable no-unused-vars */
-
 import {promisify} from 'util';
 import {Utils} from '@natlibfi/melinda-commons';
 import {mongoFactory, amqpFactory, logError, QUEUE_ITEM_STATE} from '@natlibfi/melinda-rest-api-commons';
@@ -27,12 +25,12 @@ async function run() {
 		check();
 	}
 
+	// Loop
 	async function check(wait) {
 		if (wait) {
 			await setTimeoutPromise(POLL_WAIT_TIME);
 		}
 
-		// Loop
 		if (POLL_REQUEST) {
 			// Check amqp queue
 			const message = await amqpOperator.checkQueue('REQUESTS', 'raw', false);
@@ -70,12 +68,12 @@ async function run() {
 			}
 		} else {
 			// Check Mongo for jobs
-			const result = await mongoOperator.getOne({queueItemState: QUEUE_ITEM_STATE.PENDING_QUEUING});
-			if (result) {
-				// Work with result
-				const {correlationId, cataloger, operation, contentType} = result;
+			const queueItem = await mongoOperator.getOne({queueItemState: QUEUE_ITEM_STATE.PENDING_QUEUING});
+			if (queueItem) {
+				// Work with queueItem
+				const {correlationId, cataloger, operation, contentType} = queueItem;
 
-				// Get content as stream
+				// Get stream from content
 				const stream = await mongoOperator.getStream(correlationId);
 
 				const headers = {
