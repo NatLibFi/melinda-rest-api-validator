@@ -12,7 +12,6 @@ steps:
   user: node
   commands:
   - npm install
-  - npm test
 - name: docker
   image: plugins/docker
   settings:
