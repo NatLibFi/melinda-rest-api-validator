@@ -17,7 +17,7 @@ async function run() {
 		const amqpOperator = await amqpFactory(AMQP_URL);
 		const validator = await validatorFactory();
 
-		logger.log('info', 'Started Melinda-rest-api-validator');
+		logger.log('info', `Started Melinda-rest-api-validator: ${(POLL_REQUEST) ? 'PRIORITY' : 'BULK'}`);
 
 		try {
 			check();
