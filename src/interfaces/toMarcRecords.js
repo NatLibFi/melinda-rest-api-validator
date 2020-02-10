@@ -22,8 +22,6 @@ export async function streamToMarcRecords({correlationId, headers, stream}) {
 			async function transform(record) {
 				recordNumber++;
 				// Operation CREATE -> f001 new value
-				console.log(operation);
-				console.log(recordNumber);
 				if (operation === OPERATIONS.CREATE) {
 					// Field 001 value -> 000000000, 000000001, 000000002....
 					updateField001ToParamId(`${recordNumber}`, record);
