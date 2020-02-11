@@ -32,22 +32,23 @@ export default async function () {
 		const record = ConversionService.unserialize(data, format);
 
 		if (operation === OPERATIONS.UPDATE && id) {
-			logger.log('debug', `Reading record ${id} from datastore`);
+			logger.log('debug', `Reading record ${id} from SRU`);
 			const existingRecord = await getRecord(id);
 			logger.log('debug', 'Checking LOW-tag authorization');
 			await OwnAuthorization.validateChanges(cataloger.authorization, record, existingRecord);
+			logger.log('debug', 'Checking CAT field history');
 			validateRecordState(record, existingRecord);
 		} else {
 			logger.log('debug', 'Checking LOW-tag authorization');
 			await OwnAuthorization.validateChanges(cataloger.authorization, record);
-		}
 
-		if (unique) {
-			logger.log('debug', 'Attempting to find matching records in the datastore');
-			const matchingIds = await RecordMatchingService.find(record);
+			if (unique) {
+				logger.log('debug', 'Attempting to find matching records in the SRU');
+				const matchingIds = await RecordMatchingService.find(record);
 
-			if (matchingIds.length > 0) {
-				throw new ValidationError(HttpStatus.CONFLICT, matchingIds);
+				if (matchingIds.length > 0) {
+					throw new ValidationError(HttpStatus.CONFLICT, matchingIds);
+				}
 			}
 		}
 
@@ -61,7 +62,7 @@ export default async function () {
 		// ****
 
 		if (operation === OPERATIONS.UPDATE) {
-			updateField001ToParamId(id, record);
+			updateField001ToParamId(`${id}`, record);
 		} else {
 			updateField001ToParamId('1', record);
 		}

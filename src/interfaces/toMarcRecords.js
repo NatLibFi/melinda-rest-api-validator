@@ -13,6 +13,9 @@ export async function streamToMarcRecords({correlationId, headers, stream}) {
 	let promises = [];
 	const reader = chooseAndInitReader();
 
+	// Purge queue before importing records in
+	await amqpOperator.checkQueue(correlationId, 'messages', true);
+
 	await new Promise((resolve, reject) => {
 		reader.on('error', err => {
 			reject(err);
