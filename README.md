@@ -8,8 +8,7 @@ If `'POLL_REQUEST'` is false, service will poll mongo db if there is any job in 
 | Name           | Mandatory | Description                                                                                                        |
 |----------------|-----------|--------------------------------------------------------------------------------------------------------------------|
 | AMQP_URL       | Yes       | A serialized object of AMQP connection config                                                                      |
-| SRU_URL_BIB    | Yes       | A serialized URL addres to SRU for '`RecordMatchingService'`                                                       |
-| SRU_URL_BIBPRV | Yes       | A serialized URL addres to SRU for '`validateRecordState'`                                                         |
+| SRU_URL_BIB    | Yes       | A serialized URL addres to SRU                                                                                     |
 | MONGO_URI      | No        | A serialized URL address of Melinda-rest-api's import queue database. Defaults to `'mongodb://localhost:27017/db'` |
 | OFFLINE_PERIOD | No        | Starting hour and length of offline period. e.g `'11,1'`                                                           |
 | POLL_REQUEST   | No        | A numeric presentation of boolean option to start polling AMQP `'REQUEST'` queue when process is started e.g. `1`  |

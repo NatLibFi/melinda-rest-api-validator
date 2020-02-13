@@ -15,4 +15,3 @@ export const MONGO_URI = readEnvironmentVariable('MONGO_URI', {defaultValue: 'mo
 
 // SRU variables
 export const SRU_URL_BIB = readEnvironmentVariable('SRU_URL_BIB');
-export const SRU_URL_BIBPRV = readEnvironmentVariable('SRU_URL_BIBPRV');

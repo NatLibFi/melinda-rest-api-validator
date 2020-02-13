@@ -5,7 +5,7 @@ import {MARCXML} from '@natlibfi/marc-record-serializers';
 import ValidationError, {Utils, RecordMatching, OwnAuthorization} from '@natlibfi/melinda-commons';
 import {validations, conversions, OPERATIONS} from '@natlibfi/melinda-rest-api-commons';
 import createSruClient from '@natlibfi/sru-client';
-import {SRU_URL_BIB, SRU_URL_BIBPRV} from '../config';
+import {SRU_URL_BIB} from '../config';
 
 const {createLogger, toAlephId} = Utils;
 
@@ -14,7 +14,7 @@ export default async function () {
 	const ValidationService = await validations();
 	const ConversionService = conversions();
 	const RecordMatchingService = RecordMatching.createBibService({sruURL: SRU_URL_BIB});
-	const sruClient = createSruClient({serverUrl: SRU_URL_BIBPRV, version: '2.0', maximumRecords: '1'});
+	const sruClient = createSruClient({serverUrl: SRU_URL_BIB, version: '2.0', maximumRecords: '1'});
 
 	return {process};
 
