@@ -2,8 +2,9 @@ import {Json, MARCXML, AlephSequential, ISO2709} from '@natlibfi/marc-record-ser
 import {Utils} from '@natlibfi/melinda-commons';
 import {amqpFactory, OPERATIONS} from '@natlibfi/melinda-rest-api-commons';
 import {AMQP_URL} from '../config';
+import {updateField001ToParamId} from '../utils';
 
-const {createLogger, toAlephId} = Utils;
+const {createLogger} = Utils;
 
 export async function streamToMarcRecords({correlationId, headers, stream}) {
 	const {operation, contentType} = headers;
@@ -27,11 +28,17 @@ export async function streamToMarcRecords({correlationId, headers, stream}) {
 				// Operation CREATE -> f001 new value
 				if (operation === OPERATIONS.CREATE) {
 					// Field 001 value -> 000000000, 000000001, 000000002....
-					updateField001ToParamId(`${recordNumber}`, record);
+					record = updateField001ToParamId(`${recordNumber}`, record);
+
+					await amqpOperator.sendToQueue({queue: correlationId, correlationId, headers, data: record.toObject()});
+
+					return;
 				}
 
 				await amqpOperator.sendToQueue({queue: correlationId, correlationId, headers, data: record.toObject()});
 			}
+		}).on('error', data => {
+			reject(data);
 		}).on('end', async () => {
 			logger.log('debug', `Read ${promises.length} records from stream`);
 			await Promise.all(promises);
@@ -57,18 +64,4 @@ export async function streamToMarcRecords({correlationId, headers, stream}) {
 			return new ISO2709.Reader(stream);
 		}
 	}
-}
-
-function updateField001ToParamId(id, record) {
-	const fields = record.get(/^001$/);
-
-	if (fields.length === 0) {
-		// Return to break out of function
-		return record.insertField({tag: '001', value: toAlephId(id)});
-	}
-
-	fields.map(field => {
-		field.value = toAlephId(id);
-		return field;
-	});
 }

@@ -6,8 +6,9 @@ import ValidationError, {Utils, RecordMatching, OwnAuthorization} from '@natlibf
 import {validations, conversions, OPERATIONS} from '@natlibfi/melinda-rest-api-commons';
 import createSruClient from '@natlibfi/sru-client';
 import {SRU_URL_BIB} from '../config';
+import {updateField001ToParamId} from '../utils';
 
-const {createLogger, toAlephId} = Utils;
+const {createLogger} = Utils;
 
 export default async function () {
 	const logger = createLogger();
@@ -29,16 +30,43 @@ export default async function () {
 		const unique = headers.unique || undefined;
 
 		logger.log('debug', 'Unserializing record');
-		const record = ConversionService.unserialize(data, format);
+		let record = ConversionService.unserialize(data, format);
 
-		if (operation === OPERATIONS.UPDATE && id) {
-			logger.log('debug', `Reading record ${id} from SRU`);
-			const existingRecord = await getRecord(id);
-			logger.log('debug', 'Checking LOW-tag authorization');
-			await OwnAuthorization.validateChanges(cataloger.authorization, record, existingRecord);
-			logger.log('debug', 'Checking CAT field history');
-			validateRecordState(record, existingRecord);
-		} else {
+		logger.log('debug', 'Validating the record');
+		const validationResults = await executeValidations();
+
+		if (noop) {
+			return validationResults;
+		}
+
+		return {headers: {operation, cataloger: cataloger.id}, data: record.toObject()};
+
+		async function executeValidations() {
+			if (operation === OPERATIONS.UPDATE) {
+				return updateValidations();
+			}
+
+			return createValidations();
+		}
+
+		async function updateValidations() {
+			if (id) {
+				record = updateField001ToParamId(`${id}`, record);
+				logger.log('debug', `Reading record ${id} from SRU`);
+				const existingRecord = await getRecord(id);
+				logger.log('debug', 'Checking LOW-tag authorization');
+				await OwnAuthorization.validateChanges(cataloger.authorization, record, existingRecord);
+				logger.log('debug', 'Checking CAT field history');
+				validateRecordState(record, existingRecord);
+
+				return ValidationService.validate(record);
+			}
+
+			throw new ValidationError(406, 'Update id missing!');
+		}
+
+		async function createValidations() {
+			record = updateField001ToParamId('1', record);
 			logger.log('debug', 'Checking LOW-tag authorization');
 			await OwnAuthorization.validateChanges(cataloger.authorization, record);
 
@@ -50,24 +78,9 @@ export default async function () {
 					throw new ValidationError(HttpStatus.CONFLICT, matchingIds);
 				}
 			}
+
+			return ValidationService.validate(record);
 		}
-
-		// Needed?
-		logger.log('debug', 'Validating the record');
-		const validationResults = await ValidationService.validate(record);
-
-		if (noop) {
-			return validationResults;
-		}
-		// ****
-
-		if (operation === OPERATIONS.UPDATE) {
-			updateField001ToParamId(`${id}`, record);
-		} else {
-			updateField001ToParamId('1', record);
-		}
-
-		return {headers: {operation, cataloger: cataloger.id}, data: record.toObject()};
 	}
 
 	// Checks that the modification history is identical
@@ -97,19 +110,5 @@ export default async function () {
 		});
 
 		return record;
-	}
-
-	function updateField001ToParamId(id, record) {
-		const fields = record.get(/^001$/);
-
-		if (fields.length === 0) {
-			// Return to break out of function
-			return record.insertField({tag: '001', value: toAlephId(id)});
-		}
-
-		fields.map(field => {
-			field.value = toAlephId(id);
-			return field;
-		});
 	}
 }
