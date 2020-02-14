@@ -1,5 +1,5 @@
 import {promisify} from 'util';
-import {Utils} from '@natlibfi/melinda-commons';
+import ProcessError, {Utils} from '@natlibfi/melinda-commons';
 import {mongoFactory, amqpFactory, logError, QUEUE_ITEM_STATE} from '@natlibfi/melinda-rest-api-commons';
 import {POLL_REQUEST, POLL_WAIT_TIME, AMQP_URL, MONGO_URI} from './config';
 import validatorFactory from './interfaces/validator';
@@ -90,35 +90,33 @@ async function run() {
 
 	// Check Mongo for jobs
 	async function checkMongo() {
-		const queueItem = await mongoOperator.getOne({queueItemState: QUEUE_ITEM_STATE.PENDING_QUEUING});
-		if (queueItem) {
-			// Work with queueItem
-			const {correlationId, cataloger, operation, contentType} = queueItem;
+		try {
+			const queueItem = await mongoOperator.getOne({queueItemState: QUEUE_ITEM_STATE.PENDING_QUEUING});
+			if (queueItem) {
+				// Work with queueItem
+				const {correlationId, operation, contentType} = queueItem;
 
-			const headers = {
-				operation,
-				cataloger,
-				contentType
-			};
+				// Get stream from content
+				const stream = await mongoOperator.getStream(correlationId);
 
-			// Get stream from content
-			const stream = await mongoOperator.getStream(correlationId);
+				// Read stream to MarcRecords and send em to queue
+				await streamToMarcRecords({correlationId, operation, contentType, stream});
 
-			const streamOperation = {
-				correlationId,
-				headers,
-				stream
-			};
+				// Set Mongo job state
+				await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.IN_QUEUE});
+				return check();
+			}
 
-			// Read stream to MarcRecords and send em to queue
-			await streamToMarcRecords(streamOperation);
+			// No job found
+			return check(true);
+		} catch (error) {
+			if (error instanceof ProcessError) {
+				logError(error);
+				await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.ERROR});
+				return check();
+			}
 
-			// Set Mongo job state
-			await mongoOperator.setState({correlationId, headers, state: QUEUE_ITEM_STATE.IN_QUEUE});
-			return check();
+			throw error;
 		}
-
-		// No job found
-		return check(true);
 	}
 }

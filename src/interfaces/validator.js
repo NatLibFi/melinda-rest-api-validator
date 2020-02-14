@@ -62,7 +62,7 @@ export default async function () {
 				return ValidationService.validate(record);
 			}
 
-			throw new ValidationError(406, 'Update id missing!');
+			throw new ValidationError(HttpStatus.BAD_REQUEST, 'Update id missing!');
 		}
 
 		async function createValidations() {
@@ -85,16 +85,11 @@ export default async function () {
 
 	// Checks that the modification history is identical
 	function validateRecordState(incomingRecord, existingRecord) {
-		let incomingModificationHistory;
-		if (isArray(incomingRecord)) {
-			incomingModificationHistory = incomingRecord;
-		} else {
-			incomingModificationHistory = incomingRecord.get(/^CAT$/);
-		}
+		const incomingModificationHistory = (isArray(incomingRecord)) ? incomingRecord : incomingRecord.get(/^CAT$/);
 
 		const existingModificationHistory = existingRecord.get(/^CAT$/);
 		if (!deepEqual(incomingModificationHistory, existingModificationHistory)) {
-			throw new ValidationError(409, 'Modification history mismatch');
+			throw new ValidationError(HttpStatus.CONFLICT, 'Modification history mismatch');
 		}
 	}
 

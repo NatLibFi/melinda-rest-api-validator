@@ -1,25 +1,25 @@
 import {Json, MARCXML, AlephSequential, ISO2709} from '@natlibfi/marc-record-serializers';
-import {Utils} from '@natlibfi/melinda-commons';
-import {amqpFactory, OPERATIONS} from '@natlibfi/melinda-rest-api-commons';
+import ConversionError, {Utils} from '@natlibfi/melinda-commons';
+import {amqpFactory, OPERATIONS, logError} from '@natlibfi/melinda-rest-api-commons';
 import {AMQP_URL} from '../config';
 import {updateField001ToParamId} from '../utils';
 
 const {createLogger} = Utils;
 
-export async function streamToMarcRecords({correlationId, headers, stream}) {
-	const {operation, contentType} = headers;
+export async function streamToMarcRecords({correlationId, operation, contentType, stream}) {
 	const logger = createLogger();
-	const amqpOperator = await amqpFactory(AMQP_URL);
 	let recordNumber = 0;
 	let promises = [];
-	const reader = chooseAndInitReader();
+	const reader = chooseAndInitReader(contentType);
+	const amqpOperator = await amqpFactory(AMQP_URL);
 
 	// Purge queue before importing records in
 	await amqpOperator.checkQueue(correlationId, 'messages', true);
 
 	await new Promise((resolve, reject) => {
 		reader.on('error', err => {
-			reject(err);
+			logError(err);
+			reject(new ConversionError(422, 'Invalid payload!'));
 		}).on('data', data => {
 			promises.push(transform(data));
 
@@ -37,8 +37,6 @@ export async function streamToMarcRecords({correlationId, headers, stream}) {
 
 				await amqpOperator.sendToQueue({queue: correlationId, correlationId, headers, data: record.toObject()});
 			}
-		}).on('error', data => {
-			reject(data);
 		}).on('end', async () => {
 			logger.log('debug', `Read ${promises.length} records from stream`);
 			await Promise.all(promises);
@@ -47,7 +45,7 @@ export async function streamToMarcRecords({correlationId, headers, stream}) {
 		});
 	});
 
-	function chooseAndInitReader() {
+	function chooseAndInitReader(contentType) {
 		if (contentType === 'application/alephseq') {
 			return new AlephSequential.Reader(stream);
 		}
@@ -63,5 +61,7 @@ export async function streamToMarcRecords({correlationId, headers, stream}) {
 		if (contentType === 'application/marc') {
 			return new ISO2709.Reader(stream);
 		}
+
+		throw new ConversionError(415, 'Invalid content-type');
 	}
 }
