@@ -90,17 +90,19 @@ async function run() {
 
 	// Check Mongo for jobs
 	async function checkMongo() {
+		let correlationId;
 		try {
 			const queueItem = await mongoOperator.getOne({queueItemState: QUEUE_ITEM_STATE.PENDING_QUEUING});
 			if (queueItem) {
 				// Work with queueItem
-				const {correlationId, operation, contentType} = queueItem;
+				const {operation, contentType} = queueItem;
+				correlationId = queueItem.correlationId;
 
 				// Get stream from content
 				const stream = await mongoOperator.getStream(correlationId);
 
 				// Read stream to MarcRecords and send em to queue
-				await streamToMarcRecords({correlationId, operation, contentType, stream});
+				await streamToMarcRecords({correlationId, headers: {operation, cataloger: queueItem.cataloger}, contentType, stream});
 
 				// Set Mongo job state
 				await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.IN_QUEUE});

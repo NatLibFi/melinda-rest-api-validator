@@ -6,7 +6,7 @@ import {updateField001ToParamId} from '../utils';
 
 const {createLogger} = Utils;
 
-export async function streamToMarcRecords({correlationId, operation, contentType, stream}) {
+export async function streamToMarcRecords({correlationId, headers, contentType, stream}) {
 	const logger = createLogger();
 	let recordNumber = 0;
 	let promises = [];
@@ -26,7 +26,7 @@ export async function streamToMarcRecords({correlationId, operation, contentType
 			async function transform(record) {
 				recordNumber++;
 				// Operation CREATE -> f001 new value
-				if (operation === OPERATIONS.CREATE) {
+				if (headers.operation === OPERATIONS.CREATE) {
 					// Field 001 value -> 000000000, 000000001, 000000002....
 					record = updateField001ToParamId(`${recordNumber}`, record);
 
