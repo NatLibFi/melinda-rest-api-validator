@@ -27,7 +27,7 @@
 		"app:dev": "babel-node ./src/app",
 		"app": "node -r esm ./src/app",
 		"dev": "NODE_ENV=development cross-env DEBUG=1 nodemon",
-		"build" : "babel src --source-maps --copy-files --delete-dir-on-start --out-dir=dist --minified",
+		"build": "babel src --source-maps --copy-files --delete-dir-on-start --out-dir=dist --minified",
 		"prod": "NODE_ENV=production npm-run-all clean build app",
 		"test": "npm run lint",
 		"test:dev": "npm run lint:dev"

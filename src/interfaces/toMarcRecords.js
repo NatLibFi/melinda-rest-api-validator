@@ -1,67 +1,88 @@
 import {Json, MARCXML, AlephSequential, ISO2709} from '@natlibfi/marc-record-serializers';
 import ConversionError, {Utils} from '@natlibfi/melinda-commons';
-import {amqpFactory, OPERATIONS, logError} from '@natlibfi/melinda-rest-api-commons';
-import {AMQP_URL} from '../config';
+import {OPERATIONS, logError} from '@natlibfi/melinda-rest-api-commons';
 import {updateField001ToParamId} from '../utils';
 
-const {createLogger} = Utils;
-
-export async function streamToMarcRecords({correlationId, headers, contentType, stream}) {
+export default async function (amqpOperator) {
+	const {createLogger} = Utils;
 	const logger = createLogger();
-	let recordNumber = 0;
-	let promises = [];
-	const reader = chooseAndInitReader(contentType);
-	const amqpOperator = await amqpFactory(AMQP_URL);
 
-	// Purge queue before importing records in
-	await amqpOperator.checkQueue(correlationId, 'messages', true);
+	return {streamToRecords};
 
-	await new Promise((resolve, reject) => {
-		reader.on('error', err => {
-			logError(err);
-			reject(new ConversionError(422, 'Invalid payload!'));
-		}).on('data', data => {
-			promises.push(transform(data));
+	async function streamToRecords({correlationId, headers, contentType, stream}) {
+		logger.log('info', 'Starting to transform stream to records');
+		let recordNumber = 0;
+		let promises = [];
+		const reader = chooseAndInitReader(contentType);
 
-			async function transform(record) {
+		// Purge queue before importing records in
+		await amqpOperator.checkQueue(correlationId, 'messages', true);
+
+		await new Promise((resolve, reject) => {
+			logger.log('info', 'Reading stream to records');
+			reader.on('error', err => {
+				logError(err);
+				reject(new ConversionError(422, 'Invalid payload!'));
+			}).on('data', data => {
+				promises.push(transform(data, recordNumber));
 				recordNumber++;
-				// Operation CREATE -> f001 new value
-				if (headers.operation === OPERATIONS.CREATE) {
-					// Field 001 value -> 000000000, 000000001, 000000002....
-					record = updateField001ToParamId(`${recordNumber}`, record);
+
+				if (recordNumber % 100 === 0) {
+					logger.log('debug', `Record ${recordNumber} has been red`);
+				}
+
+				async function transform(record, number) {
+					// Operation CREATE -> f001 new value
+					if (headers.operation === OPERATIONS.CREATE) {
+						// Field 001 value -> 000000000, 000000001, 000000002....
+						record = updateField001ToParamId(`${number}`, record);
+
+						await amqpOperator.sendToQueue({queue: correlationId, correlationId, headers, data: record.toObject()});
+
+						if (number % 100 === 0) {
+							logger.log('debug', `record ${number} has been queued`);
+						}
+
+						return;
+					}
 
 					await amqpOperator.sendToQueue({queue: correlationId, correlationId, headers, data: record.toObject()});
 
-					return;
+					if (number % 100 === 0) {
+						logger.log('debug', `record ${number} has been queued`);
+					}
 				}
-
-				await amqpOperator.sendToQueue({queue: correlationId, correlationId, headers, data: record.toObject()});
-			}
-		}).on('end', async () => {
-			logger.log('debug', `Read ${promises.length} records from stream`);
-			await Promise.all(promises);
-			logger.log('info', 'Request handling done!');
-			resolve();
+			}).on('end', async () => {
+				logger.log('info', `Red ${promises.length} records from stream`);
+				logger.log('info', 'This might take some time!');
+				await Promise.all(promises);
+				logger.log('info', 'Request handling done!');
+				resolve();
+			});
 		});
-	});
 
-	function chooseAndInitReader(contentType) {
-		if (contentType === 'application/alephseq') {
-			return new AlephSequential.Reader(stream);
+		function chooseAndInitReader(contentType) {
+			if (contentType === 'application/alephseq') {
+				logger.log('info', 'AlephSeq stream!');
+				return new AlephSequential.Reader(stream);
+			}
+
+			if (contentType === 'application/json') {
+				logger.log('info', 'JSON stream!');
+				return new Json.Reader(stream);
+			}
+
+			if (contentType === 'application/xml') {
+				logger.log('info', 'XML stream!');
+				return new MARCXML.Reader(stream);
+			}
+
+			if (contentType === 'application/marc') {
+				logger.log('info', 'MARC stream!');
+				return new ISO2709.Reader(stream);
+			}
+
+			throw new ConversionError(415, 'Invalid content-type');
 		}
-
-		if (contentType === 'application/json') {
-			return new Json.Reader(stream);
-		}
-
-		if (contentType === 'application/xml') {
-			return new MARCXML.Reader(stream);
-		}
-
-		if (contentType === 'application/marc') {
-			return new ISO2709.Reader(stream);
-		}
-
-		throw new ConversionError(415, 'Invalid content-type');
 	}
 }

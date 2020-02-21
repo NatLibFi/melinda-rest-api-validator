@@ -3,7 +3,7 @@ import ProcessError, {Utils} from '@natlibfi/melinda-commons';
 import {mongoFactory, amqpFactory, logError, QUEUE_ITEM_STATE} from '@natlibfi/melinda-rest-api-commons';
 import {POLL_REQUEST, POLL_WAIT_TIME, AMQP_URL, MONGO_URI} from './config';
 import validatorFactory from './interfaces/validator';
-import {streamToMarcRecords} from './interfaces/toMarcRecords';
+import toMarcRecordFactory from './interfaces/toMarcRecords';
 
 const {createLogger} = Utils;
 const setTimeoutPromise = promisify(setTimeout);
@@ -15,11 +15,12 @@ async function run() {
 	let mongoOperator;
 	let amqpOperator;
 	let validator;
-
+	let toMarcRecords;
 	try {
 		mongoOperator = await mongoFactory(MONGO_URI);
 		amqpOperator = await amqpFactory(AMQP_URL);
 		validator = await validatorFactory();
+		toMarcRecords = await toMarcRecordFactory(amqpOperator);
 	} catch (error) {
 		logError(error);
 		process.exit(5);
@@ -102,7 +103,7 @@ async function run() {
 				const stream = await mongoOperator.getStream(correlationId);
 
 				// Read stream to MarcRecords and send em to queue
-				await streamToMarcRecords({correlationId, headers: {operation, cataloger: queueItem.cataloger}, contentType, stream});
+				await toMarcRecords.streamToRecords({correlationId, headers: {operation, cataloger: queueItem.cataloger}, contentType, stream});
 
 				// Set Mongo job state
 				await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.IN_QUEUE});

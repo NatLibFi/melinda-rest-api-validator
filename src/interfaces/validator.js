@@ -86,10 +86,10 @@ export default async function () {
 	// Checks that the modification history is identical
 	function validateRecordState(incomingRecord, existingRecord) {
 		const incomingModificationHistory = (isArray(incomingRecord)) ? incomingRecord : incomingRecord.get(/^CAT$/);
-
 		const existingModificationHistory = existingRecord.get(/^CAT$/);
+
 		if (!deepEqual(incomingModificationHistory, existingModificationHistory)) {
-			throw new ValidationError(HttpStatus.CONFLICT, 'Modification history mismatch');
+			throw new ValidationError(HttpStatus.CONFLICT, 'Modification history mismatch (CAT)');
 		}
 	}
 
