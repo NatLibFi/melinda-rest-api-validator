@@ -12,7 +12,7 @@ export default async function (amqpOperator) {
 	async function streamToRecords({correlationId, headers, contentType, stream}) {
 		logger.log('info', 'Starting to transform stream to records');
 		let recordNumber = 0;
-		let promises = [];
+		const promises = [];
 		const reader = chooseAndInitReader(contentType);
 
 		// Purge queue before importing records in
@@ -35,15 +35,13 @@ export default async function (amqpOperator) {
 					// Operation CREATE -> f001 new value
 					if (headers.operation === OPERATIONS.CREATE) {
 						// Field 001 value -> 000000000, 000000001, 000000002....
-						record = updateField001ToParamId(`${number}`, record);
-
-						await amqpOperator.sendToQueue({queue: correlationId, correlationId, headers, data: record.toObject()});
+						const updatedRecord = updateField001ToParamId(`${number}`, record);
 
 						if (number % 100 === 0) {
 							logger.log('debug', `record ${number} has been queued`);
 						}
 
-						return;
+						return amqpOperator.sendToQueue({queue: correlationId, correlationId, headers, data: updatedRecord.toObject()});
 					}
 
 					await amqpOperator.sendToQueue({queue: correlationId, correlationId, headers, data: record.toObject()});

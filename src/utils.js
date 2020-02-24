@@ -10,10 +10,7 @@ export function updateField001ToParamId(id, record) {
 		return record.insertField({tag: '001', value: toAlephId(id)});
 	}
 
-	fields.map(field => {
-		field.value = toAlephId(id);
-		return field;
-	});
+	fields[0]= toAlephId(id);
 
 	return record;
 }

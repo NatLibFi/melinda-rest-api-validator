@@ -33,13 +33,13 @@ export default async function () {
 		let record = ConversionService.unserialize(data, format);
 
 		logger.log('debug', 'Validating the record');
-		const validationResults = await executeValidations();
+		const result = await executeValidations();
 
 		if (noop) {
-			return validationResults;
+			return result;
 		}
 
-		return {headers: {operation, cataloger: cataloger.id}, data: record.toObject()};
+		return {headers: {operation, cataloger: cataloger.id}, data: result.toObject()};
 
 		async function executeValidations() {
 			if (operation === OPERATIONS.UPDATE) {
@@ -51,35 +51,43 @@ export default async function () {
 
 		async function updateValidations() {
 			if (id) {
-				record = updateField001ToParamId(`${id}`, record);
+				const updatedRecord = updateField001ToParamId(`${id}`, record);
 				logger.log('debug', `Reading record ${id} from SRU`);
 				const existingRecord = await getRecord(id);
 				logger.log('debug', 'Checking LOW-tag authorization');
-				await OwnAuthorization.validateChanges(cataloger.authorization, record, existingRecord);
+				await OwnAuthorization.validateChanges(cataloger.authorization, updatedRecord, existingRecord);
 				logger.log('debug', 'Checking CAT field history');
-				validateRecordState(record, existingRecord);
+				validateRecordState(updatedRecord, existingRecord);
 
-				return ValidationService.validate(record);
+				if (noop) {
+					return ValidationService.validate(updatedRecord);
+				}
+
+				return updatedRecord;
 			}
 
 			throw new ValidationError(HttpStatus.BAD_REQUEST, 'Update id missing!');
 		}
 
 		async function createValidations() {
-			record = updateField001ToParamId('1', record);
+			const updatedRecord = updateField001ToParamId('1', record);
 			logger.log('debug', 'Checking LOW-tag authorization');
-			await OwnAuthorization.validateChanges(cataloger.authorization, record);
+			await OwnAuthorization.validateChanges(cataloger.authorization, updatedRecord);
 
 			if (unique) {
 				logger.log('debug', 'Attempting to find matching records in the SRU');
-				const matchingIds = await RecordMatchingService.find(record);
+				const matchingIds = await RecordMatchingService.find(updatedRecord);
 
 				if (matchingIds.length > 0) {
 					throw new ValidationError(HttpStatus.CONFLICT, matchingIds);
 				}
 			}
 
-			return ValidationService.validate(record);
+			if (noop) {
+				return ValidationService.validate(updatedRecord);
+			}
+
+			return updatedRecord;
 		}
 	}
 
@@ -88,7 +96,7 @@ export default async function () {
 		const incomingModificationHistory = (isArray(incomingRecord)) ? incomingRecord : incomingRecord.get(/^CAT$/);
 		const existingModificationHistory = existingRecord.get(/^CAT$/);
 
-		if (!deepEqual(incomingModificationHistory, existingModificationHistory)) {
+		if (deepEqual(incomingModificationHistory, existingModificationHistory) === false) {
 			throw new ValidationError(HttpStatus.CONFLICT, 'Modification history mismatch (CAT)');
 		}
 	}
