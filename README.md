@@ -17,7 +17,6 @@ If `'POLL_REQUEST'` is false, service will poll mongo db if there is any job in 
 ### Mongo
 Db: `'rest-api'`
 Table: `'queue-items'`
-Bucket name: `'queueItems'`
 Queue-item schema:
 ```json
 {
@@ -26,23 +25,16 @@ Queue-item schema:
 	"operation":"UPDATE",
 	"contentType":"application/json",
 	"recordLoadParams": {
-        "library": "XXX00",
-        "inputFile": "filename.seq",
-        "method": "NEW",
-        "fixRoutine": "INSB",
-        "space": "",
-        "indexing": "FULL",
-        "updateAction": "APP",
-        "mode": "M",
-        "charConversion": "",
-        "mergeRoutine": "",
-        "cataloger": "XXX0000",
-        "catalogerLevel": "",
-        "indexingPriority": "2099"
+        "pActiveLibrary": "XXX00",
+        "pInputFile": "filename.seq",
+        "pRejectFile": "filename.rej",
+        "pLogFile": "filename.syslog",
+        "pOldNew": "NEW"
       },
-	"queueItemState":"PENDING_QUEUING",
+	"queueItemState":"DONE",
 	"creationTime":"2020-01-01T00:00:00.000Z",
-	"modificationTime":"2020-01-01T00:00:01.000Z"
+  "modificationTime":"2020-01-01T00:00:01.000Z",
+  "handledIds": [ "000000001","000000002"]
 }
 ```
 
