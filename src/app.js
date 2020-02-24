@@ -23,7 +23,7 @@ async function run() {
 		toMarcRecords = await toMarcRecordFactory(amqpOperator);
 	} catch (error) {
 		logError(error);
-		process.exit(5);
+		process.exit(0);
 	}
 
 	logger.log('info', `Started Melinda-rest-api-validator: ${(POLL_REQUEST) ? 'PRIORITY' : 'BULK'}`);
@@ -32,7 +32,7 @@ async function run() {
 		check();
 	} catch (error) {
 		logError(error);
-		process.exit(5);
+		process.exit(1);
 	}
 
 	// Loop
