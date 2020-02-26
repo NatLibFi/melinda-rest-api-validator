@@ -1,5 +1,5 @@
 import {Json, MARCXML, AlephSequential, ISO2709} from '@natlibfi/marc-record-serializers';
-import ConversionError, {Utils} from '@natlibfi/melinda-commons';
+import {Error, Utils} from '@natlibfi/melinda-commons';
 import {OPERATIONS, logError} from '@natlibfi/melinda-rest-api-commons';
 import {updateField001ToParamId} from '../utils';
 
@@ -18,18 +18,16 @@ export default async function (amqpOperator) {
 		// Purge queue before importing records in
 		await amqpOperator.checkQueue(correlationId, 'messages', true);
 
-		await new Promise((resolve, reject) => {
+		return new Promise((resolve, reject) => {
 			logger.log('info', 'Reading stream to records');
 			reader.on('error', err => {
 				logError(err);
-				reject(new ConversionError(422, 'Invalid payload!'));
+				reject(new Error(422, 'Invalid payload!'));
 			}).on('data', data => {
 				promises.push(transform(data, recordNumber));
 				recordNumber++;
 
-				if (recordNumber % 100 === 0) {
-					logger.log('debug', `Record ${recordNumber} has been red`);
-				}
+				log100thQueue(recordNumber, 'red');
 
 				async function transform(record, number) {
 					// Operation CREATE -> f001 new value
@@ -37,18 +35,12 @@ export default async function (amqpOperator) {
 						// Field 001 value -> 000000000, 000000001, 000000002....
 						const updatedRecord = updateField001ToParamId(`${number}`, record);
 
-						if (number % 100 === 0) {
-							logger.log('debug', `record ${number} has been queued`);
-						}
-
-						return amqpOperator.sendToQueue({queue: correlationId, correlationId, headers, data: updatedRecord.toObject()});
+						await amqpOperator.sendToQueue({queue: correlationId, correlationId, headers, data: updatedRecord.toObject()});
+						return log100thQueue(number, 'queued');
 					}
 
 					await amqpOperator.sendToQueue({queue: correlationId, correlationId, headers, data: record.toObject()});
-
-					if (number % 100 === 0) {
-						logger.log('debug', `record ${number} has been queued`);
-					}
+					return log100thQueue(number, 'queued');
 				}
 			}).on('end', async () => {
 				logger.log('info', `Red ${promises.length} records from stream`);
@@ -80,7 +72,13 @@ export default async function (amqpOperator) {
 				return new ISO2709.Reader(stream);
 			}
 
-			throw new ConversionError(415, 'Invalid content-type');
+			throw new Error(415, 'Invalid content-type');
+		}
+
+		function log100thQueue(number, operation) {
+			if (number % 100 === 0) {
+				logger.log('debug', `Record ${number} has been ${operation}`);
+			}
 		}
 	}
 }

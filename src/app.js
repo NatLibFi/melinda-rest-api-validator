@@ -1,5 +1,5 @@
 import {promisify} from 'util';
-import ProcessError, {Utils} from '@natlibfi/melinda-commons';
+import {Error, Utils} from '@natlibfi/melinda-commons';
 import {mongoFactory, amqpFactory, logError, QUEUE_ITEM_STATE} from '@natlibfi/melinda-rest-api-commons';
 import {POLL_REQUEST, POLL_WAIT_TIME, AMQP_URL, MONGO_URI} from './config';
 import validatorFactory from './interfaces/validator';
@@ -12,19 +12,10 @@ run();
 
 async function run() {
 	const logger = createLogger(); // eslint-disable-line no-unused-vars
-	let mongoOperator;
-	let amqpOperator;
-	let validator;
-	let toMarcRecords;
-	try {
-		mongoOperator = await mongoFactory(MONGO_URI);
-		amqpOperator = await amqpFactory(AMQP_URL);
-		validator = await validatorFactory();
-		toMarcRecords = await toMarcRecordFactory(amqpOperator);
-	} catch (error) {
-		logError(error);
-		process.exit(0);
-	}
+	const mongoOperator = await mongoFactory(MONGO_URI);
+	const amqpOperator = await amqpFactory(AMQP_URL);
+	const validator = await validatorFactory();
+	const toMarcRecords = await toMarcRecordFactory(amqpOperator);
 
 	logger.log('info', `Started Melinda-rest-api-validator: ${(POLL_REQUEST) ? 'PRIORITY' : 'BULK'}`);
 
@@ -91,14 +82,13 @@ async function run() {
 
 	// Check Mongo for jobs
 	async function checkMongo() {
-		let correlationId;
-		try {
-			const queueItem = await mongoOperator.getOne({queueItemState: QUEUE_ITEM_STATE.PENDING_QUEUING});
-			if (queueItem) {
-				// Work with queueItem
-				const {operation, contentType} = queueItem;
-				correlationId = queueItem.correlationId;
+		const queueItem = await mongoOperator.getOne({queueItemState: QUEUE_ITEM_STATE.PENDING_QUEUING});
+		if (queueItem) {
+			// Work with queueItem
+			const {operation, contentType} = queueItem;
+			const correlationId = queueItem.correlationId;
 
+			try {
 				// Get stream from content
 				const stream = await mongoOperator.getStream(correlationId);
 
@@ -107,19 +97,20 @@ async function run() {
 
 				// Set Mongo job state
 				await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.IN_QUEUE});
-				return check();
+			} catch (error) {
+				if (error instanceof Error) {
+					logError(error);
+					await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.ERROR});
+					return check();
+				}
+
+				throw error;
 			}
 
-			// No job found
-			return check(true);
-		} catch (error) {
-			if (error instanceof ProcessError) {
-				logError(error);
-				await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.ERROR});
-				return check();
-			}
-
-			throw error;
+			return check();
 		}
+
+		// No job found
+		return check(true);
 	}
 }

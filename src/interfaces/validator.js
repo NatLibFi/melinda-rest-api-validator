@@ -2,7 +2,7 @@ import deepEqual from 'deep-eql';
 import HttpStatus from 'http-status';
 import {isArray} from 'util';
 import {MARCXML} from '@natlibfi/marc-record-serializers';
-import ValidationError, {Utils, RecordMatching, OwnAuthorization} from '@natlibfi/melinda-commons';
+import {Error, Utils, RecordMatching, OwnAuthorization} from '@natlibfi/melinda-commons';
 import {validations, conversions, OPERATIONS} from '@natlibfi/melinda-rest-api-commons';
 import createSruClient from '@natlibfi/sru-client';
 import {SRU_URL_BIB} from '../config';
@@ -66,7 +66,7 @@ export default async function () {
 				return updatedRecord;
 			}
 
-			throw new ValidationError(HttpStatus.BAD_REQUEST, 'Update id missing!');
+			throw new Error(HttpStatus.BAD_REQUEST, 'Update id missing!');
 		}
 
 		async function createValidations() {
@@ -79,8 +79,14 @@ export default async function () {
 				const matchingIds = await RecordMatchingService.find(updatedRecord);
 
 				if (matchingIds.length > 0) {
-					throw new ValidationError(HttpStatus.CONFLICT, matchingIds);
+					throw new Error(HttpStatus.CONFLICT, matchingIds);
 				}
+
+				if (noop) {
+					return ValidationService.validate(updatedRecord);
+				}
+
+				return updatedRecord;
 			}
 
 			if (noop) {
@@ -97,7 +103,7 @@ export default async function () {
 		const existingModificationHistory = existingRecord.get(/^CAT$/);
 
 		if (deepEqual(incomingModificationHistory, existingModificationHistory) === false) {
-			throw new ValidationError(HttpStatus.CONFLICT, 'Modification history mismatch (CAT)');
+			throw new Error(HttpStatus.CONFLICT, 'Modification history mismatch (CAT)');
 		}
 	}
 
