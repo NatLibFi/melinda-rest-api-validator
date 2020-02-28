@@ -13,13 +13,13 @@ export default async function (amqpOperator) {
 		logger.log('info', 'Starting to transform stream to records');
 		let recordNumber = 0;
 		const promises = [];
-		const reader = chooseAndInitReader(contentType);
 
 		// Purge queue before importing records in
 		await amqpOperator.checkQueue(correlationId, 'messages', true);
+		logger.log('info', 'Reading stream to records');
+		const reader = chooseAndInitReader(contentType);
 
 		return new Promise((resolve, reject) => {
-			logger.log('info', 'Reading stream to records');
 			reader.on('error', err => {
 				logError(err);
 				reject(new Error(422, 'Invalid payload!'));
@@ -27,7 +27,7 @@ export default async function (amqpOperator) {
 				promises.push(transform(data, recordNumber));
 				recordNumber++;
 
-				log100thQueue(recordNumber, 'red');
+				log100thQueue(recordNumber, 'read');
 
 				async function transform(record, number) {
 					// Operation CREATE -> f001 new value
@@ -43,7 +43,7 @@ export default async function (amqpOperator) {
 					return log100thQueue(number, 'queued');
 				}
 			}).on('end', async () => {
-				logger.log('info', `Red ${promises.length} records from stream`);
+				logger.log('info', `Read ${promises.length} records from stream`);
 				logger.log('info', 'This might take some time!');
 				await Promise.all(promises);
 				logger.log('info', 'Request handling done!');
