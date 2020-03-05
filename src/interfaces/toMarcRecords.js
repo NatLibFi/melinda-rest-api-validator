@@ -1,7 +1,8 @@
 import {Json, MARCXML, AlephSequential, ISO2709} from '@natlibfi/marc-record-serializers';
-import {Error, Utils} from '@natlibfi/melinda-commons';
+import {Error as ApiError, Utils} from '@natlibfi/melinda-commons';
 import {OPERATIONS, logError} from '@natlibfi/melinda-rest-api-commons';
 import {updateField001ToParamId} from '../utils';
+import httpStatus from 'http-status';
 
 export default async function (amqpOperator) {
 	const {createLogger} = Utils;
@@ -17,12 +18,12 @@ export default async function (amqpOperator) {
 		// Purge queue before importing records in
 		await amqpOperator.checkQueue(correlationId, 'messages', true);
 		logger.log('info', 'Reading stream to records');
-		const reader = chooseAndInitReader(contentType);
 
 		return new Promise((resolve, reject) => {
+			const reader = chooseAndInitReader(contentType);
 			reader.on('error', err => {
 				logError(err);
-				reject(new Error(422, 'Invalid payload!'));
+				reject(new ApiError(httpStatus.UNPROCESSABLE_ENTITY, 'Invalid payload!'));
 			}).on('data', data => {
 				promises.push(transform(data, recordNumber));
 				recordNumber++;
@@ -72,12 +73,12 @@ export default async function (amqpOperator) {
 				return new ISO2709.Reader(stream);
 			}
 
-			throw new Error(415, 'Invalid content-type');
+			throw new ApiError(httpStatus.UNSUPPORTED_MEDIA_TYPE, 'Invalid content-type');
 		}
 
 		function log100thQueue(number, operation) {
 			if (number % 100 === 0) {
-				logger.log('debug', `Record ${number} has been ${operation}`);
+				return logger.log('debug', `Record ${number} has been ${operation}`);
 			}
 		}
 	}

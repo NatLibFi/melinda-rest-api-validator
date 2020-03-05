@@ -1,5 +1,5 @@
 import {promisify} from 'util';
-import {Error, Utils} from '@natlibfi/melinda-commons';
+import {Error as ApiError, Utils} from '@natlibfi/melinda-commons';
 import {mongoFactory, amqpFactory, logError, QUEUE_ITEM_STATE} from '@natlibfi/melinda-rest-api-commons';
 import {POLL_REQUEST, POLL_WAIT_TIME, AMQP_URL, MONGO_URI} from './config';
 import validatorFactory from './interfaces/validator';
@@ -85,10 +85,10 @@ async function run() {
 		const queueItem = await mongoOperator.getOne({queueItemState: QUEUE_ITEM_STATE.PENDING_QUEUING});
 		if (queueItem) {
 			// Work with queueItem
-			const {operation, contentType} = queueItem;
 			const correlationId = queueItem.correlationId;
 
 			try {
+				const {operation, contentType} = queueItem;
 				// Get stream from content
 				const stream = await mongoOperator.getStream(correlationId);
 
@@ -97,8 +97,10 @@ async function run() {
 
 				// Set Mongo job state
 				await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.IN_QUEUE});
+
+				return check();
 			} catch (error) {
-				if (error instanceof Error) {
+				if (error instanceof ApiError) {
 					logError(error);
 					await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.ERROR});
 					return check();
@@ -106,8 +108,6 @@ async function run() {
 
 				throw error;
 			}
-
-			return check();
 		}
 
 		// No job found
