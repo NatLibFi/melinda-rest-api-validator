@@ -1,3 +1,4 @@
+---
 kind: pipeline
 name: default
 steps:
@@ -12,6 +13,7 @@ steps:
   user: node
   commands:
   - npm install
+  - npm test
 - name: docker
   image: plugins/docker
   settings:
@@ -21,3 +23,16 @@ steps:
       from_secret: docker_username
     password:
       from_secret: docker_password
+---
+kind: secret
+name: docker_username
+data: PawYQ2dFpSW9A1hH81IFPuzX968FVDbsKAL97TgGWGiW4utV8wkcla+n+Lz5X1Cehnw=
+---
+kind: secret
+name: docker_password
+data: gtXL+jCqTzTTeinX8n4TDeAxw8F7L3RWMSmtNECDOnbNyz5o60AXhXSZfgOIf0+7ftwXmJPF7WJkhQbbaaX9yS63BiNNkMPj1Ne7pxtVgt3gbRE2nfeC9xk6sdc=
+---
+kind: signature
+hmac: e6bed9f5e9ca6f971178a92615173a73a93d18d907c843d785c304037a7b5933
+
+...
