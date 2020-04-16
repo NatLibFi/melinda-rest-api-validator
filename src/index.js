@@ -39,7 +39,11 @@ async function run() {
 
   registerInterruptionHandlers();
 
-  server = await startApp({...config}); // eslint-disable-line prefer-const
+  try {
+    server = await startApp({...config}); // eslint-disable-line prefer-const
+  } catch (error) {
+    logError(error);
+  }
 
   function registerInterruptionHandlers() {
     process
