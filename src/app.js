@@ -1,39 +1,43 @@
 import {promisify} from 'util';
 import {Error as ApiError, Utils} from '@natlibfi/melinda-commons';
 import {mongoFactory, amqpFactory, logError, QUEUE_ITEM_STATE} from '@natlibfi/melinda-rest-api-commons';
-import {POLL_REQUEST, POLL_WAIT_TIME, AMQP_URL, MONGO_URI} from './config';
 import validatorFactory from './interfaces/validator';
 import toMarcRecordFactory from './interfaces/toMarcRecords';
 
 const {createLogger} = Utils;
 const setTimeoutPromise = promisify(setTimeout);
 
-run();
-
-async function run() {
+export default async function ({
+  pollRequest, pollWaitTime, amqpUrl, mongoUri, sruUrlBib
+}) {
   const logger = createLogger(); // eslint-disable-line no-unused-vars
-  const mongoOperator = await mongoFactory(MONGO_URI);
-  const amqpOperator = await amqpFactory(AMQP_URL);
-  const validator = await validatorFactory();
+  const mongoOperator = await mongoFactory(mongoUri);
+  const amqpOperator = await amqpFactory(amqpUrl);
+  const validator = await validatorFactory(sruUrlBib);
   const toMarcRecords = await toMarcRecordFactory(amqpOperator);
 
-  logger.log('info', `Started Melinda-rest-api-validator: ${POLL_REQUEST ? 'PRIORITY' : 'BULK'}`);
+  logger.log('info', `Started Melinda-rest-api-validator: ${pollRequest ? 'PRIORITY' : 'BULK'}`);
 
-  try {
-    check();
-  } catch (error) {
-    logError(error);
-    process.exit(1); // eslint-disable-line no-process-exit
-  }
+  const server = await initCheck();
+
+  // Soft shutdown function
+  server.on('close', () => {
+    logger.log('info', 'Initiating soft shutdown of Melinda-rest-api-validator');
+    // Things that need soft shutdown
+    // Needs amqp disconnect?
+    // Needs mongo disconnect?
+  });
+
+  return server;
 
   // Loop
-  async function check(wait) {
+  async function initCheck(wait) {
     if (wait) {
-      await setTimeoutPromise(POLL_WAIT_TIME);
-      return check(false);
+      await setTimeoutPromise(pollWaitTime);
+      return initCheck(false);
     }
 
-    if (POLL_REQUEST) {
+    if (pollRequest) {
       return checkAmqp();
     }
 
@@ -65,11 +69,11 @@ async function run() {
         await amqpOperator.sendToQueue(toQueue);
         await amqpOperator.ackMessages([message]);
 
-        return check();
+        return initCheck();
       }
 
       // No job found
-      return check(true);
+      return initCheck(true);
     } catch (error) {
       logError(error);
       await amqpOperator.ackNReplyMessages({
@@ -77,7 +81,7 @@ async function run() {
         messages: [message],
         payloads: [error.payload]
       });
-      return check(true);
+      return initCheck(true);
     }
   }
 
@@ -102,16 +106,16 @@ async function run() {
         if (error instanceof ApiError) {
           logError(error);
           await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.ERROR});
-          return check();
+          return initCheck();
         }
 
         throw error;
       }
 
-      return check();
+      return initCheck();
     }
 
     // No job found
-    return check(true);
+    return initCheck(true);
   }
 }
