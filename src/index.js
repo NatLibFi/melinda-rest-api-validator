@@ -70,7 +70,7 @@ async function run() {
 
     function logMessage(message) {
       if (message) {
-        console.log(message);
+        console.log(message); // eslint-disable-line no-console
         return logError(message);
       }
     }
