@@ -39,7 +39,6 @@ async function run() {
 
   registerInterruptionHandlers();
 
-
   server = await startApp({...config}); // eslint-disable-line prefer-const
 
   function registerInterruptionHandlers() {
@@ -70,7 +69,6 @@ async function run() {
 
     function logMessage(message) {
       if (message) {
-        console.log(message); // eslint-disable-line no-console
         return logError(message);
       }
     }
