@@ -17,7 +17,7 @@ export default function (amqpOperator) {
 
     // Purge queue before importing records in
     await amqpOperator.checkQueue(correlationId, 'messages', true);
-    logger.log('info', 'Reading stream to records');
+    logger.log('verbose', 'Reading stream to records');
 
     return new Promise((resolve, reject) => {
       const reader = chooseAndInitReader(contentType);
@@ -46,7 +46,7 @@ export default function (amqpOperator) {
       })
         .on('end', async () => {
           logger.log('info', `Read ${promises.length} records from stream`);
-          logger.log('info', 'This might take some time!');
+          logger.log('info', 'Sending records to queue! This might take some time!');
           await Promise.all(promises);
           logger.log('info', 'Request handling done!');
           resolve();
@@ -55,22 +55,22 @@ export default function (amqpOperator) {
 
     function chooseAndInitReader(contentType) {
       if (contentType === 'application/alephseq') {
-        logger.log('info', 'AlephSeq stream!');
+        logger.log('debug', 'AlephSeq stream!');
         return new AlephSequential.Reader(stream);
       }
 
       if (contentType === 'application/json') {
-        logger.log('info', 'JSON stream!');
+        logger.log('debug', 'JSON stream!');
         return new Json.Reader(stream);
       }
 
       if (contentType === 'application/xml') {
-        logger.log('info', 'XML stream!');
+        logger.log('debug', 'XML stream!');
         return new MARCXML.Reader(stream);
       }
 
       if (contentType === 'application/marc') {
-        logger.log('info', 'MARC stream!');
+        logger.log('debug', 'MARC stream!');
         return new ISO2709.Reader(stream);
       }
 
@@ -81,6 +81,7 @@ export default function (amqpOperator) {
       if (number % 100 === 0) {
         return logger.log('debug', `Record ${number} has been ${operation}`);
       }
+      return logger.log('silly', `Record ${number} has been ${operation}`);
     }
   }
 }

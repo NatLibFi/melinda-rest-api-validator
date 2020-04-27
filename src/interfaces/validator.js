@@ -11,7 +11,7 @@ const {createLogger} = Utils;
 
 export default async function (sruUrlBib) {
   const logger = createLogger();
-  const ValidationService = await validations();
+  const validationService = await validations();
   const ConversionService = conversions();
   const RecordMatchingService = RecordMatching.createBibService({sruURL: sruUrlBib});
   const sruClient = createSruClient({serverUrl: sruUrlBib, version: '2.0', maximumRecords: '1'});
@@ -19,6 +19,7 @@ export default async function (sruUrlBib) {
   return {process};
 
   async function process(headers, data) {
+    logger.log('debug', `process headers ${JSON.stringify(headers)}`);
     const {
       operation,
       format,
@@ -28,17 +29,25 @@ export default async function (sruUrlBib) {
     const id = headers.id || undefined;
     const unique = headers.unique || undefined;
 
-    logger.log('debug', 'Unserializing record');
     const record = ConversionService.unserialize(data, format);
 
-    logger.log('debug', 'Validating the record');
-    const result = await executeValidations();
+    logger.log('verbose', 'Validating the record');
 
     if (noop) {
+      const result = {
+        status: operation === 'CREATE' ? 'CREATED' : 'UPDATED',
+        ...await executeValidations()
+      };
       return result;
     }
+    const result = await executeValidations();
 
-    return {headers: {operation, cataloger: cataloger.id}, data: result.toObject()};
+    if (result.failed) { // eslint-disable-line functional/no-conditional-statement
+      logger.log('debug', 'Validation failed');
+      throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, result.messages);
+    }
+
+    return {headers: {operation, cataloger: cataloger.id}, data: result.record.toObject()};
 
     function executeValidations() {
       if (operation === OPERATIONS.UPDATE) {
@@ -51,48 +60,41 @@ export default async function (sruUrlBib) {
     async function updateValidations() {
       if (id) {
         const updatedRecord = updateField001ToParamId(`${id}`, record);
-        logger.log('debug', `Reading record ${id} from SRU`);
+        logger.log('verbose', `Reading record ${id} from SRU`);
         const existingRecord = await getRecord(id);
-        logger.log('debug', 'Checking LOW-tag authorization');
+        logger.log('verbose', 'Checking LOW-tag authorization');
         await OwnAuthorization.validateChanges(cataloger.authorization, updatedRecord, existingRecord);
-        logger.log('debug', 'Checking CAT field history');
+        logger.log('verbose', 'Checking CAT field history');
         validateRecordState(updatedRecord, existingRecord);
 
-        if (noop) {
-          return ValidationService.validate(updatedRecord);
-        }
-
-        return updatedRecord;
+        const validationResults = await validationService(updatedRecord);
+        return validationResults;
       }
 
+      logger.log('debug', 'No id in headers');
       throw new ValidationError(HttpStatus.BAD_REQUEST, 'Update id missing!');
     }
 
     async function createValidations() {
       const updatedRecord = updateField001ToParamId('1', record);
-      logger.log('debug', 'Checking LOW-tag authorization');
+      logger.log('verbose', 'Checking LOW-tag authorization');
       await OwnAuthorization.validateChanges(cataloger.authorization, updatedRecord);
 
       if (unique) {
-        logger.log('debug', 'Attempting to find matching records in the SRU');
+        logger.log('verbose', 'Attempting to find matching records in the SRU');
         const matchingIds = await RecordMatchingService.find(updatedRecord);
 
         if (matchingIds.length > 0) { // eslint-disable-line functional/no-conditional-statement
+          logger.log('debug', 'Matching record has been found');
           throw new ValidationError(HttpStatus.CONFLICT, matchingIds);
         }
 
-        if (noop) {
-          return ValidationService.validate(updatedRecord);
-        }
-
-        return updatedRecord;
+        const validationResults = await validationService(updatedRecord);
+        return validationResults;
       }
 
-      if (noop) {
-        return ValidationService.validate(updatedRecord);
-      }
-
-      return updatedRecord;
+      const validationResults = await validationService(updatedRecord);
+      return validationResults;
     }
   }
 
@@ -109,6 +111,7 @@ export default async function (sruUrlBib) {
     const staDeletedFields = existingRecord.getFields('STA', [{code: 'a', value: 'DELETED'}]);
 
     if (staDeletedFields.length > 0) { // eslint-disable-line functional/no-conditional-statement
+      logger.log('debug', 'Record is deleted');
       throw new ValidationError(HttpStatus.GONE, 'Record is deleted');
     }
   }
