@@ -10,7 +10,7 @@ const setTimeoutPromise = promisify(setTimeout);
 export default async function ({
   pollRequest, pollWaitTime, amqpUrl, mongoUri, sruUrlBib
 }) {
-  const logger = createLogger(); // eslint-disable-line no-unused-vars
+  const logger = createLogger();
   const mongoOperator = await mongoFactory(mongoUri);
   const amqpOperator = await amqpFactory(amqpUrl);
   const validator = await validatorFactory(sruUrlBib);
