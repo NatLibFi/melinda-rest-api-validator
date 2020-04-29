@@ -20,14 +20,6 @@ export default async function ({
 
   const server = await initCheck();
 
-  // Soft shutdown function
-  server.on('close', () => {
-    logger.log('info', 'Initiating soft shutdown of Melinda-rest-api-validator');
-    // Things that need soft shutdown
-    // Needs amqp disconnect?
-    // Needs mongo disconnect?
-  });
-
   return server;
 
   // Loop

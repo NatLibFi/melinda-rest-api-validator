@@ -35,11 +35,10 @@ run();
 
 async function run() {
   const {handleInterrupt} = Utils;
-  let server; // eslint-disable-line functional/no-let
 
   registerInterruptionHandlers();
 
-  server = await startApp({...config}); // eslint-disable-line prefer-const
+  const server = await startApp(config);
 
   function registerInterruptionHandlers() {
     process
