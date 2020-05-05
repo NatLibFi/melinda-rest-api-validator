@@ -38,7 +38,7 @@ async function run() {
 
   registerInterruptionHandlers();
 
-  const server = await startApp(config);
+  await startApp(config);
 
   function registerInterruptionHandlers() {
     process
@@ -53,12 +53,6 @@ async function run() {
 
     function handleTermination({code = 0, message = false}) {
       logMessage(message);
-
-      if (server) {
-        server.close();
-        return process.exit(code); // eslint-disable-line no-process-exit
-      }
-
       process.exit(code); // eslint-disable-line no-process-exit
     }
 
