@@ -3,6 +3,7 @@ import {Error as ApiError, Utils} from '@natlibfi/melinda-commons';
 import {mongoFactory, amqpFactory, logError, QUEUE_ITEM_STATE, PRIO_QUEUE_ITEM_STATE} from '@natlibfi/melinda-rest-api-commons';
 import validatorFactory from './interfaces/validator';
 import toMarcRecordFactory from './interfaces/toMarcRecords';
+import httpStatus from 'http-status';
 
 const {createLogger} = Utils;
 const setTimeoutPromise = promisify(setTimeout);
@@ -77,7 +78,7 @@ export default async function ({
           return initCheck();
         }
 
-        await amqpOperator.ackNReplyMessages({status: 408, messages: [message], payloads: ['Time out!']});
+        await amqpOperator.ackNReplyMessages({status: httpStatus.REQUEST_TIMEOUT, messages: [message], payloads: ['Time out!']});
 
         return initCheck();
       }
@@ -86,6 +87,16 @@ export default async function ({
       return initCheck(true);
     } catch (error) {
       logError(error);
+      if (error.status === 403) {
+        await amqpOperator.ackNReplyMessages({
+          status: error.status,
+          messages: [message],
+          payloads: ['LOW tag permission error']
+        });
+        const {correlationId} = message.properties;
+        await mongoOperator.checkAndSetState({correlationId, state: PRIO_QUEUE_ITEM_STATE.ERROR});
+        return initCheck(true);
+      }
       await amqpOperator.ackNReplyMessages({
         status: error.status || 500,
         messages: [message],
