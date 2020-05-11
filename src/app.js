@@ -1,116 +1,144 @@
 import {promisify} from 'util';
 import {Error as ApiError, Utils} from '@natlibfi/melinda-commons';
-import {mongoFactory, amqpFactory, logError, QUEUE_ITEM_STATE} from '@natlibfi/melinda-rest-api-commons';
-import {POLL_REQUEST, POLL_WAIT_TIME, AMQP_URL, MONGO_URI} from './config';
+import {mongoFactory, amqpFactory, logError, QUEUE_ITEM_STATE, PRIO_QUEUE_ITEM_STATE} from '@natlibfi/melinda-rest-api-commons';
 import validatorFactory from './interfaces/validator';
 import toMarcRecordFactory from './interfaces/toMarcRecords';
+import httpStatus from 'http-status';
 
 const {createLogger} = Utils;
 const setTimeoutPromise = promisify(setTimeout);
 
-run();
+export default async function ({
+  pollRequest, pollWaitTime, amqpUrl, mongoUri, sruUrlBib
+}) {
+  const logger = createLogger();
+  const mongoOperator = await mongoFactory(mongoUri);
+  const amqpOperator = await amqpFactory(amqpUrl);
+  const validator = await validatorFactory(sruUrlBib);
+  const toMarcRecords = await toMarcRecordFactory(amqpOperator);
 
-async function run() {
-	const logger = createLogger(); // eslint-disable-line no-unused-vars
-	const mongoOperator = await mongoFactory(MONGO_URI);
-	const amqpOperator = await amqpFactory(AMQP_URL);
-	const validator = await validatorFactory();
-	const toMarcRecords = await toMarcRecordFactory(amqpOperator);
+  logger.log('info', `Started Melinda-rest-api-validator: ${pollRequest ? 'PRIORITY' : 'BULK'}`);
 
-	logger.log('info', `Started Melinda-rest-api-validator: ${(POLL_REQUEST) ? 'PRIORITY' : 'BULK'}`);
+  const server = await initCheck();
 
-	try {
-		check();
-	} catch (error) {
-		logError(error);
-		process.exit(1);
-	}
+  return server;
 
-	// Loop
-	async function check(wait) {
-		if (wait) {
-			await setTimeoutPromise(POLL_WAIT_TIME);
-		}
+  // Loop
+  async function initCheck(wait = false) {
+    if (wait) {
+      await setTimeoutPromise(pollWaitTime);
+      return initCheck();
+    }
+    logger.log('silly', 'Initiating check');
 
-		if (POLL_REQUEST) {
-			return checkAmqp();
-		}
+    if (pollRequest) {
+      return checkAmqp();
+    }
 
-		return checkMongo();
-	}
+    return checkMongo();
+  }
 
-	// Check amqp for jobs
-	async function checkAmqp() {
-		const message = await amqpOperator.checkQueue('REQUESTS', 'raw', false);
-		if (message) {
-			try {
-				// Work with message
-				const correlationId = message.properties.correlationId;
-				const headers = message.properties.headers;
-				const content = JSON.parse(message.content.toString());
+  // Check amqp for jobs
+  async function checkAmqp() {
+    logger.log('silly', 'Checking amqp');
+    const message = await amqpOperator.checkQueue('REQUESTS', 'raw', false);
+    try {
+      if (message) {
+        // Work with message
+        const {correlationId} = message.properties;
 
-				// Validate data
-				const valid = await validator.process(headers, content.data);
+        const valid = await mongoOperator.checkAndSetState({correlationId, state: PRIO_QUEUE_ITEM_STATE.VALIDATING});
 
-				// Process validated data
-				const toQueue = {
-					correlationId,
-					queue: (valid.headers === undefined) ? correlationId : headers.operation,
-					headers: valid.headers || headers,
-					data: valid.data || valid
-				};
+        if (valid) {
+          const {headers} = message.properties;
+          const content = JSON.parse(message.content.toString());
 
-				// Pass processed data forward
-				await amqpOperator.sendToQueue(toQueue);
-				await amqpOperator.ackMessages([message]);
+          logger.log('silly', JSON.stringify(content));
+          // Validate data
+          const processResult = await validator.process(headers, content.data);
 
-				return check();
-			} catch (error) {
-				logError(error);
-				await amqpOperator.ackNReplyMessages({
-					status: error.status || 500,
-					messages: [message],
-					payloads: [error.payload]
-				});
-				return check(true);
-			}
-		}
+          // Process validated data
+          const toQueue = {
+            correlationId,
+            queue: processResult.headers === undefined ? correlationId : headers.operation,
+            headers: processResult.headers || headers,
+            data: processResult.data || processResult
+          };
 
-		// No job found
-		return check(true);
-	}
+          // Pass processed data forward
+          await amqpOperator.sendToQueue(toQueue);
+          await amqpOperator.ackMessages([message]);
+          if (processResult.headers === undefined) {
+            // Noop return
+            await mongoOperator.checkAndSetState({correlationId, state: PRIO_QUEUE_ITEM_STATE.DONE});
+            return initCheck();
+          }
 
-	// Check Mongo for jobs
-	async function checkMongo() {
-		const queueItem = await mongoOperator.getOne({queueItemState: QUEUE_ITEM_STATE.PENDING_QUEUING});
-		if (queueItem) {
-			// Work with queueItem
-			const correlationId = queueItem.correlationId;
+          await mongoOperator.checkAndSetState({correlationId, state: PRIO_QUEUE_ITEM_STATE.VALIDATED});
+          return initCheck();
+        }
 
-			try {
-				const {operation, contentType} = queueItem;
-				// Get stream from content
-				const stream = await mongoOperator.getStream(correlationId);
+        await amqpOperator.ackNReplyMessages({status: httpStatus.REQUEST_TIMEOUT, messages: [message], payloads: ['Time out!']});
 
-				// Read stream to MarcRecords and send em to queue
-				await toMarcRecords.streamToRecords({correlationId, headers: {operation, cataloger: queueItem.cataloger}, contentType, stream});
+        return initCheck();
+      }
 
-				// Set Mongo job state
-				await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.IN_QUEUE});
+      // No job found
+      return initCheck(true);
+    } catch (error) {
+      logError(error);
+      if (error.status === 403) {
+        await amqpOperator.ackNReplyMessages({
+          status: error.status,
+          messages: [message],
+          payloads: ['LOW tag permission error']
+        });
+        const {correlationId} = message.properties;
+        await mongoOperator.checkAndSetState({correlationId, state: PRIO_QUEUE_ITEM_STATE.ERROR});
+        return initCheck(true);
+      }
+      await amqpOperator.ackNReplyMessages({
+        status: error.status || 500,
+        messages: [message],
+        payloads: [error.payload]
+      });
+      const {correlationId} = message.properties;
+      await mongoOperator.checkAndSetState({correlationId, state: PRIO_QUEUE_ITEM_STATE.ERROR});
+      return initCheck(true);
+    }
+  }
 
-				return check();
-			} catch (error) {
-				if (error instanceof ApiError) {
-					logError(error);
-					await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.ERROR});
-					return check();
-				}
+  // Check Mongo for jobs
+  async function checkMongo() {
+    logger.log('silly', 'Checking mongo');
+    const queueItem = await mongoOperator.getOne({queueItemState: QUEUE_ITEM_STATE.PENDING_QUEUING});
+    if (queueItem) {
+      // Work with queueItem
+      const {correlationId} = queueItem;
+      try {
+        const {operation, contentType} = queueItem;
+        // Get stream from content
+        const stream = await mongoOperator.getStream(correlationId);
 
-				throw error;
-			}
-		}
+        // Read stream to MarcRecords and send em to queue
+        await toMarcRecords.streamToRecords({correlationId, headers: {operation, cataloger: queueItem.cataloger}, contentType, stream});
 
-		// No job found
-		return check(true);
-	}
+        // Set Mongo job state
+        await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.IN_QUEUE});
+      } catch (error) {
+        if (error instanceof ApiError) {
+          logError(error);
+          await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.ERROR});
+          return initCheck();
+        }
+
+        throw error;
+      }
+
+      return initCheck();
+    }
+
+    // No job found
+    return initCheck(true);
+  }
 }
