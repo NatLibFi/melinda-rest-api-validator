@@ -81,6 +81,7 @@ export default async function (sruUrlBib) {
       logger.log('verbose', 'Checking LOW-tag authorization');
       const lows = record.get(/^LOW$/u);
       if (lows.length > 0) { // eslint-disable-line functional/no-conditional-statement
+        logger.log('debug', `LOWS ${JSON.stringify(lows)}`);
         await OwnAuthorization.validateChanges(cataloger.authorization, updatedRecord);
       }
 
