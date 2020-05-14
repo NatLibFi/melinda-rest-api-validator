@@ -81,10 +81,11 @@ export default async function (sruUrlBib) {
     async function createValidations() {
       logger.log('verbose', 'Validations for CREATE operation');
       const updatedRecord = updateField001ToParamId('1', record);
+      logger.log('debug', `Updated record:\n${JSON.stringify(updatedRecord)}`);
 
-      logger.log('verbose', 'Checking LOW-tag authorization');
       const lows = record.get(/^LOW$/u);
       if (lows.length > 0) { // eslint-disable-line functional/no-conditional-statement
+        logger.log('verbose', 'Checking LOW-tag authorization');
         logger.log('debug', `LOWS ${JSON.stringify(lows)}`);
         await OwnAuthorization.validateChanges(cataloger.authorization, updatedRecord);
       }
