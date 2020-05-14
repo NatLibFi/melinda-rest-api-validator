@@ -9,7 +9,8 @@ export function updateField001ToParamId(id, record) {
 
   if (fields.length === 0) {
     // Return to break out of function
-    return record.insertField({tag: '001', value: toAlephId(id)});
+    record.insertField({tag: '001', value: toAlephId(id)});
+    return record;
   }
 
   fields[0].value = toAlephId(id); // eslint-disable-line functional/immutable-data
