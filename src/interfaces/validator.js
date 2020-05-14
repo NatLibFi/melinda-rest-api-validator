@@ -77,8 +77,12 @@ export default async function (sruUrlBib) {
 
     async function createValidations() {
       const updatedRecord = updateField001ToParamId('1', record);
+
       logger.log('verbose', 'Checking LOW-tag authorization');
-      await OwnAuthorization.validateChanges(cataloger.authorization, updatedRecord);
+      const lows = record.get(/^LOW$/u);
+      if (lows.length > 0) { // eslint-disable-line functional/no-conditional-statement
+        await OwnAuthorization.validateChanges(cataloger.authorization, updatedRecord);
+      }
 
       if (unique) {
         logger.log('verbose', 'Attempting to find matching records in the SRU');
