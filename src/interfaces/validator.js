@@ -31,7 +31,7 @@ export default async function (sruUrlBib) {
 
     const record = ConversionService.unserialize(data, format);
 
-    logger.log('debug', `Unserialize record:\n${JSON.stringify(record)}`);
+    logger.log('silly', `Unserialize record:\n${JSON.stringify(record)}`);
 
     if (noop) {
       const result = {
@@ -63,10 +63,14 @@ export default async function (sruUrlBib) {
       logger.log('verbose', 'Validations for UPDATE operation');
       if (id) {
         const updatedRecord = updateField001ToParamId(`${id}`, record);
+        logger.log('silly', `Updated record:\n${JSON.stringify(updatedRecord)}`);
+
         logger.log('verbose', `Reading record ${id} from SRU`);
         const existingRecord = await getRecord(id);
+
         logger.log('verbose', 'Checking LOW-tag authorization');
         await OwnAuthorization.validateChanges(cataloger.authorization, updatedRecord, existingRecord);
+
         logger.log('verbose', 'Checking CAT field history');
         validateRecordState(updatedRecord, existingRecord);
 
@@ -81,14 +85,10 @@ export default async function (sruUrlBib) {
     async function createValidations() {
       logger.log('verbose', 'Validations for CREATE operation');
       const updatedRecord = updateField001ToParamId('1', record);
-      logger.log('debug', `Updated record:\n${JSON.stringify(updatedRecord)}`);
+      logger.log('silly', `Updated record:\n${JSON.stringify(updatedRecord)}`);
 
-      const lows = record.get(/^LOW$/u);
-      if (lows.length > 0) { // eslint-disable-line functional/no-conditional-statement
-        logger.log('verbose', 'Checking LOW-tag authorization');
-        logger.log('debug', `LOWS ${JSON.stringify(lows)}`);
-        await OwnAuthorization.validateChanges(cataloger.authorization, updatedRecord);
-      }
+      logger.log('verbose', 'Checking LOW-tag authorization');
+      await OwnAuthorization.validateChanges(cataloger.authorization, updatedRecord);
 
       if (unique) {
         logger.log('verbose', 'Attempting to find matching records in the SRU');
