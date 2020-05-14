@@ -31,7 +31,7 @@ export default async function (sruUrlBib) {
 
     const record = ConversionService.unserialize(data, format);
 
-    logger.log('verbose', 'Validating the record');
+    logger.log('debug', `Unserialize record:\n${JSON.stringify(record)}`);
 
     if (noop) {
       const result = {
@@ -50,6 +50,8 @@ export default async function (sruUrlBib) {
     return {headers: {operation, cataloger: cataloger.id}, data: result.record.toObject()};
 
     function executeValidations() {
+      logger.log('verbose', 'Validating the record');
+
       if (operation === OPERATIONS.UPDATE) {
         return updateValidations();
       }
