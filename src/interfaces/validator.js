@@ -58,6 +58,7 @@ export default async function (sruUrlBib) {
     }
 
     async function updateValidations() {
+      logger.log('verbose', 'Validations for UPDATE operation');
       if (id) {
         const updatedRecord = updateField001ToParamId(`${id}`, record);
         logger.log('verbose', `Reading record ${id} from SRU`);
@@ -76,6 +77,7 @@ export default async function (sruUrlBib) {
     }
 
     async function createValidations() {
+      logger.log('verbose', 'Validations for CREATE operation');
       const updatedRecord = updateField001ToParamId('1', record);
 
       logger.log('verbose', 'Checking LOW-tag authorization');
