@@ -113,6 +113,7 @@ export default async function (sruUrlBib) {
     const incomingModificationHistory = isArray(incomingRecord) ? incomingRecord : incomingRecord.get(/^CAT$/u);
     const existingModificationHistory = existingRecord.get(/^CAT$/u);
 
+    // Merge makes uuid variables to all fields and this removes those
     const existingModificationHistoryNoUuids = existingModificationHistory.map(field => { // eslint-disable-line arrow-body-style
       return {tag: field.tag, ind1: field.ind1, ind2: field.ind2, subfields: field.subfields};
     });
