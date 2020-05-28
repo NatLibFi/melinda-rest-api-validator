@@ -114,11 +114,13 @@ export default async function (sruUrlBib) {
     const existingModificationHistory = existingRecord.get(/^CAT$/u);
 
     // Merge makes uuid variables to all fields and this removes those
-    const existingModificationHistoryNoUuids = existingModificationHistory.map(field => { // eslint-disable-line arrow-body-style
+    const incomingModificationHistoryNoUuids = incomingModificationHistory.map(field => { // eslint-disable-line arrow-body-style
       return {tag: field.tag, ind1: field.ind1, ind2: field.ind2, subfields: field.subfields};
     });
 
-    if (deepEqual(incomingModificationHistory, existingModificationHistoryNoUuids) === false) { // eslint-disable-line functional/no-conditional-statement
+    logger.log('silly', `Incoming CATS:\n${JSON.stringify(incomingModificationHistoryNoUuids)}`);
+    logger.log('silly', `Existing CATS:\n${JSON.stringify(existingModificationHistory)}`);
+    if (deepEqual(incomingModificationHistoryNoUuids, existingModificationHistory) === false) { // eslint-disable-line functional/no-conditional-statement
       throw new ValidationError(HttpStatus.CONFLICT, 'Modification history mismatch (CAT)');
     }
 
