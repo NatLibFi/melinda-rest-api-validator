@@ -113,7 +113,11 @@ export default async function (sruUrlBib) {
     const incomingModificationHistory = isArray(incomingRecord) ? incomingRecord : incomingRecord.get(/^CAT$/u);
     const existingModificationHistory = existingRecord.get(/^CAT$/u);
 
-    if (deepEqual(incomingModificationHistory, existingModificationHistory) === false) { // eslint-disable-line functional/no-conditional-statement
+    const existingModificationHistoryNoUuids = existingModificationHistory.map(field => { // eslint-disable-line arrow-body-style
+      return {tag: field.tag, ind1: field.ind1, ind2: field.ind2, subfields: field.subfields};
+    });
+
+    if (deepEqual(incomingModificationHistory, existingModificationHistoryNoUuids) === false) { // eslint-disable-line functional/no-conditional-statement
       throw new ValidationError(HttpStatus.CONFLICT, 'Modification history mismatch (CAT)');
     }
 
