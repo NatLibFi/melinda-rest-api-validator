@@ -3,10 +3,11 @@ import HttpStatus from 'http-status';
 import {isArray} from 'util';
 import {MARCXML} from '@natlibfi/marc-record-serializers';
 import {Error as ValidationError, Utils, RecordMatching, OwnAuthorization} from '@natlibfi/melinda-commons';
-import {validations, conversions, OPERATIONS} from '@natlibfi/melinda-rest-api-commons';
+import {validations, conversions, format, OPERATIONS} from '@natlibfi/melinda-rest-api-commons';
 import createSruClient from '@natlibfi/sru-client';
 import {updateField001ToParamId} from '../utils';
 
+const {formatRecord, BIB_FORMAT_SETTINGS} = format;
 const {createLogger} = Utils;
 
 export default async function (sruUrlBib) {
@@ -29,7 +30,7 @@ export default async function (sruUrlBib) {
     const id = headers.id || undefined;
     const unique = headers.unique || undefined;
 
-    const record = ConversionService.unserialize(data, format);
+    const record = formatRecord(ConversionService.unserialize(data, format), BIB_FORMAT_SETTINGS);
 
     logger.log('silly', `Unserialize record:\n${JSON.stringify(record)}`);
 
