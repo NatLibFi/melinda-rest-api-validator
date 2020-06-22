@@ -35,7 +35,7 @@
 		"@natlibfi/marc-record": "^4.0.4",
 		"@natlibfi/marc-record-serializers": "^5.0.1",
 		"@natlibfi/melinda-commons": "git+https://github.com/NatLibFi/melinda-commons-js.git#melkehitys-1541",
-		"@natlibfi/melinda-rest-api-commons": "git+https://github.com/NatLibFi/melinda-rest-api-commons.git#melkehitys-1541",
+		"@natlibfi/melinda-rest-api-commons": ">=1.0.0-alpha.2",
 		"@natlibfi/sru-client": "^3.1.3",
 		"chai": "^4.2.0",
 		"deep-eql": "^4.0.0",
