@@ -3,10 +3,11 @@ import HttpStatus from 'http-status';
 import {isArray} from 'util';
 import {MARCXML} from '@natlibfi/marc-record-serializers';
 import {Error as ValidationError, Utils, RecordMatching, OwnAuthorization} from '@natlibfi/melinda-commons';
-import {validations, conversions, OPERATIONS} from '@natlibfi/melinda-rest-api-commons';
+import {validations, conversions, format, OPERATIONS} from '@natlibfi/melinda-rest-api-commons';
 import createSruClient from '@natlibfi/sru-client';
 import {updateField001ToParamId} from '../utils';
 
+const {formatRecord, BIB_FORMAT_SETTINGS} = format;
 const {createLogger} = Utils;
 
 export default async function (sruUrlBib) {
@@ -29,9 +30,9 @@ export default async function (sruUrlBib) {
     const id = headers.id || undefined;
     const unique = headers.unique || undefined;
 
-    const record = ConversionService.unserialize(data, format);
+    const record = formatRecord(ConversionService.unserialize(data, format), BIB_FORMAT_SETTINGS);
 
-    logger.log('verbose', 'Validating the record');
+    logger.log('silly', `Unserialize record:\n${JSON.stringify(record)}`);
 
     if (noop) {
       const result = {
@@ -50,6 +51,8 @@ export default async function (sruUrlBib) {
     return {headers: {operation, cataloger: cataloger.id}, data: result.record.toObject()};
 
     function executeValidations() {
+      logger.log('verbose', 'Validating the record');
+
       if (operation === OPERATIONS.UPDATE) {
         return updateValidations();
       }
@@ -58,12 +61,18 @@ export default async function (sruUrlBib) {
     }
 
     async function updateValidations() {
+      logger.log('verbose', 'Validations for UPDATE operation');
       if (id) {
         const updatedRecord = updateField001ToParamId(`${id}`, record);
+        logger.log('silly', `Updated record:\n${JSON.stringify(updatedRecord)}`);
+
         logger.log('verbose', `Reading record ${id} from SRU`);
         const existingRecord = await getRecord(id);
+        logger.log('silly', `Record from SRU: ${JSON.stringify(existingRecord)}`);
+
         logger.log('verbose', 'Checking LOW-tag authorization');
         await OwnAuthorization.validateChanges(cataloger.authorization, updatedRecord, existingRecord);
+
         logger.log('verbose', 'Checking CAT field history');
         validateRecordState(updatedRecord, existingRecord);
 
@@ -76,7 +85,10 @@ export default async function (sruUrlBib) {
     }
 
     async function createValidations() {
+      logger.log('verbose', 'Validations for CREATE operation');
       const updatedRecord = updateField001ToParamId('1', record);
+      logger.log('silly', `Updated record:\n${JSON.stringify(updatedRecord)}`);
+
       logger.log('verbose', 'Checking LOW-tag authorization');
       await OwnAuthorization.validateChanges(cataloger.authorization, updatedRecord);
 
@@ -101,18 +113,17 @@ export default async function (sruUrlBib) {
   // Checks that the modification history is identical
   function validateRecordState(incomingRecord, existingRecord) {
     const incomingModificationHistory = isArray(incomingRecord) ? incomingRecord : incomingRecord.get(/^CAT$/u);
-    const existingModificationHistory = existingRecord.get(/^CAT$/u);
+    const existingModificationHistory = existingRecord.get(/^CAT$/u) || [];
 
-    if (deepEqual(incomingModificationHistory, existingModificationHistory) === false) { // eslint-disable-line functional/no-conditional-statement
+    // Merge makes uuid variables to all fields and this removes those
+    const incomingModificationHistoryNoUuids = incomingModificationHistory.map(field => { // eslint-disable-line arrow-body-style
+      return {tag: field.tag, ind1: field.ind1, ind2: field.ind2, subfields: field.subfields};
+    });
+
+    logger.log('silly', `Incoming CATS:\n${JSON.stringify(incomingModificationHistoryNoUuids)}`);
+    logger.log('silly', `Existing CATS:\n${JSON.stringify(existingModificationHistory)}`);
+    if (deepEqual(incomingModificationHistoryNoUuids, existingModificationHistory) === false) { // eslint-disable-line functional/no-conditional-statement
       throw new ValidationError(HttpStatus.CONFLICT, 'Modification history mismatch (CAT)');
-    }
-
-    // Check if existing record is deleted
-    const staDeletedFields = existingRecord.getFields('STA', [{code: 'a', value: 'DELETED'}]);
-
-    if (staDeletedFields.length > 0) { // eslint-disable-line functional/no-conditional-statement
-      logger.log('debug', 'Record is deleted');
-      throw new ValidationError(HttpStatus.GONE, 'Record is deleted');
     }
   }
 

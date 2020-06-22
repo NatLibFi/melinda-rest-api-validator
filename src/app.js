@@ -100,7 +100,7 @@ export default async function ({
       await amqpOperator.ackNReplyMessages({
         status: error.status || 500,
         messages: [message],
-        payloads: [error.payload]
+        payloads: [error.payload || 'Unexpected error!']
       });
       const {correlationId} = message.properties;
       await mongoOperator.checkAndSetState({correlationId, state: PRIO_QUEUE_ITEM_STATE.ERROR});
