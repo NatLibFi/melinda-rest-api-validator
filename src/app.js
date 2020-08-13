@@ -1,11 +1,11 @@
 import {promisify} from 'util';
-import {Error as ApiError, Utils} from '@natlibfi/melinda-commons';
+import {createLogger} from '@natlibfi/melinda-backend-commons';
+import {Error as ApiError} from '@natlibfi/melinda-commons';
 import {mongoFactory, amqpFactory, logError, QUEUE_ITEM_STATE, PRIO_QUEUE_ITEM_STATE} from '@natlibfi/melinda-rest-api-commons';
 import validatorFactory from './interfaces/validator';
 import toMarcRecordFactory from './interfaces/toMarcRecords';
 import httpStatus from 'http-status';
 
-const {createLogger} = Utils;
 const setTimeoutPromise = promisify(setTimeout);
 
 export default async function ({

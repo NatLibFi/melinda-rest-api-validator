@@ -1,11 +1,11 @@
 import {Json, MARCXML, AlephSequential, ISO2709} from '@natlibfi/marc-record-serializers';
-import {Error as ApiError, Utils} from '@natlibfi/melinda-commons';
+import {createLogger} from '@natlibfi/melinda-backend-commons';
+import {Error as ApiError} from '@natlibfi/melinda-commons';
 import {OPERATIONS, logError} from '@natlibfi/melinda-rest-api-commons';
 import {updateField001ToParamId} from '../utils';
 import httpStatus from 'http-status';
 
 export default function (amqpOperator) {
-  const {createLogger} = Utils;
   const logger = createLogger();
 
   return {streamToRecords};

@@ -2,16 +2,15 @@ import deepEqual from 'deep-eql';
 import HttpStatus from 'http-status';
 import {isArray} from 'util';
 import {MARCXML} from '@natlibfi/marc-record-serializers';
-import {Error as ValidationError, Utils, RecordMatching, OwnAuthorization} from '@natlibfi/melinda-commons';
+import {createLogger} from '@natlibfi/melinda-backend-commons';
+import {Error as ValidationError, RecordMatching, OwnAuthorization} from '@natlibfi/melinda-commons';
 import {validations, conversions, format, OPERATIONS} from '@natlibfi/melinda-rest-api-commons';
 import createSruClient from '@natlibfi/sru-client';
 import {updateField001ToParamId} from '../utils';
 
-const {formatRecord, BIB_FORMAT_SETTINGS} = format;
-const {createLogger} = Utils;
-
 export default async function (sruUrlBib) {
   const logger = createLogger();
+  const {formatRecord, BIB_FORMAT_SETTINGS} = format;
   const validationService = await validations();
   const ConversionService = conversions();
   const RecordMatchingService = RecordMatching.createBibService({sruURL: sruUrlBib});
