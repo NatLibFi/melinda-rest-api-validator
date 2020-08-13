@@ -1,7 +1,6 @@
 
-import {Utils} from '@natlibfi/melinda-commons';
-
-const {readEnvironmentVariable, parseBoolean} = Utils;
+import {parseBoolean} from '@natlibfi/melinda-commons';
+import {readEnvironmentVariable} from '@natlibfi/melinda-backend-commons';
 
 // Poll variables
 export const pollRequest = readEnvironmentVariable('POLL_REQUEST', {defaultValue: 0, format: v => parseBoolean(v)});

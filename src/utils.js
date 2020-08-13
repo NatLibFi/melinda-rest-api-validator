@@ -1,6 +1,6 @@
-import {Utils} from '@natlibfi/melinda-commons';
+import {toAlephId} from '@natlibfi/melinda-commons';
+import {createLogger} from '@natlibfi/melinda-backend-commons';
 
-const {toAlephId, createLogger} = Utils;
 const logger = createLogger();
 
 export function updateField001ToParamId(id, record) {
