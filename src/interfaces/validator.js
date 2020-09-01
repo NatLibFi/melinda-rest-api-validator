@@ -3,18 +3,19 @@ import HttpStatus from 'http-status';
 import {isArray} from 'util';
 import {MARCXML} from '@natlibfi/marc-record-serializers';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
-import {Error as ValidationError, RecordMatching, OwnAuthorization} from '@natlibfi/melinda-commons';
+import {Error as ValidationError, OwnAuthorization} from '@natlibfi/melinda-commons';
 import {validations, conversions, format, OPERATIONS} from '@natlibfi/melinda-rest-api-commons';
 import createSruClient from '@natlibfi/sru-client';
+import createMatchInterface from '@natlibfi/melinda-record-matching';
 import {updateField001ToParamId} from '../utils';
 
-export default async function (sruUrlBib) {
+export default async function ({formatOptions, sruUrl, matchOptions}) {
   const logger = createLogger();
-  const {formatRecord, BIB_FORMAT_SETTINGS} = format;
+  const {formatRecord} = format;
   const validationService = await validations();
   const ConversionService = conversions();
-  const RecordMatchingService = RecordMatching.createBibService({sruURL: sruUrlBib});
-  const sruClient = createSruClient({serverUrl: sruUrlBib, version: '2.0', maximumRecords: '1'});
+  const match = createMatchInterface(matchOptions);
+  const sruClient = createSruClient({serverUrl: sruUrl, version: '2.0', maximumRecords: '1'});
 
   return {process};
 
@@ -29,7 +30,7 @@ export default async function (sruUrlBib) {
     const id = headers.id || undefined;
     const unique = headers.unique || undefined;
 
-    const record = formatRecord(ConversionService.unserialize(data, format), BIB_FORMAT_SETTINGS);
+    const record = formatRecord(ConversionService.unserialize(data, format), formatOptions);
 
     logger.log('silly', `Unserialize record:\n${JSON.stringify(record)}`);
 
@@ -93,11 +94,12 @@ export default async function (sruUrlBib) {
 
       if (unique) {
         logger.log('verbose', 'Attempting to find matching records in the SRU');
-        const matchingIds = await RecordMatchingService.find(updatedRecord);
+        const matchResults = await match(updatedRecord);
 
-        if (matchingIds.length > 0) { // eslint-disable-line functional/no-conditional-statement
+        if (matchResults.length > 0) { // eslint-disable-line functional/no-conditional-statement
           logger.log('debug', 'Matching record has been found');
-          throw new ValidationError(HttpStatus.CONFLICT, matchingIds);
+          logger.log('debug', JSON.stringify(matchResults.map(({id, probability}) => ({id, probability}))));
+          throw new ValidationError(HttpStatus.CONFLICT, matchResults.map(({id}) => id));
         }
 
         const validationResults = await validationService(updatedRecord);

@@ -9,12 +9,12 @@ import httpStatus from 'http-status';
 const setTimeoutPromise = promisify(setTimeout);
 
 export default async function ({
-  pollRequest, pollWaitTime, amqpUrl, mongoUri, sruUrlBib
+  pollRequest, pollWaitTime, amqpUrl, mongoUri, validatorOptions
 }) {
   const logger = createLogger();
   const mongoOperator = await mongoFactory(mongoUri);
   const amqpOperator = await amqpFactory(amqpUrl);
-  const validator = await validatorFactory(sruUrlBib);
+  const validator = await validatorFactory(validatorOptions);
   const toMarcRecords = await toMarcRecordFactory(amqpOperator);
 
   logger.log('info', `Started Melinda-rest-api-validator: ${pollRequest ? 'PRIORITY' : 'BULK'}`);
