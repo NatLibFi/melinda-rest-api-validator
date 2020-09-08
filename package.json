@@ -34,7 +34,7 @@
 	"dependencies": {
 		"@babel/runtime": "^7.11.2",
 		"@natlibfi/marc-record": "^4.0.4",
-		"@natlibfi/marc-record-serializers": "^7.1.2",
+		"@natlibfi/marc-record-serializers": "git+https://github.com/NatLibFi/marc-record-serializers.git#bybass-global-validation-options",
 		"@natlibfi/melinda-backend-commons": "^1.0.6",
 		"@natlibfi/melinda-commons": "^10.0.3",
 		"@natlibfi/melinda-record-matching": "^1.0.0-alpha.4",
