@@ -30,6 +30,9 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
     const id = headers.id || undefined;
     const unique = headers.unique || undefined;
 
+    logger.log('silly', `Data: ${JSON.stringify(data)}`);
+    logger.log('silly', `Format: ${format}`);
+
     const record = formatRecord(ConversionService.unserialize(data, format), formatOptions);
 
     logger.log('silly', `Unserialize record:\n${JSON.stringify(record)}`);
@@ -132,7 +135,7 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
     return new Promise((resolve, reject) => {
       sruClient.searchRetrieve(`rec.id=${id}`)
         .on('record', xmlString => {
-          resolve(MARCXML.from(xmlString));
+          resolve(await MARCXML.from(xmlString));
         })
         .on('end', () => resolve())
         .on('error', err => reject(err));
