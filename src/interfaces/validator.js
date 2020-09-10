@@ -134,7 +134,7 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
   function getRecord(id) {
     return new Promise((resolve, reject) => {
       sruClient.searchRetrieve(`rec.id=${id}`)
-        .on('record', xmlString => {
+        .on('record', async xmlString => {
           resolve(await MARCXML.from(xmlString));
         })
         .on('end', () => resolve())
