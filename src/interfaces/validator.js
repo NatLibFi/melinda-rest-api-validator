@@ -135,9 +135,10 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
     return new Promise((resolve, reject) => {
       sruClient.searchRetrieve(`rec.id=${id}`)
         .on('record', async xmlString => {
-          resolve(await MARCXML.from(xmlString));
+          const record = await MARCXML.from(xmlString);
+          resolve(record);
         })
-        .on('end', () => resolve())
+        .on('end', () => logger.log('debug', 'Awaiting record to be transformed'))
         .on('error', err => reject(err));
     });
   }
