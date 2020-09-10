@@ -133,13 +133,26 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
 
   function getRecord(id) {
     return new Promise((resolve, reject) => {
+      let promise; // eslint-disable-line functional/no-let
+
       sruClient.searchRetrieve(`rec.id=${id}`)
-        .on('record', async xmlString => {
-          const record = await MARCXML.from(xmlString);
-          logger.log('debug', 'Record has be transformed');
-          resolve(record);
+        .on('record', xmlString => {
+          promise = MARCXML.from(xmlString, {subfieldValues: false});
         })
-        .on('end', () => logger.log('debug', 'Awaiting record to be transformed'))
+        .on('end', async () => {
+          if (promise) {
+            try {
+              const record = await promise;
+              resolve(record);
+            } catch (err) {
+              reject(err);
+            }
+
+            return;
+          }
+
+          resolve();
+        })
         .on('error', err => reject(err));
     });
   }
