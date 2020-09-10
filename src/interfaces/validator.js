@@ -15,7 +15,7 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
   const validationService = await validations();
   const ConversionService = conversions();
   const match = createMatchInterface(matchOptions);
-  const sruClient = createSruClient({sruUrl, recordSchema: 'marcxml', retrieveAll: false, maximumRecordsPerRequest: 1});
+  const sruClient = createSruClient({url: sruUrl, recordSchema: 'marcxml', retrieveAll: false, maximumRecordsPerRequest: 1});
 
   return {process};
 
