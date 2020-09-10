@@ -148,6 +148,7 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
               reject(err);
             }
 
+            logger.log('debug', 'No record promise from sru');
             return;
           }
 
