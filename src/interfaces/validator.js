@@ -32,10 +32,10 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
 
     logger.log('silly', `Data: ${JSON.stringify(data)}`);
     logger.log('silly', `Format: ${format}`);
-
-    const record = formatRecord(ConversionService.unserialize(data, format), formatOptions);
-
-    logger.log('silly', `Unserialize record:\n${JSON.stringify(record)}`);
+    const unzerialized = await ConversionService.unserialize(data, format);
+    logger.log('silly', `Unserialized data: ${JSON.stringify(unzerialized)}`);
+    const record = await formatRecord(unzerialized, formatOptions);
+    logger.log('silly', `Formated record:\n${JSON.stringify(record)}`);
 
     if (noop) {
       const result = {

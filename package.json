@@ -38,7 +38,7 @@
 		"@natlibfi/melinda-backend-commons": "^1.0.6",
 		"@natlibfi/melinda-commons": "^11.0.1",
 		"@natlibfi/melinda-record-matching": "^1.0.0-alpha.4",
-		"@natlibfi/melinda-rest-api-commons": "^1.0.0-alpha.19",
+		"@natlibfi/melinda-rest-api-commons": "1.0.0-alpha.19",
 		"@natlibfi/sru-client": "^4.0.2",
 		"chai": "^4.2.0",
 		"deep-eql": "^4.0.0",
