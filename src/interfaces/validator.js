@@ -126,6 +126,7 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
 
     logger.log('silly', `Incoming CATS:\n${JSON.stringify(incomingModificationHistoryNoUuids)}`);
     logger.log('silly', `Existing CATS:\n${JSON.stringify(existingModificationHistory)}`);
+
     if (deepEqual(incomingModificationHistoryNoUuids, existingModificationHistory) === false) { // eslint-disable-line functional/no-conditional-statement
       throw new ValidationError(HttpStatus.CONFLICT, 'Modification history mismatch (CAT)');
     }
