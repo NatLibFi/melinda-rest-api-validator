@@ -112,6 +112,7 @@ export default async function ({
   async function checkMongo() {
     logger.log('silly', 'Checking mongo');
     const queueItem = await mongoOperator.getOne({queueItemState: QUEUE_ITEM_STATE.PENDING_QUEUING});
+    console.log(queueItem); // eslint-disable-line no-console
     logger.log('silly', `queue item: ${JSON.stringify(queueItem)}`);
 
     if (queueItem) {
