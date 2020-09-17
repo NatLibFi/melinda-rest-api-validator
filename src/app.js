@@ -112,6 +112,8 @@ export default async function ({
   async function checkMongo() {
     logger.log('silly', 'Checking mongo');
     const queueItem = await mongoOperator.getOne({queueItemState: QUEUE_ITEM_STATE.PENDING_QUEUING});
+    logger.log('silly', `queue item: ${JSON.stringify(queueItem)}`);
+
     if (queueItem) {
       logger.log('silly', 'Mongo queue item found');
       // Work with queueItem
