@@ -3,11 +3,12 @@ import HttpStatus from 'http-status';
 import {isArray} from 'util';
 import {MARCXML} from '@natlibfi/marc-record-serializers';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
-import {Error as ValidationError, OwnAuthorization} from '@natlibfi/melinda-commons';
+import {Error as ValidationError} from '@natlibfi/melinda-commons';
 import {validations, conversions, format, OPERATIONS} from '@natlibfi/melinda-rest-api-commons';
 import createSruClient from '@natlibfi/sru-client';
 import createMatchInterface from '@natlibfi/melinda-record-matching';
-import {updateField001ToParamId} from '../utils';
+import validateOwnChanges from './own-authorization';
+import {updateField001ToParamId} from '../../utils';
 
 export default async function ({formatOptions, sruUrl, matchOptions}) {
   const logger = createLogger();
@@ -71,7 +72,7 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
         logger.log('silly', `Record from SRU: ${JSON.stringify(existingRecord)}`);
 
         logger.log('verbose', 'Checking LOW-tag authorization');
-        await OwnAuthorization.validateChanges(cataloger.authorization, updatedRecord, existingRecord);
+        validateOwnChanges(cataloger.authorization, updatedRecord, existingRecord);
 
         logger.log('verbose', 'Checking CAT field history');
         validateRecordState(updatedRecord, existingRecord);
@@ -90,7 +91,7 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
       logger.log('silly', `Updated record:\n${JSON.stringify(updatedRecord)}`);
 
       logger.log('verbose', 'Checking LOW-tag authorization');
-      await OwnAuthorization.validateChanges(cataloger.authorization, updatedRecord);
+      await validateOwnChanges(cataloger.authorization, updatedRecord);
 
       if (unique) {
         logger.log('verbose', 'Attempting to find matching records in the SRU');
