@@ -1,10 +1,11 @@
+import httpStatus from 'http-status';
 import {Error as ValidationError} from '@natlibfi/melinda-commons';
 
 export default (ownTags, incomingRecord, existingRecord) => {
   const lowTags = getLowTags();
 
   if (lowTags.some(t => !ownTags.includes(t))) { // eslint-disable-line functional/no-conditional-statement
-    throw new ValidationError(403);
+    throw new ValidationError(httpStatus.FORBIDDEN, 'Own authorization error');
   }
 
   function getLowTags() {
