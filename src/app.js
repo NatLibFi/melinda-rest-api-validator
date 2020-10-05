@@ -113,8 +113,10 @@ export default async function ({
     logger.log('silly', 'Checking mongo');
     const queueItem = await mongoOperator.getOne({queueItemState: QUEUE_ITEM_STATE.PENDING_QUEUING});
     if (queueItem) {
+      logger.log('silly', 'Mongo queue item found');
       // Work with queueItem
       const {correlationId} = queueItem;
+      logger.log('silly', `Correlation id: ${correlationId}`);
       try {
         const {operation, contentType} = queueItem;
         // Get stream from content

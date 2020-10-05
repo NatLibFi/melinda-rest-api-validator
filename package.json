@@ -35,13 +35,14 @@
 	},
 	"dependencies": {
 		"@babel/runtime": "^7.11.2",
-		"@natlibfi/marc-record": "^4.0.4",
-		"@natlibfi/marc-record-serializers": "^5.0.1",
+		"@natlibfi/marc-record": "^6.1.1",
+		"@natlibfi/marc-record-serializers": "^7.1.6",
 		"@natlibfi/melinda-backend-commons": "^2.0.2",
 		"@natlibfi/melinda-commons": "^11.0.1",
 		"@natlibfi/melinda-record-matching": "^1.0.0",
 		"@natlibfi/melinda-rest-api-commons": "^1.0.0-alpha.25",
-		"@natlibfi/sru-client": "^3.1.3",
+		"@natlibfi/sru-client": "^4.0.2",
+		"chai": "^4.2.0",
 		"deep-eql": "^4.0.0",
 		"http-status": "^1.4.2",
 		"moment": "^2.24.0"

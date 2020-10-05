@@ -16,7 +16,7 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
   const validationService = await validations();
   const ConversionService = conversions();
   const match = createMatchInterface(matchOptions);
-  const sruClient = createSruClient({serverUrl: sruUrl, version: '2.0', maximumRecords: '1'});
+  const sruClient = createSruClient({url: sruUrl, recordSchema: 'marcxml', retrieveAll: false, maximumRecordsPerRequest: 1});
 
   return {process};
 
@@ -31,9 +31,12 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
     const id = headers.id || undefined;
     const unique = headers.unique || undefined;
 
-    const record = formatRecord(ConversionService.unserialize(data, format), formatOptions);
-
-    logger.log('silly', `Unserialize record:\n${JSON.stringify(record)}`);
+    logger.log('silly', `Data: ${JSON.stringify(data)}`);
+    logger.log('silly', `Format: ${format}`);
+    const unzerialized = await ConversionService.unserialize(data, format);
+    logger.log('silly', `Unserialized data: ${JSON.stringify(unzerialized)}`);
+    const record = await formatRecord(unzerialized, formatOptions);
+    logger.log('silly', `Formated record:\n${JSON.stringify(record)}`);
 
     if (noop) {
       const result = {
@@ -124,6 +127,7 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
 
     logger.log('silly', `Incoming CATS:\n${JSON.stringify(incomingModificationHistoryNoUuids)}`);
     logger.log('silly', `Existing CATS:\n${JSON.stringify(existingModificationHistory)}`);
+
     if (deepEqual(incomingModificationHistoryNoUuids, existingModificationHistory) === false) { // eslint-disable-line functional/no-conditional-statement
       throw new ValidationError(HttpStatus.CONFLICT, 'Modification history mismatch (CAT)');
     }
@@ -131,11 +135,27 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
 
   function getRecord(id) {
     return new Promise((resolve, reject) => {
+      let promise; // eslint-disable-line functional/no-let
+
       sruClient.searchRetrieve(`rec.id=${id}`)
         .on('record', xmlString => {
-          resolve(MARCXML.from(xmlString));
+          promise = MARCXML.from(xmlString, {subfieldValues: false});
         })
-        .on('end', () => resolve())
+        .on('end', async () => {
+          if (promise) {
+            try {
+              const record = await promise;
+              resolve(record);
+            } catch (err) {
+              reject(err);
+            }
+
+            logger.log('debug', 'No record promise from sru');
+            return;
+          }
+
+          resolve();
+        })
         .on('error', err => reject(err));
     });
   }
