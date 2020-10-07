@@ -101,10 +101,12 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
         const matchResults = await match(updatedRecord);
 
         if (matchResults.length > 0) { // eslint-disable-line functional/no-conditional-statement
-          logger.log('debug', 'Matching record has been found');
+          logger.log('verbose', 'Matching record has been found');
           logger.log('silly', JSON.stringify(matchResults.map(({candidate: {id}, probability}) => ({id, probability}))));
           throw new ValidationError(HttpStatus.CONFLICT, matchResults.map(({candidate: {id}}) => id));
         }
+
+        logger.log('verbose', 'No matching records');
 
         const validationResults = await validationService(updatedRecord);
         return validationResults;
