@@ -4,8 +4,11 @@ import {Error as ApiError} from '@natlibfi/melinda-commons';
 import {OPERATIONS, logError} from '@natlibfi/melinda-rest-api-commons';
 import {updateField001ToParamId} from '../utils';
 import httpStatus from 'http-status';
+import {promisify} from 'util';
+
 
 export default function (amqpOperator) {
+  const setTimeoutPromise = promisify(setTimeout);
   const logger = createLogger();
 
   return {streamToRecords};
@@ -47,6 +50,10 @@ export default function (amqpOperator) {
         .on('end', async () => {
           logger.log('info', `Read ${promises.length} records from stream`);
           logger.log('info', 'Sending records to queue! This might take some time!');
+          await setTimeoutPromise(500); // Makes sure that even slowest promise is in the array
+          if (promises.length === 0) { // eslint-disable-line functional/no-conditional-statement
+            reject(new ApiError(httpStatus.UNPROCESSABLE_ENTITY, 'Invalid payload!'));
+          }
           await Promise.all(promises);
           logger.log('info', 'Request handling done!');
           resolve();
