@@ -50,10 +50,13 @@ export default function (amqpOperator) {
         .on('end', async () => {
           logger.log('info', `Read ${promises.length} records from stream`);
           logger.log('info', 'Sending records to queue! This might take some time!');
+
           await setTimeoutPromise(500); // Makes sure that even slowest promise is in the array
-          if (promises.length === 0) { // eslint-disable-line functional/no-conditional-statement
+          if (promises.length === 0) {
             reject(new ApiError(httpStatus.UNPROCESSABLE_ENTITY, 'Invalid payload!'));
+            return;
           }
+
           await Promise.all(promises);
           logger.log('info', 'Request handling done!');
           resolve();
