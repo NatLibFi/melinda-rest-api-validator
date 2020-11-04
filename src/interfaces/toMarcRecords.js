@@ -14,6 +14,7 @@ export default function (amqpOperator) {
   return {streamToRecords};
 
   async function streamToRecords({correlationId, headers, contentType, stream}) {
+    logger.log('info', `Transformation operation ${headers.operation === OPERATIONS.CREATE ? 'CREATE' : 'UPDATE'}`);
     logger.log('info', 'Starting to transform stream to records');
     let recordNumber = 1; // eslint-disable-line functional/no-let
     const promises = [];
