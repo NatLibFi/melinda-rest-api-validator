@@ -53,8 +53,7 @@ export default function (amqpOperator) {
 
           await setTimeoutPromise(500); // Makes sure that even slowest promise is in the array
           if (promises.length === 0) {
-            reject(new ApiError(httpStatus.UNPROCESSABLE_ENTITY, 'Invalid payload!'));
-            return;
+            return reject(new ApiError(httpStatus.UNPROCESSABLE_ENTITY, 'Invalid payload!'));
           }
 
           await Promise.all(promises);
