@@ -70,7 +70,7 @@ export default function (amqpOperator) {
 
       if (contentType === 'application/json') {
         logger.log('debug', 'JSON stream!');
-        return new Json.Reader(stream, {subfieldValues: false});
+        return new Json.Reader(stream, {subfieldValues: false}, true);
       }
 
       if (contentType === 'application/xml') {
