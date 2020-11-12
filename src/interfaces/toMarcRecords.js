@@ -65,12 +65,12 @@ export default function (amqpOperator) {
     function chooseAndInitReader(contentType) {
       if (contentType === 'application/alephseq') {
         logger.log('debug', 'AlephSeq stream!');
-        return new AlephSequential.Reader(stream, {subfieldValues: false});
+        return new AlephSequential.Reader(stream, {subfieldValues: false}, true);
       }
 
       if (contentType === 'application/json') {
         logger.log('debug', 'JSON stream!');
-        return new Json.Reader(stream, {subfieldValues: false}, true);
+        return new Json.Reader(stream, {subfieldValues: false});
       }
 
       if (contentType === 'application/xml') {
