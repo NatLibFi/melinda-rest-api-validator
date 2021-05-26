@@ -75,14 +75,19 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
         const existingRecord = await getRecord(id);
         logger.log('silly', `Record from SRU: ${JSON.stringify(existingRecord)}`);
 
-        logger.log('verbose', 'Checking LOW-tag authorization');
-        validateOwnChanges(cataloger.authorization, updatedRecord, existingRecord);
+        // If there's no record received, throw error
+        if (existingRecord) {
 
-        logger.log('verbose', 'Checking CAT field history');
-        validateRecordState(updatedRecord, existingRecord);
+          logger.log('verbose', 'Checking LOW-tag authorization');
+          validateOwnChanges(cataloger.authorization, updatedRecord, existingRecord);
 
-        const validationResults = await validationService(updatedRecord);
-        return validationResults;
+          logger.log('verbose', 'Checking CAT field history');
+          validateRecordState(updatedRecord, existingRecord);
+
+          const validationResults = await validationService(updatedRecord);
+          return validationResults;
+        }
+        throw new ValidationError(HttpStatus.BAD_REQUEST, 'Record for update id not found!');
       }
 
       logger.log('debug', 'No id in headers');
