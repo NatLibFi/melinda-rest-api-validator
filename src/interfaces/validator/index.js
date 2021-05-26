@@ -148,7 +148,7 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
         .on('end', async () => {
           if (promise) {
             try {
-              logger.log('silly', 'Solving record promise from SRU');
+              logger.log('debug', 'Solving record promise from SRU');
               const record = await promise;
               logger.log('silly', `Record: ${JSON.stringify(record)}`);
               resolve(record);
