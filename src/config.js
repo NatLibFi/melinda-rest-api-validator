@@ -15,6 +15,7 @@ export const amqpUrl = readEnvironmentVariable('AMQP_URL', {defaultValue: 'amqp:
 export const mongoUri = readEnvironmentVariable('MONGO_URI', {defaultValue: 'mongodb://127.0.0.1:27017/db'});
 
 const recordType = readEnvironmentVariable('RECORD_TYPE');
+const validatorMatchPackage = readEnvironmentVariable('VALIDATOR_MATCH_PACKAGE', {defaultValue: 'CONTENT'});
 
 export const validatorOptions = {
   formatOptions: generateFormatOptions(),
@@ -43,30 +44,50 @@ function generateFormatOptions() {
 
 function generateStrategy() {
   if (recordType === 'bib') {
-    return [
-      matchDetection.features.bib.hostComponent(),
-      matchDetection.features.bib.isbn(),
-      matchDetection.features.bib.issn(),
-      matchDetection.features.bib.otherStandardIdentifier(),
-      matchDetection.features.bib.title(),
-      matchDetection.features.bib.authors(),
-      matchDetection.features.bib.recordType(),
-      matchDetection.features.bib.publicationTime(),
-      matchDetection.features.bib.language(),
-      matchDetection.features.bib.bibliographicLevel()
-    ];
+    if (validatorMatchPackage === 'IDS') {
+      return [
+        matchDetection.features.bib.melindaId(),
+        matchDetection.features.bib.allSourceIds()
+      ];
+    }
+    if (validatorMatchPackage === 'CONTENT') {
+      return [
+        matchDetection.features.bib.hostComponent(),
+        matchDetection.features.bib.isbn(),
+        matchDetection.features.bib.issn(),
+        matchDetection.features.bib.otherStandardIdentifier(),
+        matchDetection.features.bib.title(),
+        matchDetection.features.bib.authors(),
+        matchDetection.features.bib.recordType(),
+        matchDetection.features.bib.publicationTime(),
+        matchDetection.features.bib.language(),
+        matchDetection.features.bib.bibliographicLevel()
+      ];
+    }
+    throw new Error('Unsupported match validation package');
   }
 
   throw new Error('Unsupported record type');
 }
 
+
 function generateSearchSpec() {
   if (recordType === 'bib') {
-    return [
-      candidateSearch.searchTypes.bib.hostComponents,
-      candidateSearch.searchTypes.bib.standardIdentifiers,
-      candidateSearch.searchTypes.bib.title
-    ];
+    if (validatorMatchPackage === 'IDS') {
+      return [
+        candidateSearch.searchTypes.bib.melindaId,
+        candidateSearch.searchTypes.bib.sourceIds
+      ];
+    }
+
+    if (validatorMatchPackage === 'CONTENT') {
+      return [
+        candidateSearch.searchTypes.bib.hostComponents,
+        candidateSearch.searchTypes.bib.standardIdentifiers,
+        candidateSearch.searchTypes.bib.title
+      ];
+    }
+    throw new Error('Unsupported match validation package');
   }
 
   throw new Error('Unsupported record type');

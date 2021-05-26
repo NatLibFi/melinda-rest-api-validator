@@ -94,6 +94,7 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
       const updatedRecord = updateField001ToParamId('1', record);
       logger.log('silly', `Updated record:\n${JSON.stringify(updatedRecord)}`);
 
+      // Note: If new records created in Merge UI are created through REST, LOW authorization needs to be skippable
       logger.log('verbose', 'Checking LOW-tag authorization');
       await validateOwnChanges(cataloger.authorization, updatedRecord);
 
@@ -137,6 +138,7 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
   }
 
   // Note: getRecord(id) is trustworthy only if used search will not return more than one record!
+  // Note2: sruClient has been configured to return max 1 result
   function getRecord(id) {
     return new Promise((resolve, reject) => {
       let promise; // eslint-disable-line functional/no-let
