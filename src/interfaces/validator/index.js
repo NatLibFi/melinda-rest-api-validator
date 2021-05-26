@@ -1,3 +1,4 @@
+/* eslint-disable max-statements */
 import deepEqual from 'deep-eql';
 import HttpStatus from 'http-status';
 import {isArray} from 'util';
@@ -146,13 +147,15 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
         .on('end', async () => {
           if (promise) {
             try {
+              logger.log('silly', 'Solving record promise from SRU');
               const record = await promise;
+              logger.log('silly', `Record: ${JSON.stringify(record)}`);
               resolve(record);
             } catch (err) {
               reject(err);
             }
 
-            logger.log('debug', 'No record promise from sru');
+            logger.log('debug', 'No record promise from SRU');
             return;
           }
 
