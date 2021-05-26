@@ -75,7 +75,7 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
         const existingRecord = await getRecord(id);
         logger.log('silly', `Record from SRU: ${JSON.stringify(existingRecord)}`);
 
-        // If there's no record received, throw error
+        // If there's no record received, throw error (400 Bad Request)
         if (existingRecord) {
 
           logger.log('verbose', 'Checking LOW-tag authorization');
@@ -159,11 +159,9 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
             } catch (err) {
               reject(err);
             }
-
-            logger.log('debug', 'No record promise from SRU');
             return;
           }
-
+          logger.log('debug', 'No record promise from SRU');
           resolve();
         })
         .on('error', err => reject(err));
