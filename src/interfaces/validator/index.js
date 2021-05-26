@@ -128,8 +128,8 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
       return {tag: field.tag, ind1: field.ind1, ind2: field.ind2, subfields: field.subfields};
     });
 
-    logger.log('silly', `Incoming CATS:\n${JSON.stringify(incomingModificationHistoryNoUuids)}`);
-    logger.log('silly', `Existing CATS:\n${JSON.stringify(existingModificationHistory)}`);
+    logger.log('silly', `Incoming CATS (${incomingModificationHistoryNoUuids.length}):\n${JSON.stringify(incomingModificationHistoryNoUuids)}`);
+    logger.log('silly', `Existing CATS (${existingModificationHistory.length}):\n${JSON.stringify(existingModificationHistory)}`);
 
     if (deepEqual(incomingModificationHistoryNoUuids, existingModificationHistory) === false) { // eslint-disable-line functional/no-conditional-statement
       throw new ValidationError(HttpStatus.CONFLICT, 'Modification history mismatch (CAT)');
