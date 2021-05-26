@@ -75,19 +75,14 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
         const existingRecord = await getRecord(id);
         logger.log('silly', `Record from SRU: ${JSON.stringify(existingRecord)}`);
 
-        // If there's no record received, throw error (400 Bad Request)
-        if (existingRecord) {
+        logger.log('verbose', 'Checking LOW-tag authorization');
+        validateOwnChanges(cataloger.authorization, updatedRecord, existingRecord);
 
-          logger.log('verbose', 'Checking LOW-tag authorization');
-          validateOwnChanges(cataloger.authorization, updatedRecord, existingRecord);
+        logger.log('verbose', 'Checking CAT field history');
+        validateRecordState(updatedRecord, existingRecord);
 
-          logger.log('verbose', 'Checking CAT field history');
-          validateRecordState(updatedRecord, existingRecord);
-
-          const validationResults = await validationService(updatedRecord);
-          return validationResults;
-        }
-        throw new ValidationError(HttpStatus.BAD_REQUEST, 'Record for update id not found!');
+        const validationResults = await validationService(updatedRecord);
+        return validationResults;
       }
 
       logger.log('debug', 'No id in headers');
@@ -141,6 +136,7 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
     }
   }
 
+  // Note: getRecord(id) is trustworthy only if used search will not return more than one record!
   function getRecord(id) {
     return new Promise((resolve, reject) => {
       let promise; // eslint-disable-line functional/no-let
@@ -162,7 +158,7 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
             return;
           }
           logger.log('debug', 'No record promise from SRU');
-          resolve();
+          reject(new ValidationError(HttpStatus.NOT_FOUND, 'Record to update not found'));
         })
         .on('error', err => reject(err));
     });
