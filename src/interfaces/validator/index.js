@@ -108,7 +108,8 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
         logger.log('verbose', 'Attempting to find matching records in the SRU');
 
         // Currently run first matcher in matchers, needs to be updated to run them all
-        debugData(`Using matchOptions: ${JSON.stringify(matchOptionsList[0])}`);
+        debugData(`There are ${matchOptionsList.length} set of matchOptions: ${JSON.stringify(matchOptionsList)}`);
+        debugData(`Using first matchOptions: ${JSON.stringify(matchOptionsList[0])}`);
         const matchResults = await matchers[0](updatedRecord);
 
         if (matchResults.length > 0) { // eslint-disable-line functional/no-conditional-statement

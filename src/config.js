@@ -21,7 +21,7 @@ export const amqpUrl = readEnvironmentVariable('AMQP_URL', {defaultValue: 'amqp:
 export const mongoUri = readEnvironmentVariable('MONGO_URI', {defaultValue: 'mongodb://127.0.0.1:27017/db'});
 
 const recordType = readEnvironmentVariable('RECORD_TYPE');
-const validatorMatchPackages = readEnvironmentVariable('VALIDATOR_MATCH_PACKAGES', {defaultValue: 'CONTENT,IDS'}).split(',');
+const validatorMatchPackages = readEnvironmentVariable('VALIDATOR_MATCH_PACKAGES', {defaultValue: 'IDS,CONTENT'}).split(',');
 
 export const validatorOptions = {
   formatOptions: generateFormatOptions(),
@@ -35,6 +35,7 @@ function generateMatchOptionsList() {
 
 function generateMatchOptions(validatorMatchPackage) {
   return {
+    matchPackageName: validatorMatchPackage,
     maxMatches: generateMaxMatches(validatorMatchPackage),
     maxCandidates: generateMaxCandidates(validatorMatchPackage),
     search: {
