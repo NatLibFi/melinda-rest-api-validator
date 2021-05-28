@@ -109,7 +109,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
 
         debugData(`There are ${matchOptionsList.length} set of matchOptions: ${JSON.stringify(matchOptionsList)}`);
 
-        const matchResults = await iterateMatchers(matchers, updatedRecord);
+        const matchResults = await iterateMatchersUntilMatchIsFound(matchers, updatedRecord);
         // eslint-disable-next-line functional/no-conditional-statement
         if (matchResults.length > 0) {
           throw new ValidationError(HttpStatus.CONFLICT, matchResults.map(({candidate: {id}}) => id));
@@ -126,7 +126,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
     }
   }
 
-  async function iterateMatchers(matchers, updatedRecord, matcherCount = 0) {
+  async function iterateMatchersUntilMatchIsFound(matchers, updatedRecord, matcherCount = 0) {
 
     const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator:iterate-matchers');
     const debugData = debug.extend('data');
@@ -150,13 +150,13 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
         }
 
         debug(`No matching record from matcher ${matcherCount}`);
-        return iterateMatchers(matchers.slice(1), updatedRecord);
+        return iterateMatchersUntilMatchIsFound(matchers.slice(1), updatedRecord, matcherCount);
 
       } catch (err) {
 
         if (err.message === 'Generated query list contains no queries') {
           debug(`Matcher ${matcherCount} did not run: ${err.message}`);
-          return iterateMatchers(matchers.slice(1), updatedRecord, matcherCount);
+          return iterateMatchersUntilMatchIsFound(matchers.slice(1), updatedRecord, matcherCount, matcherCount);
         }
 
         throw err;
