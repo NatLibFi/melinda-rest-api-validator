@@ -129,20 +129,41 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
     }
   }
 
-  // Checks that the modification history is identical
+  // Checks that the modification history (CAT-fields) is identical
   function validateRecordState(incomingRecord, existingRecord) {
+    const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator:validate-record-state');
+    const debugData = debug.extend('data');
+
+    // Why is this isArray here?
     const incomingModificationHistory = isArray(incomingRecord) ? incomingRecord : incomingRecord.get(/^CAT$/u);
     const existingModificationHistory = existingRecord.get(/^CAT$/u) || [];
+
+    const incomingModificationHistoryCount = incomingModificationHistory.length;
+    const existingModificationHistoryCount = existingModificationHistory.length;
+
+    // Melinda records should always have at least one CAT
+    // eslint-disable-next-line functional/no-conditional-statement
+    if (existingModificationHistoryCount === 0) {
+      debug(`Record state is not valid: no modification history found in existing record.`);
+      throw new ValidationError(HttpStatus.CONFLICT, 'Modification history mismatch (CAT)');
+    }
+
+    // eslint-disable-next-line functional/no-conditional-statement
+    if (incomingModificationHistoryCount !== existingModificationHistoryCount) {
+      debug(`Record state is not valid: modification history counts not matching (${incomingModificationHistoryCount} vs ${existingModificationHistoryCount} CAT-fields).`);
+      throw new ValidationError(HttpStatus.CONFLICT, 'Modification history mismatch (CAT)');
+    }
 
     // Merge makes uuid variables to all fields and this removes those
     const incomingModificationHistoryNoUuids = incomingModificationHistory.map(field => { // eslint-disable-line arrow-body-style
       return {tag: field.tag, ind1: field.ind1, ind2: field.ind2, subfields: field.subfields};
     });
 
-    logger.log('silly', `Incoming CATS (${incomingModificationHistoryNoUuids.length}):\n${JSON.stringify(incomingModificationHistoryNoUuids)}`);
-    logger.log('silly', `Existing CATS (${existingModificationHistory.length}):\n${JSON.stringify(existingModificationHistory)}`);
+    debugData(`Incoming CATS (${incomingModificationHistoryNoUuids.length}): ${JSON.stringify(incomingModificationHistoryNoUuids)}`);
+    debugData(`Existing CATS (${existingModificationHistory.length}): ${JSON.stringify(existingModificationHistory)}`);
 
     if (deepEqual(incomingModificationHistoryNoUuids, existingModificationHistory) === false) { // eslint-disable-line functional/no-conditional-statement
+      debug(`Record state is not valid: modification histories not matching.`);
       throw new ValidationError(HttpStatus.CONFLICT, 'Modification history mismatch (CAT)');
     }
   }
