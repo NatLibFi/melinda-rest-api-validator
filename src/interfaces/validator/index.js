@@ -107,7 +107,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       if (unique) {
         logger.log('verbose', 'Attempting to find matching records in the SRU');
 
-        debugData(`There are ${matchOptionsList.length} set of matchOptions: ${JSON.stringify(matchOptionsList)}`);
+        debugData(`There are ${matchers.length} matchers with matchOptions: ${JSON.stringify(matchOptionsList)}`);
 
         const matchResults = await iterateMatchersUntilMatchIsFound(matchers, updatedRecord);
         // eslint-disable-next-line functional/no-conditional-statement
@@ -135,17 +135,22 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
 
     // eslint-disable-next-line functional/no-conditional-statement
     if (matcher) {
+
       // eslint-disable-next-line no-param-reassign
       matcherCount += 1;
+
       debug(`Running matcher ${matcherCount}`);
+      debugData(`MatchingOptions for matcher ${matcherCount}: ${JSON.stringify(matchOptionsList[matcherCount - 1])}`);
 
       try {
+
         const matchResults = await matcher(updatedRecord);
 
         if (matchResults.length > 0) { // eslint-disable-line functional/no-conditional-statement
+
           logger.log('verbose', `Matching record has been found in matcher ${matcherCount}`);
-          logger.log('silly', JSON.stringify(matchResults.map(({candidate: {id}, probability}) => ({id, probability}))));
-          debugData(`${JSON.stringify(matchResults)}`);
+          debugData(`${JSON.stringify(matchResults.map(({candidate: {id}, probability}) => ({id, probability})))}`);
+
           return matchResults;
         }
 
