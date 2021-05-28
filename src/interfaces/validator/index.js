@@ -22,6 +22,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
   const ConversionService = conversions();
   const matchers = matchOptionsList.map(matchOptions => createMatchInterface(matchOptions));
 
+  // This sruClient is used for fetching record for checking its existence and LOW/CAT-validations, matchers use their own sruClient
   const sruClient = createSruClient({url: sruUrl, recordSchema: 'marcxml', retrieveAll: false, maximumRecordsPerRequest: 1});
 
   return {process};

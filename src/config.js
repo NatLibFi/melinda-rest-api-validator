@@ -3,6 +3,12 @@ import {parseBoolean} from '@natlibfi/melinda-commons';
 import {readEnvironmentVariable} from '@natlibfi/melinda-backend-commons';
 import {candidateSearch, matchDetection} from '@natlibfi/melinda-record-matching';
 import {format} from '@natlibfi/melinda-rest-api-commons';
+import createDebugLogger from 'debug';
+
+const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:config');
+// eslint-disable-next-line no-unused-vars
+const debugData = debug.extend('data');
+
 
 // Poll variables
 export const pollRequest = readEnvironmentVariable('POLL_REQUEST', {defaultValue: 0, format: v => parseBoolean(v)});
@@ -29,17 +35,32 @@ function generateMatchOptionsList() {
 
 function generateMatchOptions(validatorMatchPackage) {
   return {
-    maxMatches: readEnvironmentVariable('MAX_MATCHES', {defaultValue: 1, format: v => Number(v)}),
-    maxCandidates: readEnvironmentVariable('MAX_CANDIDATES', {defaultValue: 25, format: v => Number(v)}),
+    maxMatches: generateMaxMatches(validatorMatchPackage),
+    maxCandidates: generateMaxCandidates(validatorMatchPackage),
     search: {
       url: readEnvironmentVariable('SRU_URL'),
       searchSpec: generateSearchSpec(validatorMatchPackage)
     },
     detection: {
-      treshold: readEnvironmentVariable('MATCHING_TRESHOLD', {defaultValue: 0.9, format: v => Number(v)}),
+      treshold: generateThreshold(validatorMatchPackage),
       strategy: generateStrategy(validatorMatchPackage)
     }
   };
+}
+
+function generateMaxMatches(validatorMatchPackage) {
+  debug(`MaxMatches for ${validatorMatchPackage} uses environment variable`);
+  return readEnvironmentVariable('MAX_MATCHES', {defaultValue: 1, format: v => Number(v)});
+}
+
+function generateMaxCandidates(validatorMatchPackage) {
+  debug(`MaxCandidates for ${validatorMatchPackage} uses environment variable`);
+  return readEnvironmentVariable('MAX_CANDIDATES', {defaultValue: 25, format: v => Number(v)});
+}
+
+function generateThreshold(validatorMatchPackage) {
+  debug(`Threshold for ${validatorMatchPackage} uses environment variable`);
+  return readEnvironmentVariable('MATCHING_TRESHOLD', {defaultValue: 0.9, format: v => Number(v)});
 }
 
 function generateFormatOptions() {
