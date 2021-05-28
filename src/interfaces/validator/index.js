@@ -107,14 +107,11 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       if (unique) {
         logger.log('verbose', 'Attempting to find matching records in the SRU');
 
-        // Currently run first matcher in matchers, needs to be updated to run them all
         debugData(`There are ${matchOptionsList.length} set of matchOptions: ${JSON.stringify(matchOptionsList)}`);
-        debugData(`Using first matchOptions: ${JSON.stringify(matchOptionsList[0])}`);
-        const matchResults = await matchers[0](updatedRecord);
 
-        if (matchResults.length > 0) { // eslint-disable-line functional/no-conditional-statement
-          logger.log('verbose', 'Matching record has been found');
-          logger.log('silly', JSON.stringify(matchResults.map(({candidate: {id}, probability}) => ({id, probability}))));
+        const matchResults = await iterateMatchers(matchers, updatedRecord);
+        // eslint-disable-next-line functional/no-conditional-statement
+        if (matchResults.length > 0) {
           throw new ValidationError(HttpStatus.CONFLICT, matchResults.map(({candidate: {id}}) => id));
         }
 
@@ -128,6 +125,46 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       return validationResults;
     }
   }
+
+  async function iterateMatchers(matchers, updatedRecord, matcherCount = 0) {
+
+    const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator:iterate-matchers');
+    const debugData = debug.extend('data');
+
+    const [matcher] = matchers;
+
+    // eslint-disable-next-line functional/no-conditional-statement
+    if (matcher) {
+      // eslint-disable-next-line no-param-reassign
+      matcherCount += 1;
+      debug(`Running matcher ${matcherCount}`);
+
+      try {
+        const matchResults = await matcher(updatedRecord);
+
+        if (matchResults.length > 0) { // eslint-disable-line functional/no-conditional-statement
+          logger.log('verbose', `Matching record has been found in matcher ${matcherCount}`);
+          logger.log('silly', JSON.stringify(matchResults.map(({candidate: {id}, probability}) => ({id, probability}))));
+          debugData(`${JSON.stringify(matchResults)}`);
+          return matchResults;
+        }
+
+        debug(`No matching record from matcher ${matcherCount}`);
+        return iterateMatchers(matchers.slice(1), updatedRecord);
+
+      } catch (err) {
+
+        if (err.message === 'Generated query list contains no queries') {
+          debug(`Matcher ${matcherCount} did not run: ${err.message}`);
+          return iterateMatchers(matchers.slice(1), updatedRecord, matcherCount);
+        }
+
+        throw err;
+      }
+    }
+    return [];
+  }
+
 
   // Checks that the modification history (CAT-fields) is identical
   function validateRecordState(incomingRecord, existingRecord) {
