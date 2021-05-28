@@ -10,13 +10,18 @@ import createSruClient from '@natlibfi/sru-client';
 import createMatchInterface from '@natlibfi/melinda-record-matching';
 import validateOwnChanges from './own-authorization';
 import {updateField001ToParamId} from '../../utils';
+import createDebugLogger from 'debug';
 
-export default async function ({formatOptions, sruUrl, matchOptions}) {
+const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator');
+const debugData = debug.extend('data');
+
+export default async function ({formatOptions, sruUrl, matchOptionsList}) {
   const logger = createLogger();
   const {formatRecord} = format;
   const validationService = await validations();
   const ConversionService = conversions();
-  const match = createMatchInterface(matchOptions);
+  const matchers = matchOptionsList.map(matchOptions => createMatchInterface(matchOptions));
+
   const sruClient = createSruClient({url: sruUrl, recordSchema: 'marcxml', retrieveAll: false, maximumRecordsPerRequest: 1});
 
   return {process};
@@ -100,7 +105,10 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
 
       if (unique) {
         logger.log('verbose', 'Attempting to find matching records in the SRU');
-        const matchResults = await match(updatedRecord);
+
+        // Currently run first matcher in matchers, needs to be updated to run them all
+        debugData(`Using matchOptions: ${JSON.stringify(matchOptionsList[0])}`);
+        const matchResults = await matchers[0](updatedRecord);
 
         if (matchResults.length > 0) { // eslint-disable-line functional/no-conditional-statement
           logger.log('verbose', 'Matching record has been found');

@@ -15,24 +15,32 @@ export const amqpUrl = readEnvironmentVariable('AMQP_URL', {defaultValue: 'amqp:
 export const mongoUri = readEnvironmentVariable('MONGO_URI', {defaultValue: 'mongodb://127.0.0.1:27017/db'});
 
 const recordType = readEnvironmentVariable('RECORD_TYPE');
-const validatorMatchPackage = readEnvironmentVariable('VALIDATOR_MATCH_PACKAGE', {defaultValue: 'CONTENT'});
+const validatorMatchPackages = readEnvironmentVariable('VALIDATOR_MATCH_PACKAGES', {defaultValue: 'CONTENT,IDS'}).split(',');
 
 export const validatorOptions = {
   formatOptions: generateFormatOptions(),
   sruUrl: readEnvironmentVariable('SRU_URL'),
-  matchOptions: {
+  matchOptionsList: generateMatchOptionsList()
+};
+
+function generateMatchOptionsList() {
+  return validatorMatchPackages.map(matchPackage => generateMatchOptions(matchPackage));
+}
+
+function generateMatchOptions(validatorMatchPackage) {
+  return {
     maxMatches: readEnvironmentVariable('MAX_MATCHES', {defaultValue: 1, format: v => Number(v)}),
     maxCandidates: readEnvironmentVariable('MAX_CANDIDATES', {defaultValue: 25, format: v => Number(v)}),
     search: {
       url: readEnvironmentVariable('SRU_URL'),
-      searchSpec: generateSearchSpec()
+      searchSpec: generateSearchSpec(validatorMatchPackage)
     },
     detection: {
       treshold: readEnvironmentVariable('MATCHING_TRESHOLD', {defaultValue: 0.9, format: v => Number(v)}),
-      strategy: generateStrategy()
+      strategy: generateStrategy(validatorMatchPackage)
     }
-  }
-};
+  };
+}
 
 function generateFormatOptions() {
   if (recordType === 'bib') {
@@ -42,7 +50,7 @@ function generateFormatOptions() {
   throw new Error('Unsupported record type');
 }
 
-function generateStrategy() {
+function generateStrategy(validatorMatchPackage) {
   if (recordType === 'bib') {
     if (validatorMatchPackage === 'IDS') {
       return [
@@ -71,7 +79,7 @@ function generateStrategy() {
 }
 
 
-function generateSearchSpec() {
+function generateSearchSpec(validatorMatchPackage) {
   if (recordType === 'bib') {
     if (validatorMatchPackage === 'IDS') {
       return [
