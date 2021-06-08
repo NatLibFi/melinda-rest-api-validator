@@ -1,3 +1,4 @@
+/* eslint-disable max-statements */
 import deepEqual from 'deep-eql';
 import HttpStatus from 'http-status';
 import {isArray} from 'util';
@@ -9,6 +10,7 @@ import createSruClient from '@natlibfi/sru-client';
 import createMatchInterface from '@natlibfi/melinda-record-matching';
 import validateOwnChanges from './own-authorization';
 import {updateField001ToParamId} from '../../utils';
+import {CandidateSearchError} from '@natlibfi/melinda-record-matching/dist/candidate-search';
 
 export default async function ({formatOptions, sruUrl, matchOptions}) {
   const logger = createLogger();
@@ -98,15 +100,25 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
 
       if (unique) {
         logger.log('verbose', 'Attempting to find matching records in the SRU');
-        const matchResults = await match(updatedRecord);
 
-        if (matchResults.length > 0) { // eslint-disable-line functional/no-conditional-statement
-          logger.log('verbose', 'Matching record has been found');
-          logger.log('silly', JSON.stringify(matchResults.map(({candidate: {id}, probability}) => ({id, probability}))));
-          throw new ValidationError(HttpStatus.CONFLICT, matchResults.map(({candidate: {id}}) => id));
+        try {
+          const matchResults = await match(updatedRecord);
+
+          if (matchResults.length > 0) { // eslint-disable-line functional/no-conditional-statement
+            logger.log('verbose', 'Matching record has been found');
+            logger.log('silly', JSON.stringify(matchResults.map(({candidate: {id}, probability}) => ({id, probability}))));
+            throw new ValidationError(HttpStatus.CONFLICT, matchResults.map(({candidate: {id}}) => id));
+          }
+          logger.log('verbose', 'No matching records');
+
+        } catch (error) {
+          // eslint-disable-next-line functional/no-conditional-statement
+          if (error instanceof CandidateSearchError && error.message === 'Generated query list contains no queries') {
+            throw new ValidationError(HttpStatus.BAD_REQUEST, 'Generated query list contains no queries');
+            // return new ValidationError(HttpStatus.BAD_REQUEST, 'Generated query list contains no queries');
+          }
+          throw new ValidationError(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
         }
-
-        logger.log('verbose', 'No matching records');
 
         const validationResults = await validationService(updatedRecord);
         return validationResults;
