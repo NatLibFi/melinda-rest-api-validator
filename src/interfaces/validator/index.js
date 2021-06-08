@@ -126,7 +126,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
     }
   }
 
-  async function iterateMatchersUntilMatchIsFound(matchers, updatedRecord, matcherCount = 0) {
+  async function iterateMatchersUntilMatchIsFound(matchers, updatedRecord, matcherCount = 0, matcherNoRunCount = 0) {
 
     const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator:iterate-matchers');
     const debugData = debug.extend('data');
@@ -161,11 +161,20 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
 
         if (err.message === 'Generated query list contains no queries') {
           debug(`Matcher ${matcherCount} did not run: ${err.message}`);
-          return iterateMatchersUntilMatchIsFound(matchers.slice(1), updatedRecord, matcherCount, matcherCount);
+          // eslint-disable-next-line no-param-reassign
+          matcherNoRunCount += 1;
+          return iterateMatchersUntilMatchIsFound(matchers.slice(1), updatedRecord, matcherCount);
         }
 
         throw err;
       }
+    }
+
+    debug(`All ${matcherCount} matchers handled, ${matcherNoRunCount} did not run`);
+    // eslint-disable-next-line functional/no-conditional-statement
+    if (matcherNoRunCount === matcherCount) {
+      debug(`None of the matchers resulted in candidates`);
+      throw new ValidationError(HttpStatus.BAD_REQUEST, 'Generated query list contains no queries');
     }
     return [];
   }
