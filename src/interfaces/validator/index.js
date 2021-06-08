@@ -96,29 +96,29 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
       logger.log('silly', `Updated record:\n${JSON.stringify(updatedRecord)}`);
 
       logger.log('verbose', 'Checking LOW-tag authorization');
-
-      try {
-        await validateOwnChanges(cataloger.authorization, updatedRecord);
-      } catch (error) {
-        // eslint-disable-next-line functional/no-conditional-statement
-        if (error instanceof CandidateSearchError && error.message === 'Generated query list contains no queries') {
-          throw new ValidationError(HttpStatus.BAD_REQUEST, 'Generated query list contains no queries');
-          // return new ValidationError(HttpStatus.BAD_REQUEST, 'Generated query list contains no queries');
-        }
-        throw new ValidationError(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
-      }
+      await validateOwnChanges(cataloger.authorization, updatedRecord);
 
       if (unique) {
         logger.log('verbose', 'Attempting to find matching records in the SRU');
-        const matchResults = await match(updatedRecord);
 
-        if (matchResults.length > 0) { // eslint-disable-line functional/no-conditional-statement
-          logger.log('verbose', 'Matching record has been found');
-          logger.log('silly', JSON.stringify(matchResults.map(({candidate: {id}, probability}) => ({id, probability}))));
-          throw new ValidationError(HttpStatus.CONFLICT, matchResults.map(({candidate: {id}}) => id));
+        try {
+          const matchResults = await match(updatedRecord);
+
+          if (matchResults.length > 0) { // eslint-disable-line functional/no-conditional-statement
+            logger.log('verbose', 'Matching record has been found');
+            logger.log('silly', JSON.stringify(matchResults.map(({candidate: {id}, probability}) => ({id, probability}))));
+            throw new ValidationError(HttpStatus.CONFLICT, matchResults.map(({candidate: {id}}) => id));
+          }
+          logger.log('verbose', 'No matching records');
+
+        } catch (error) {
+          // eslint-disable-next-line functional/no-conditional-statement
+          if (error instanceof CandidateSearchError && error.message === 'Generated query list contains no queries') {
+            throw new ValidationError(HttpStatus.BAD_REQUEST, 'Generated query list contains no queries');
+            // return new ValidationError(HttpStatus.BAD_REQUEST, 'Generated query list contains no queries');
+          }
+          throw new ValidationError(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
         }
-
-        logger.log('verbose', 'No matching records');
 
         const validationResults = await validationService(updatedRecord);
         return validationResults;
