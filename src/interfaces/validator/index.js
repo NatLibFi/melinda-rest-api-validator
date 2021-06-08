@@ -1,3 +1,4 @@
+/* eslint-disable max-statements */
 import deepEqual from 'deep-eql';
 import HttpStatus from 'http-status';
 import {isArray} from 'util';
@@ -9,13 +10,19 @@ import createSruClient from '@natlibfi/sru-client';
 import createMatchInterface from '@natlibfi/melinda-record-matching';
 import validateOwnChanges from './own-authorization';
 import {updateField001ToParamId} from '../../utils';
+import createDebugLogger from 'debug';
 
-export default async function ({formatOptions, sruUrl, matchOptions}) {
+const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator');
+const debugData = debug.extend('data');
+
+export default async function ({formatOptions, sruUrl, matchOptionsList}) {
   const logger = createLogger();
   const {formatRecord} = format;
   const validationService = await validations();
   const ConversionService = conversions();
-  const match = createMatchInterface(matchOptions);
+  const matchers = matchOptionsList.map(matchOptions => createMatchInterface(matchOptions));
+
+  // This sruClient is used for fetching record for checking its existence and LOW/CAT-validations, matchers use their own sruClient
   const sruClient = createSruClient({url: sruUrl, recordSchema: 'marcxml', retrieveAll: false, maximumRecordsPerRequest: 1});
 
   return {process};
@@ -93,16 +100,18 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
       const updatedRecord = updateField001ToParamId('1', record);
       logger.log('silly', `Updated record:\n${JSON.stringify(updatedRecord)}`);
 
+      // Note: If new records created in Merge UI are created through REST, LOW authorization needs to be skippable
       logger.log('verbose', 'Checking LOW-tag authorization');
       await validateOwnChanges(cataloger.authorization, updatedRecord);
 
       if (unique) {
         logger.log('verbose', 'Attempting to find matching records in the SRU');
-        const matchResults = await match(updatedRecord);
 
-        if (matchResults.length > 0) { // eslint-disable-line functional/no-conditional-statement
-          logger.log('verbose', 'Matching record has been found');
-          logger.log('silly', JSON.stringify(matchResults.map(({candidate: {id}, probability}) => ({id, probability}))));
+        debugData(`There are ${matchers.length} matchers with matchOptions: ${JSON.stringify(matchOptionsList)}`);
+
+        const matchResults = await iterateMatchersUntilMatchIsFound(matchers, updatedRecord);
+        // eslint-disable-next-line functional/no-conditional-statement
+        if (matchResults.length > 0) {
           throw new ValidationError(HttpStatus.CONFLICT, matchResults.map(({candidate: {id}}) => id));
         }
 
@@ -117,24 +126,101 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
     }
   }
 
-  // Checks that the modification history is identical
+  async function iterateMatchersUntilMatchIsFound(matchers, updatedRecord, matcherCount = 0, matcherNoRunCount = 0) {
+
+    const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator:iterate-matchers');
+    const debugData = debug.extend('data');
+
+    const [matcher] = matchers;
+
+    // eslint-disable-next-line functional/no-conditional-statement
+    if (matcher) {
+
+      // eslint-disable-next-line no-param-reassign
+      matcherCount += 1;
+
+      debug(`Running matcher ${matcherCount}`);
+      debugData(`MatchingOptions for matcher ${matcherCount}: ${JSON.stringify(matchOptionsList[matcherCount - 1])}`);
+
+      try {
+
+        const matchResults = await matcher(updatedRecord);
+
+        if (matchResults.length > 0) { // eslint-disable-line functional/no-conditional-statement
+
+          logger.log('verbose', `Matching record has been found in matcher ${matcherCount}`);
+          debugData(`${JSON.stringify(matchResults.map(({candidate: {id}, probability}) => ({id, probability})))}`);
+
+          return matchResults;
+        }
+
+        debug(`No matching record from matcher ${matcherCount}`);
+        return iterateMatchersUntilMatchIsFound(matchers.slice(1), updatedRecord, matcherCount);
+
+      } catch (err) {
+
+        if (err.message === 'Generated query list contains no queries') {
+          debug(`Matcher ${matcherCount} did not run: ${err.message}`);
+          // eslint-disable-next-line no-param-reassign
+          matcherNoRunCount += 1;
+          return iterateMatchersUntilMatchIsFound(matchers.slice(1), updatedRecord, matcherCount);
+        }
+
+        throw err;
+      }
+    }
+
+    debug(`All ${matcherCount} matchers handled, ${matcherNoRunCount} did not run`);
+    // eslint-disable-next-line functional/no-conditional-statement
+    if (matcherNoRunCount === matcherCount) {
+      debug(`None of the matchers resulted in candidates`);
+      throw new ValidationError(HttpStatus.BAD_REQUEST, 'Generated query list contains no queries');
+    }
+    return [];
+  }
+
+
+  // Checks that the modification history (CAT-fields) is identical
   function validateRecordState(incomingRecord, existingRecord) {
+    const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator:validate-record-state');
+    const debugData = debug.extend('data');
+
+    // Why is this isArray here?
     const incomingModificationHistory = isArray(incomingRecord) ? incomingRecord : incomingRecord.get(/^CAT$/u);
     const existingModificationHistory = existingRecord.get(/^CAT$/u) || [];
+
+    const incomingModificationHistoryCount = incomingModificationHistory.length;
+    const existingModificationHistoryCount = existingModificationHistory.length;
+
+    // Melinda records should always have at least one CAT
+    // eslint-disable-next-line functional/no-conditional-statement
+    if (existingModificationHistoryCount === 0) {
+      debug(`Record state is not valid: no modification history found in existing record.`);
+      throw new ValidationError(HttpStatus.CONFLICT, 'Modification history mismatch (CAT)');
+    }
+
+    // eslint-disable-next-line functional/no-conditional-statement
+    if (incomingModificationHistoryCount !== existingModificationHistoryCount) {
+      debug(`Record state is not valid: modification history counts not matching (${incomingModificationHistoryCount} vs ${existingModificationHistoryCount} CAT-fields).`);
+      throw new ValidationError(HttpStatus.CONFLICT, 'Modification history mismatch (CAT)');
+    }
 
     // Merge makes uuid variables to all fields and this removes those
     const incomingModificationHistoryNoUuids = incomingModificationHistory.map(field => { // eslint-disable-line arrow-body-style
       return {tag: field.tag, ind1: field.ind1, ind2: field.ind2, subfields: field.subfields};
     });
 
-    logger.log('silly', `Incoming CATS:\n${JSON.stringify(incomingModificationHistoryNoUuids)}`);
-    logger.log('silly', `Existing CATS:\n${JSON.stringify(existingModificationHistory)}`);
+    debugData(`Incoming CATS (${incomingModificationHistoryNoUuids.length}): ${JSON.stringify(incomingModificationHistoryNoUuids)}`);
+    debugData(`Existing CATS (${existingModificationHistory.length}): ${JSON.stringify(existingModificationHistory)}`);
 
     if (deepEqual(incomingModificationHistoryNoUuids, existingModificationHistory) === false) { // eslint-disable-line functional/no-conditional-statement
+      debug(`Record state is not valid: modification histories not matching.`);
       throw new ValidationError(HttpStatus.CONFLICT, 'Modification history mismatch (CAT)');
     }
   }
 
+  // Note: getRecord(id) is trustworthy only if used search will not return more than one record!
+  // Note2: sruClient has been configured to return max 1 result
   function getRecord(id) {
     return new Promise((resolve, reject) => {
       let promise; // eslint-disable-line functional/no-let
@@ -146,17 +232,17 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
         .on('end', async () => {
           if (promise) {
             try {
+              logger.log('debug', 'Solving record promise from SRU');
               const record = await promise;
+              logger.log('silly', `Record: ${JSON.stringify(record)}`);
               resolve(record);
             } catch (err) {
               reject(err);
             }
-
-            logger.log('debug', 'No record promise from sru');
             return;
           }
-
-          resolve();
+          logger.log('debug', 'No record promise from SRU');
+          reject(new ValidationError(HttpStatus.NOT_FOUND, 'Record to update not found'));
         })
         .on('error', err => reject(err));
     });

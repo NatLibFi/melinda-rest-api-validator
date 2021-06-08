@@ -8,6 +8,7 @@ import httpStatus from 'http-status';
 
 const setTimeoutPromise = promisify(setTimeout);
 
+// eslint-disable-next-line max-statements
 export default async function ({
   pollRequest, pollWaitTime, amqpUrl, mongoUri, validatorOptions
 }) {
@@ -39,6 +40,7 @@ export default async function ({
   }
 
   // Check amqp for jobs
+  // eslint-disable-next-line max-statements
   async function checkAmqp() {
     logger.log('silly', 'Checking amqp');
     const message = await amqpOperator.checkQueue('REQUESTS', 'raw', false);
@@ -109,6 +111,7 @@ export default async function ({
   }
 
   // Check Mongo for jobs
+  // eslint-disable-next-line max-statements
   async function checkMongo() {
     logger.log('silly', 'Checking mongo');
     const queueItem = await mongoOperator.getOne({queueItemState: QUEUE_ITEM_STATE.PENDING_QUEUING});
