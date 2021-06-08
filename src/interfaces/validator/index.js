@@ -1,3 +1,4 @@
+/* eslint-disable max-statements */
 import deepEqual from 'deep-eql';
 import HttpStatus from 'http-status';
 import {isArray} from 'util';
@@ -9,6 +10,7 @@ import createSruClient from '@natlibfi/sru-client';
 import createMatchInterface from '@natlibfi/melinda-record-matching';
 import validateOwnChanges from './own-authorization';
 import {updateField001ToParamId} from '../../utils';
+import {CandidateSearchError} from '@natlibfi/melinda-record-matching/dist/candidate-search';
 
 export default async function ({formatOptions, sruUrl, matchOptions}) {
   const logger = createLogger();
@@ -94,7 +96,17 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
       logger.log('silly', `Updated record:\n${JSON.stringify(updatedRecord)}`);
 
       logger.log('verbose', 'Checking LOW-tag authorization');
-      await validateOwnChanges(cataloger.authorization, updatedRecord);
+
+      try {
+        await validateOwnChanges(cataloger.authorization, updatedRecord);
+      } catch (error) {
+        // eslint-disable-next-line functional/no-conditional-statement
+        if (error instanceof CandidateSearchError && error.message === 'Generated query list contains no queries') {
+          throw new ValidationError(HttpStatus.BAD_REQUEST, 'Generated query list contains no queries');
+          // return new ValidationError(HttpStatus.BAD_REQUEST, 'Generated query list contains no queries');
+        }
+        throw new ValidationError(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
+      }
 
       if (unique) {
         logger.log('verbose', 'Attempting to find matching records in the SRU');
