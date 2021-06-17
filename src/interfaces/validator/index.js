@@ -11,7 +11,8 @@ import createMatchInterface from '@natlibfi/melinda-record-matching';
 import validateOwnChanges from './own-authorization';
 import {updateField001ToParamId} from '../../utils';
 import createDebugLogger from 'debug';
-import merger from '@natlibfi/marc-record-merge';
+import merger, {Reducers} from '@natlibfi/marc-record-merge';
+import {MelindaReducers, MelindaCopyReducerConfigs} from '@natlibfi/melinda-marc-record-merge-redusers';
 
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator');
 const debugData = debug.extend('data');
@@ -113,12 +114,15 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
         const matchResults = await iterateMatchersUntilMatchIsFound(matchers, updatedRecord);
         // eslint-disable-next-line functional/no-conditional-statement
         if (matchResults.length > 0) {
-          logger.debug('*************** MERGE DEV HERE *******************');
           logger.debug(`All matches: ${JSON.stringify(matchResults)}`);
+          logger.debug('*************** MERGE validator DEV HERE *******************');
           const [canditateRecord] = matchResults.filter(matched => matched.probability === 1).map(matched => matched.candidate.record);
           logger.debug(JSON.stringify(canditateRecord));
-          const mergedRecord = merger({base: canditateRecord, source: updatedRecord, reducers: [], baseValidators: {subfieldValues: false}, sourceValidators: {subfieldValues: false}});
+          logger.debug('*************** MERGE reducers DEV HERE *******************');
+          const reducers = [...MelindaCopyReducerConfigs.map(conf => Reducers.copy(conf)), ...MelindaReducers];
+          const mergedRecord = merger({base: canditateRecord, source: updatedRecord, reducers, baseValidators: {subfieldValues: false}, sourceValidators: {subfieldValues: false}});
           logger.debug('**********************************');
+          logger.debug('*************** Merge result *******************');
           logger.debug(JSON.stringify(mergedRecord));
           logger.debug('**********************************');
           throw new ValidationError(HttpStatus.CONFLICT, matchResults.map(({candidate: {id}}) => id));
