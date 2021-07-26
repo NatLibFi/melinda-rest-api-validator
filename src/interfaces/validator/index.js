@@ -10,6 +10,7 @@ import createMatchInterface from '@natlibfi/melinda-record-matching';
 import validateOwnChanges from './own-authorization';
 import {updateField001ToParamId} from '../../utils';
 import {validateExistingRecord} from './validate-existing-record';
+import {isArray} from 'util';
 
 export default async function ({formatOptions, sruUrl, matchOptions}) {
   const logger = createLogger();
@@ -125,7 +126,7 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
   // Checks that the modification history is identical
   function validateRecordState(incomingRecord, existingRecord) {
     const logger = createLogger();
-    const incomingModificationHistory = incomingRecord.isArray() ? incomingRecord : incomingRecord.get(/^CAT$/u);
+    const incomingModificationHistory = isArray(incomingRecord) ? incomingRecord : incomingRecord.get(/^CAT$/u);
     const existingModificationHistory = existingRecord.get(/^CAT$/u) || [];
 
     // Merge makes uuid variables to all fields and this removes those
