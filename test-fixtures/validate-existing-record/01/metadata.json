@@ -1,0 +1,4 @@
+{
+    "description": "Should not throw error for a non-deleted record",
+    "expectedToThrow": false
+  }

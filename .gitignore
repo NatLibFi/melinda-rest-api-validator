@@ -25,7 +25,9 @@ node_modules/
 
 # dotenv environment variables file
 .env
+.env2
 
 .nyc_output
 coverage
 
+temp-test-data
