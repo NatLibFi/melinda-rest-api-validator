@@ -1,6 +1,6 @@
-/* eslint-disable max-statements */
 import deepEqual from 'deep-eql';
 import HttpStatus from 'http-status';
+import {isArray} from 'util';
 import {MARCXML} from '@natlibfi/marc-record-serializers';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ValidationError} from '@natlibfi/melinda-commons';
@@ -9,7 +9,6 @@ import createSruClient from '@natlibfi/sru-client';
 import createMatchInterface from '@natlibfi/melinda-record-matching';
 import validateOwnChanges from './own-authorization';
 import {updateField001ToParamId} from '../../utils';
-import {validateExistingRecord} from './validate-existing-record';
 
 export default async function ({formatOptions, sruUrl, matchOptions}) {
   const logger = createLogger();
@@ -75,10 +74,6 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
         const existingRecord = await getRecord(id);
         logger.log('silly', `Record from SRU: ${JSON.stringify(existingRecord)}`);
 
-        // aleph-record-load-api cannot currently update a record if the existing record is deleted
-        logger.log('verbose', 'Checking whether the existing record is deleted');
-        validateExistingRecord(existingRecord);
-
         logger.log('verbose', 'Checking LOW-tag authorization');
         validateOwnChanges(cataloger.authorization, updatedRecord, existingRecord);
 
@@ -124,8 +119,7 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
 
   // Checks that the modification history is identical
   function validateRecordState(incomingRecord, existingRecord) {
-    const logger = createLogger();
-    const incomingModificationHistory = Array.isArray(incomingRecord) ? incomingRecord : incomingRecord.get(/^CAT$/u);
+    const incomingModificationHistory = isArray(incomingRecord) ? incomingRecord : incomingRecord.get(/^CAT$/u);
     const existingModificationHistory = existingRecord.get(/^CAT$/u) || [];
 
     // Merge makes uuid variables to all fields and this removes those
@@ -140,7 +134,6 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
       throw new ValidationError(HttpStatus.CONFLICT, 'Modification history mismatch (CAT)');
     }
   }
-
 
   function getRecord(id) {
     return new Promise((resolve, reject) => {
@@ -169,5 +162,3 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
     });
   }
 }
-
-
