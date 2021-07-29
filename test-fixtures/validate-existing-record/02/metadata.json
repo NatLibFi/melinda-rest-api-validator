@@ -1,0 +1,6 @@
+{
+    "description": "Should throw error for a deleted record",
+    "expectedToThrow": true,
+    "expectedStatus": 404,
+    "expectedError": "Existing record is deleted"
+  }
