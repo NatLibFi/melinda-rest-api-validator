@@ -1,3 +1,4 @@
+/* eslint-disable max-statements */
 import {promisify} from 'util';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
@@ -12,7 +13,8 @@ export default async function ({
   pollRequest, pollWaitTime, amqpUrl, mongoUri, validatorOptions
 }) {
   const logger = createLogger();
-  const mongoOperator = await mongoFactory(mongoUri);
+  const collection = pollRequest ? 'prio' : 'bulk';
+  const mongoOperator = await mongoFactory(mongoUri, collection);
   const amqpOperator = await amqpFactory(amqpUrl);
   const validator = await validatorFactory(validatorOptions);
   const toMarcRecords = await toMarcRecordFactory(amqpOperator);
@@ -55,12 +57,26 @@ export default async function ({
 
           logger.log('silly', JSON.stringify(content));
           // Validate data
+          //     return {headers: {operation, cataloger: cataloger.id}, data: result.record.toObject()};
+          // For Noop operations validation does not return headers
+
           const processResult = await validator.process(headers, content.data);
+          logger.log('debug', JSON.stringify(processResult));
+
+
+          // eslint-disable-next-line functional/no-conditional-statement
+          if (processResult.headers !== undefined && processResult.headers.operation !== headers.operation) {
+            logger.debug(`Validation changed operation from ${headers.operation} to ${processResult.headers.operation}`);
+            await mongoOperator.setOperation({correlationId, operation: processResult.headers.operation});
+          }
 
           // Process validated data
+          // Normal data to queue operation.correlationId
+          // Noop data to queue correlationId
+
           const toQueue = {
             correlationId,
-            queue: processResult.headers === undefined ? correlationId : headers.operation,
+            queue: processResult.headers ? `${processResult.headers.operation}.${correlationId}` : correlationId,
             headers: processResult.headers || headers,
             data: processResult.data || processResult
           };
@@ -68,8 +84,9 @@ export default async function ({
           // Pass processed data forward
           await amqpOperator.sendToQueue(toQueue);
           await amqpOperator.ackMessages([message]);
+
           if (processResult.headers === undefined) {
-            // Noop return
+            // Noop return returns no headers
             await mongoOperator.checkAndSetState({correlationId, state: PRIO_QUEUE_ITEM_STATE.DONE});
             return initCheck();
           }

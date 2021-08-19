@@ -1,3 +1,4 @@
+/* eslint-disable max-statements */
 import {Json, MARCXML, AlephSequential, ISO2709} from '@natlibfi/marc-record-serializers';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
@@ -19,7 +20,7 @@ export default function (amqpOperator) {
     const promises = [];
 
     // Purge queue before importing records in
-    await amqpOperator.checkQueue(correlationId, 'messages', true);
+    await amqpOperator.checkQueue(`${headers.operation}.${correlationId}`, 'messages', true);
     logger.log('verbose', 'Reading stream to records');
 
     return new Promise((resolve, reject) => {
@@ -39,11 +40,11 @@ export default function (amqpOperator) {
             // Field 001 value -> 000000001, 000000002, 000000003....
             const updatedRecord = updateField001ToParamId(`${number}`, record);
 
-            await amqpOperator.sendToQueue({queue: correlationId, correlationId, headers, data: updatedRecord.toObject()});
+            await amqpOperator.sendToQueue({queue: `${headers.operation}.${correlationId}`, correlationId, headers, data: updatedRecord.toObject()});
             return log100thQueue(number, 'queued');
           }
 
-          await amqpOperator.sendToQueue({queue: correlationId, correlationId, headers, data: record.toObject()});
+          await amqpOperator.sendToQueue({queue: `${headers.operation}.${correlationId}`, correlationId, headers, data: record.toObject()});
           return log100thQueue(number, 'queued');
         }
       })
