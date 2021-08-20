@@ -36,7 +36,7 @@
 	"dependencies": {
 		"@babel/runtime": "^7.14.8",
 		"@natlibfi/marc-record": "^6.1.2",
-		"@natlibfi/marc-record-serializers": "^7.2.7",
+		"@natlibfi/marc-record-serializers": "^7.2.8",
 		"@natlibfi/melinda-backend-commons": "^2.0.3",
 		"@natlibfi/melinda-commons": "^11.1.4",
 		"@natlibfi/melinda-record-matching": "^1.0.10",
