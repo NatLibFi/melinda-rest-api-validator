@@ -46,6 +46,7 @@ export default async function ({
     const message = await amqpOperator.checkQueue('REQUESTS', 'raw', false);
     try {
       if (message) {
+        logger.log('debug', `${JSON.stringify(message)}`);
         // Work with message
         const {correlationId} = message.properties;
 
