@@ -2,7 +2,7 @@
 import {promisify} from 'util';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
-import {mongoFactory, amqpFactory, logError, QUEUE_ITEM_STATE, PRIO_QUEUE_ITEM_STATE} from '@natlibfi/melinda-rest-api-commons';
+import {mongoFactory, amqpFactory, logError, QUEUE_ITEM_STATE} from '@natlibfi/melinda-rest-api-commons';
 import validatorFactory from './interfaces/validator';
 import toMarcRecordFactory from './interfaces/toMarcRecords';
 import httpStatus from 'http-status';
@@ -50,7 +50,7 @@ export default async function ({
         // Work with message
         const {correlationId} = message.properties;
 
-        const valid = await mongoOperator.checkAndSetState({correlationId, state: PRIO_QUEUE_ITEM_STATE.VALIDATING});
+        const valid = await mongoOperator.checkAndSetState({correlationId, state: QUEUE_ITEM_STATE.VALIDATOR.VALIDATING});
 
         if (valid) {
           const {headers} = message.properties;
@@ -88,11 +88,11 @@ export default async function ({
 
           if (processResult.headers === undefined) {
             // Noop return returns no headers
-            await mongoOperator.checkAndSetState({correlationId, state: PRIO_QUEUE_ITEM_STATE.DONE});
+            await mongoOperator.checkAndSetState({correlationId, state: QUEUE_ITEM_STATE.DONE});
             return initCheck();
           }
 
-          await mongoOperator.checkAndSetState({correlationId, state: PRIO_QUEUE_ITEM_STATE.VALIDATED});
+          await mongoOperator.checkAndSetState({correlationId, state: QUEUE_ITEM_STATE.VALIDATOR.IN_QUEUE});
           return initCheck();
         }
 
@@ -105,14 +105,14 @@ export default async function ({
       return initCheck(true);
     } catch (error) {
       logError(error);
-      if (error.status === 403) {
+      if (error.status !== 500) {
         await amqpOperator.ackNReplyMessages({
           status: error.status,
           messages: [message],
-          payloads: ['LOW tag permission error']
+          payloads: [error.message]
         });
         const {correlationId} = message.properties;
-        await mongoOperator.checkAndSetState({correlationId, state: PRIO_QUEUE_ITEM_STATE.ERROR});
+        await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.ERROR, errorMessage: error.message});
         return initCheck(true);
       }
       await amqpOperator.ackNReplyMessages({
@@ -121,7 +121,7 @@ export default async function ({
         payloads: [error.payload || 'Unexpected error!']
       });
       const {correlationId} = message.properties;
-      await mongoOperator.checkAndSetState({correlationId, state: PRIO_QUEUE_ITEM_STATE.ERROR});
+      await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.ERROR, errorMessage: 'Internal server error!'});
       return initCheck(true);
     }
   }
@@ -129,7 +129,7 @@ export default async function ({
   // Check Mongo for jobs
   async function checkMongo() {
     logger.log('silly', 'Checking mongo');
-    const queueItem = await mongoOperator.getOne({queueItemState: QUEUE_ITEM_STATE.PENDING_QUEUING});
+    const queueItem = await mongoOperator.getOne({queueItemState: QUEUE_ITEM_STATE.VALIDATOR.PENDING_QUEUING});
     if (queueItem) {
       logger.log('silly', 'Mongo queue item found');
       // Work with queueItem
@@ -144,11 +144,11 @@ export default async function ({
         await toMarcRecords.streamToRecords({correlationId, headers: {operation, cataloger: queueItem.cataloger}, contentType, stream});
 
         // Set Mongo job state
-        await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.IN_QUEUE});
+        await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.VALIDATOR.VALIDATOR.IN_QUEUE});
       } catch (error) {
         if (error instanceof ApiError) {
           logError(error);
-          await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.ERROR});
+          await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.ERROR, errorMessage: error});
           return initCheck();
         }
 
