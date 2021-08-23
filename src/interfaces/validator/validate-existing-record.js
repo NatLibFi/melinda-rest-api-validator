@@ -1,9 +1,7 @@
-/* eslint-disable no-unused-vars */
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ValidationError, isDeletedRecord} from '@natlibfi/melinda-commons';
 import httpStatus from 'http-status';
 import createDebugLogger from 'debug';
-import error from '@natlibfi/melinda-commons/dist/error';
 
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator:validate-existing-record');
 const debugData = debug.extend('data');

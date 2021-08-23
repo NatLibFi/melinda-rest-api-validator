@@ -38,7 +38,7 @@
 		"@natlibfi/marc-record": "^6.1.2",
 		"@natlibfi/marc-record-serializers": "^7.2.8",
 		"@natlibfi/melinda-backend-commons": "^2.0.3",
-		"@natlibfi/melinda-commons": "^11.1.4",
+		"@natlibfi/melinda-commons": "^11.1.5",
 		"@natlibfi/melinda-record-matching": "^1.0.10",
 		"@natlibfi/melinda-rest-api-commons": "^1.1.0-alpha.0",
 		"@natlibfi/sru-client": "^4.1.0",
