@@ -144,7 +144,7 @@ export default async function ({
         await toMarcRecords.streamToRecords({correlationId, headers: {operation, cataloger: queueItem.cataloger}, contentType, stream});
 
         // Set Mongo job state
-        await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.VALIDATOR.VALIDATOR.IN_QUEUE});
+        await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.VALIDATOR.IN_QUEUE});
       } catch (error) {
         if (error instanceof ApiError) {
           logError(error);
