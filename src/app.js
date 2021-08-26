@@ -112,7 +112,7 @@ export default async function ({
           payloads: [error.message]
         });
         const {correlationId} = message.properties;
-        await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.ERROR, errorMessage: error.message});
+        await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.ERROR, errorMessage: error.payload});
         return initCheck(true);
       }
       await amqpOperator.ackNReplyMessages({
@@ -148,7 +148,7 @@ export default async function ({
       } catch (error) {
         if (error instanceof ApiError) {
           logError(error);
-          await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.ERROR, errorMessage: error});
+          await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.ERROR, errorMessage: error.payload});
           return initCheck();
         }
 
