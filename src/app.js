@@ -109,21 +109,27 @@ export default async function ({
       // No job found
       return initCheck(true);
     } catch (error) {
+      logger.debug(`checkAmqpqueue errored: `);
       logError(error);
+      logger.silly(`error.message: ${error.message}`);
+      logger.silly(`error.payload: ${error.payload}`);
+      const responsePayload = error.message || error.payload;
+      logger.silly(`responsePayload: ${responsePayload}`);
+
       if (error.status !== 500) {
         await amqpOperator.ackNReplyMessages({
           status: error.status,
           messages: [message],
-          payloads: [error.message]
+          payloads: [responsePayload]
         });
         const {correlationId} = message.properties;
-        await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.ERROR, errorMessage: error.payload});
+        await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.ERROR, errorMessage: responsePayload});
         return initCheck(true);
       }
       await amqpOperator.ackNReplyMessages({
         status: error.status || 500,
         messages: [message],
-        payloads: [error.payload || 'Unexpected error!']
+        payloads: [error.message || error.payload || 'Unexpected error!']
       });
       const {correlationId} = message.properties;
       await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.ERROR, errorMessage: 'Internal server error!'});

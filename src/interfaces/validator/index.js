@@ -4,7 +4,7 @@ import HttpStatus from 'http-status';
 import {MARCXML} from '@natlibfi/marc-record-serializers';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ValidationError} from '@natlibfi/melinda-commons';
-import {validations, conversions, format, OPERATIONS} from '@natlibfi/melinda-rest-api-commons';
+import {validations, conversions, format, OPERATIONS, logError} from '@natlibfi/melinda-rest-api-commons';
 import createSruClient from '@natlibfi/sru-client';
 import createMatchInterface from '@natlibfi/melinda-record-matching';
 import validateOwnChanges from './own-authorization';
@@ -44,7 +44,11 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
         logger.log('silly', `Formated record:\n${JSON.stringify(record)}`);
         return record;
       } catch (err) {
-        throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, err.message);
+        logger.debug(`unserializeAndFormatRecord errored:`);
+        logError(err);
+        const cleanErrorMessage = err.message.replace(/(?<lineBreaks>\r\n|\n|\r)/gmu, ' ');
+        //logger.silly(`${cleanErrorMessage}`);
+        throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, `Parsing input data failed. ${cleanErrorMessage}`);
       }
     }
 
