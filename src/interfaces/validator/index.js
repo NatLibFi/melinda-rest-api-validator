@@ -23,6 +23,7 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
 
   async function process(headers, data) {
     logger.log('debug', `process headers ${JSON.stringify(headers)}`);
+
     const {
       operation,
       format,
@@ -33,6 +34,23 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
     const unique = headers.unique || undefined;
 
     const record = await unserializeAndFormatRecord(data, format, formatOptions);
+    logger.debug(record);
+
+    if (noop) {
+      const result = {
+        status: operation === 'CREATE' ? 'CREATED' : 'UPDATED',
+        ...await executeValidations()
+      };
+      return result;
+    }
+    const result = await executeValidations();
+
+    if (result.failed) { // eslint-disable-line functional/no-conditional-statement
+      logger.log('debug', 'Validation failed');
+      throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, result.messages);
+    }
+
+    return {headers: {operation, cataloger: cataloger.id}, data: result.record.toObject()};
 
     async function unserializeAndFormatRecord(data, format, formatOptions) {
       try {
@@ -51,23 +69,6 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
         throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, `Parsing input data failed. ${cleanErrorMessage}`);
       }
     }
-
-    logger.debug(record);
-    if (noop) {
-      const result = {
-        status: operation === 'CREATE' ? 'CREATED' : 'UPDATED',
-        ...await executeValidations()
-      };
-      return result;
-    }
-    const result = await executeValidations();
-
-    if (result.failed) { // eslint-disable-line functional/no-conditional-statement
-      logger.log('debug', 'Validation failed');
-      throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, result.messages);
-    }
-
-    return {headers: {operation, cataloger: cataloger.id}, data: result.record.toObject()};
 
     function executeValidations() {
       logger.log('verbose', 'Validating the record');
