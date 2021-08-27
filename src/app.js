@@ -46,9 +46,10 @@ export default async function ({
     const message = await amqpOperator.checkQueue('REQUESTS', 'raw', false);
     try {
       if (message) {
-        logger.log('debug', `${JSON.stringify(message)}`);
+        // logger.log('debug', `app/chechAmqp: Found message: ${JSON.stringify(message)}`);
         // Work with message
         const {correlationId} = message.properties;
+        logger.log('debug', `app/checkAmqp: correlationId: ${correlationId}`);
 
         const valid = await mongoOperator.checkAndSetState({correlationId, state: QUEUE_ITEM_STATE.VALIDATOR.VALIDATING});
 
@@ -56,14 +57,17 @@ export default async function ({
           const {headers} = message.properties;
           const content = JSON.parse(message.content.toString());
 
-          logger.log('silly', JSON.stringify(content));
+          //logger.log('silly', `app/checkAmqp: content ${JSON.stringify(content)}`);
+
           // Validate data
           //     return {headers: {operation, cataloger: cataloger.id}, data: result.record.toObject()};
           // For Noop operations validation does not return headers
 
+          logger.log('silly', `app/checkAmqp: Actually validating`);
           const processResult = await validator.process(headers, content.data);
-          logger.log('debug', JSON.stringify(processResult));
+          logger.log('silly', `app/checkAmqp: Validation done`);
 
+          // logger.log('debug', `app/checkAmqp: Validation results: ${JSON.stringify(processResult)}`);
 
           // eslint-disable-next-line functional/no-conditional-statement
           if (processResult.headers !== undefined && processResult.headers.operation !== headers.operation) {
@@ -82,6 +86,7 @@ export default async function ({
             data: processResult.data || processResult
           };
 
+          logger.log('debug', `app/checkAmqp: sending to queue toQueue: ${JSON.stringify(toQueue)}`);
           // Pass processed data forward
           await amqpOperator.sendToQueue(toQueue);
           await amqpOperator.ackMessages([message]);

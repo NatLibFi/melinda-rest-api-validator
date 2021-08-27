@@ -32,13 +32,23 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
     const id = headers.id || undefined;
     const unique = headers.unique || undefined;
 
-    logger.log('silly', `Data: ${JSON.stringify(data)}`);
-    logger.log('silly', `Format: ${format}`);
-    const unzerialized = await ConversionService.unserialize(data, format);
-    logger.log('silly', `Unserialized data: ${JSON.stringify(unzerialized)}`);
-    const record = await formatRecord(unzerialized, formatOptions);
-    logger.log('silly', `Formated record:\n${JSON.stringify(record)}`);
+    const record = await unserializeAndFormatRecord(data, format, formatOptions);
 
+    async function unserializeAndFormatRecord(data, format, formatOptions) {
+      try {
+        logger.log('silly', `Data: ${JSON.stringify(data)}`);
+        logger.log('silly', `Format: ${format}`);
+        const unzerialized = await ConversionService.unserialize(data, format);
+        logger.log('silly', `Unserialized data: ${JSON.stringify(unzerialized)}`);
+        const record = await formatRecord(unzerialized, formatOptions);
+        logger.log('silly', `Formated record:\n${JSON.stringify(record)}`);
+        return record;
+      } catch (err) {
+        throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, err.message);
+      }
+    }
+
+    logger.debug(record);
     if (noop) {
       const result = {
         status: operation === 'CREATE' ? 'CREATED' : 'UPDATED',

@@ -64,6 +64,7 @@ export default function (amqpOperator) {
     });
 
     function chooseAndInitReader(contentType) {
+      logger.debug(`toMarcRecords/chooseAndInitReader: Choosing reader for contentType: ${contentType}`);
       if (contentType === 'application/alephseq') {
         logger.log('debug', 'AlephSeq stream!');
         return new AlephSequential.Reader(stream, {subfieldValues: false}, true);
