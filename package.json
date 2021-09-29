@@ -40,7 +40,7 @@
 		"@natlibfi/melinda-backend-commons": "^2.0.3",
 		"@natlibfi/melinda-commons": "^11.1.8",
 		"@natlibfi/melinda-record-matching": "^1.0.10",
-		"@natlibfi/melinda-rest-api-commons": "^2.0.0-alpha.9",
+		"@natlibfi/melinda-rest-api-commons": "^2.0.0-alpha.10",
 		"@natlibfi/sru-client": "^4.1.0",
 		"deep-eql": "^4.0.0",
 		"http-status": "^1.5.0",
