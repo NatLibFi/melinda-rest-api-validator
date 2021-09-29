@@ -5,7 +5,6 @@ import {Error as ApiError} from '@natlibfi/melinda-commons';
 import {mongoFactory, amqpFactory, logError, QUEUE_ITEM_STATE} from '@natlibfi/melinda-rest-api-commons';
 import validatorFactory from './interfaces/validator';
 import toMarcRecordFactory from './interfaces/toMarcRecords';
-import httpStatus from 'http-status';
 
 const setTimeoutPromise = promisify(setTimeout);
 
@@ -51,6 +50,7 @@ export default async function ({
         const {correlationId} = message.properties;
         logger.log('debug', `app/checkAmqp: correlationId: ${correlationId}`);
 
+        // checkAndSetState checks that the queueItem is not too old, sets state and return true if okay
         const valid = await mongoOperator.checkAndSetState({correlationId, state: QUEUE_ITEM_STATE.VALIDATOR.VALIDATING});
 
         if (valid) {
@@ -107,8 +107,9 @@ export default async function ({
           return initCheck();
         }
 
-        // This could also set mongoState instead of using ackNReply
-        await amqpOperator.ackNReplyMessages({status: httpStatus.REQUEST_TIMEOUT, messages: [message], payloads: ['Time out!']});
+        // queueItem was too old, queueItem was set to ABORT
+        // melinda-rest-api-http does not read responses for ABORT from queue:correlationID, no need to send the there
+        await amqpOperator.ackMessages([message]);
 
         return initCheck();
       }
@@ -121,36 +122,20 @@ export default async function ({
       logError(error);
 
       logger.silly(`error.status: ${error.status}`);
-      logger.silly(`error.message: ${error.message}`);
-      logger.silly(`error.payload: ${error.payload}`);
-      const responsePayload = error.message || error.payload;
-      logger.silly(`responsePayload: ${responsePayload}`);
+      const responseStatus = error.status || '500';
+      logger.debug(`responseStatus: ${responseStatus}`);
 
-      if (error.status !== 500) {
-        // Add error status to queueItem -> ackNReply would not be needed
-        await amqpOperator.ackNReplyMessages({
-          status: error.status,
-          messages: [message],
-          payloads: [responsePayload]
-        });
-        const {correlationId} = message.properties;
-        logger.silly(`correlationId: ${correlationId}`);
-        await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.ERROR, errorMessage: responsePayload});
-        return initCheck(true);
-      }
+      logger.silly(`error.message: ${error.message}, error.payload: ${error.payload}`);
+      const responsePayload = error.message || error.payload || 'Unexpected error!';
+      logger.debug(`responsePayload: ${responsePayload}`);
 
-      // (error.status == 500) or ?undefined?
-      // Add error status to queueItem -> ackNReply would not be needed
-      await amqpOperator.ackNReplyMessages({
-        status: error.status || 500,
-        messages: [message],
-        payloads: [error.message || error.payload || 'Unexpected error!']
-      });
+      await amqpOperator.ackMessages([message]);
 
       const {correlationId} = message.properties;
       logger.silly(`correlationId: ${correlationId}`);
-      await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.ERROR, errorMessage: 'Internal server error!'});
+      await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.ERROR, errorStatus: responseStatus, errorMessage: responsePayload});
       return initCheck(true);
+
     }
   }
 
