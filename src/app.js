@@ -5,7 +5,6 @@ import {Error as ApiError} from '@natlibfi/melinda-commons';
 import {mongoFactory, amqpFactory, logError, QUEUE_ITEM_STATE} from '@natlibfi/melinda-rest-api-commons';
 import validatorFactory from './interfaces/validator';
 import toMarcRecordFactory from './interfaces/toMarcRecords';
-import httpStatus from 'http-status';
 
 const setTimeoutPromise = promisify(setTimeout);
 
@@ -51,6 +50,7 @@ export default async function ({
         const {correlationId} = message.properties;
         logger.log('debug', `app/checkAmqp: correlationId: ${correlationId}`);
 
+        // checkAndSetState checks that the queueItem is not too old, sets state and return true if okay
         const valid = await mongoOperator.checkAndSetState({correlationId, state: QUEUE_ITEM_STATE.VALIDATOR.VALIDATING});
 
         if (valid) {
@@ -61,23 +61,28 @@ export default async function ({
 
           // Validate data
           //     return {headers: {operation, cataloger: cataloger.id}, data: result.record.toObject()};
-          // For Noop operations validation does not return headers
+          //     For Noop operations validation does not return headers
 
           logger.log('silly', `app/checkAmqp: Actually validating`);
           const processResult = await validator.process(headers, content.data);
           logger.log('silly', `app/checkAmqp: Validation done`);
 
-          // logger.log('debug', `app/checkAmqp: Validation results: ${JSON.stringify(processResult)}`);
+          logger.log('debug', `app/checkAmqp: Validation results: ${JSON.stringify(processResult)}`);
 
           // eslint-disable-next-line functional/no-conditional-statement
           if (processResult.headers !== undefined && processResult.headers.operation !== headers.operation) {
             logger.debug(`Validation changed operation from ${headers.operation} to ${processResult.headers.operation}`);
+            // Should note to mongo that operation has been changed
             await mongoOperator.setOperation({correlationId, operation: processResult.headers.operation});
           }
 
           // Process validated data
           // Normal data to queue operation.correlationId
           // Noop data to queue correlationId
+
+          // Should get noop-info from queueItem and/or message
+          // const queue = noop ? correlationId : `${processResult.headers.operation}.${correlationId}`
+          // const headerToQueue = noop ? headers : processResult.headers || headers;
 
           const toQueue = {
             correlationId,
@@ -91,6 +96,7 @@ export default async function ({
           await amqpOperator.sendToQueue(toQueue);
           await amqpOperator.ackMessages([message]);
 
+          // Should be if noop || processResult.headers === undefined
           if (processResult.headers === undefined) {
             // Noop return returns no headers
             await mongoOperator.checkAndSetState({correlationId, state: QUEUE_ITEM_STATE.DONE});
@@ -101,7 +107,9 @@ export default async function ({
           return initCheck();
         }
 
-        await amqpOperator.ackNReplyMessages({status: httpStatus.REQUEST_TIMEOUT, messages: [message], payloads: ['Time out!']});
+        // queueItem was too old, queueItem was set to ABORT
+        // melinda-rest-api-http does not read responses for ABORT from queue:correlationID, no need to send the there
+        await amqpOperator.ackMessages([message]);
 
         return initCheck();
       }
@@ -109,31 +117,25 @@ export default async function ({
       // No job found
       return initCheck(true);
     } catch (error) {
+
       logger.debug(`checkAmqpqueue errored: `);
       logError(error);
-      logger.silly(`error.message: ${error.message}`);
-      logger.silly(`error.payload: ${error.payload}`);
-      const responsePayload = error.message || error.payload;
-      logger.silly(`responsePayload: ${responsePayload}`);
 
-      if (error.status !== 500) {
-        await amqpOperator.ackNReplyMessages({
-          status: error.status,
-          messages: [message],
-          payloads: [responsePayload]
-        });
-        const {correlationId} = message.properties;
-        await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.ERROR, errorMessage: responsePayload});
-        return initCheck(true);
-      }
-      await amqpOperator.ackNReplyMessages({
-        status: error.status || 500,
-        messages: [message],
-        payloads: [error.message || error.payload || 'Unexpected error!']
-      });
+      logger.silly(`error.status: ${error.status}`);
+      const responseStatus = error.status || '500';
+      logger.debug(`responseStatus: ${responseStatus}`);
+
+      logger.silly(`error.message: ${error.message}, error.payload: ${error.payload}`);
+      const responsePayload = error.message || error.payload || 'Unexpected error!';
+      logger.debug(`responsePayload: ${responsePayload}`);
+
+      await amqpOperator.ackMessages([message]);
+
       const {correlationId} = message.properties;
-      await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.ERROR, errorMessage: 'Internal server error!'});
+      logger.silly(`correlationId: ${correlationId}`);
+      await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.ERROR, errorStatus: responseStatus, errorMessage: responsePayload});
       return initCheck(true);
+
     }
   }
 

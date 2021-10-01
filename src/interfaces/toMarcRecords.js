@@ -34,6 +34,7 @@ export default function (amqpOperator) {
 
         log100thQueue(recordNumber, 'read');
 
+        // This could input to Mongo also id:s of records to be handled: for updates Melinda-ID, for creates original 003+001 and temporary number
         async function transform(record, number) {
           // Operation CREATE -> f001 new value
           if (headers.operation === OPERATIONS.CREATE) {
@@ -59,6 +60,7 @@ export default function (amqpOperator) {
 
           await Promise.all(promises);
           logger.log('info', 'Request handling done!');
+          // This could add to mongo the amount of records created totalRecordAmount
           resolve();
         });
     });
