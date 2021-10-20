@@ -18,7 +18,7 @@ export default async function ({
   const validator = await validatorFactory(validatorOptions);
   const toMarcRecords = await toMarcRecordFactory(amqpOperator);
 
-  logger.log('info', `Started Melinda-rest-api-validator: ${pollRequest ? 'PRIORITY' : 'BULK'}`);
+  logger.info(`Started Melinda-rest-api-validator: ${pollRequest ? 'PRIORITY' : 'BULK'}`);
 
   const server = await initCheck();
 
@@ -30,7 +30,7 @@ export default async function ({
       await setTimeoutPromise(pollWaitTime);
       return initCheck();
     }
-    logger.log('silly', 'Initiating check');
+    logger.silly('Initiating check');
 
     if (pollRequest) {
       return checkAmqp();
@@ -41,14 +41,14 @@ export default async function ({
 
   // Check amqp for jobs
   async function checkAmqp() {
-    logger.log('silly', 'Checking amqp');
+    logger.silly('Checking amqp');
     const message = await amqpOperator.checkQueue('REQUESTS', 'raw', false);
     try {
       if (message) {
-        // logger.log('debug', `app/chechAmqp: Found message: ${JSON.stringify(message)}`);
+        // logger.debug(`app/chechAmqp: Found message: ${JSON.stringify(message)}`);
         // Work with message
         const {correlationId} = message.properties;
-        logger.log('debug', `app/checkAmqp: correlationId: ${correlationId}`);
+        logger.silly(`app/checkAmqp: correlationId: ${correlationId}`);
 
         // checkAndSetState checks that the queueItem is not too old, sets state and return true if okay
         const valid = await mongoOperator.checkAndSetState({correlationId, state: QUEUE_ITEM_STATE.VALIDATOR.VALIDATING});
@@ -57,17 +57,17 @@ export default async function ({
           const {headers} = message.properties;
           const content = JSON.parse(message.content.toString());
 
-          //logger.log('silly', `app/checkAmqp: content ${JSON.stringify(content)}`);
+          //logger.silly(`app/checkAmqp: content ${JSON.stringify(content)}`);
 
           // Validate data
           //     return {headers: {operation, cataloger: cataloger.id}, data: result.record.toObject()};
           //     For Noop operations validation does not return headers
 
-          logger.log('silly', `app/checkAmqp: Actually validating`);
+          logger.silly(`app/checkAmqp: Actually validating`);
           const processResult = await validator.process(headers, content.data);
-          logger.log('silly', `app/checkAmqp: Validation done`);
+          logger.debug(`app/checkAmqp: Validation done`);
 
-          logger.log('debug', `app/checkAmqp: Validation results: ${JSON.stringify(processResult)}`);
+          logger.silly(`app/checkAmqp: Validation results: ${JSON.stringify(processResult)}`);
 
           // eslint-disable-next-line functional/no-conditional-statement
           if (processResult.headers !== undefined && processResult.headers.operation !== headers.operation) {
@@ -91,7 +91,7 @@ export default async function ({
             data: processResult.data || processResult
           };
 
-          logger.log('debug', `app/checkAmqp: sending to queue toQueue: ${JSON.stringify(toQueue)}`);
+          logger.silly(`app/checkAmqp: sending to queue toQueue: ${JSON.stringify(toQueue)}`);
           // Pass processed data forward
           await amqpOperator.sendToQueue(toQueue);
           await amqpOperator.ackMessages([message]);
@@ -141,13 +141,13 @@ export default async function ({
 
   // Check Mongo for jobs
   async function checkMongo() {
-    logger.log('silly', 'Checking mongo');
+    logger.silly('Checking mongo');
     const queueItem = await mongoOperator.getOne({queueItemState: QUEUE_ITEM_STATE.VALIDATOR.PENDING_QUEUING});
     if (queueItem) {
-      logger.log('silly', 'Mongo queue item found');
+      logger.silly('Mongo queue item found');
       // Work with queueItem
       const {correlationId} = queueItem;
-      logger.log('silly', `Correlation id: ${correlationId}`);
+      logger.silly(`Correlation id: ${correlationId}`);
       try {
         const {operation, contentType} = queueItem;
         // Get stream from content

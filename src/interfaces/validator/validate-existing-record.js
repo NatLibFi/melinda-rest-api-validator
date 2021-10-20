@@ -15,11 +15,11 @@ export function validateExistingRecord(existingRecord) {
 
   // eslint-disable-next-line functional/no-conditional-statement
   if (isDeleted) {
-    logger.log('verbose', 'Existing record is deleted!');
+    logger.verbose('Existing record is deleted!');
     debug('Existing record is deleted!');
     throw new ValidationError(httpStatus.NOT_FOUND, 'Existing record is deleted');
   }
 
-  logger.log('debug', 'Existing record is not deleted.');
+  logger.debug('Existing record is not deleted.');
   debug('Existing record is not deleted.');
 }
