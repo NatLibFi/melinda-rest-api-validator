@@ -69,22 +69,22 @@ export default function (amqpOperator) {
       logger.debug(`toMarcRecords/chooseAndInitReader: Choosing reader for contentType: ${contentType}`);
       if (contentType === 'application/alephseq') {
         logger.log('debug', 'AlephSeq stream!');
-        return new AlephSequential.Reader(stream, {subfieldValues: false}, true);
+        return AlephSequential.reader(stream, {subfieldValues: false}, true);
       }
 
       if (contentType === 'application/json') {
         logger.log('debug', 'JSON stream!');
-        return new Json.Reader(stream, {subfieldValues: false});
+        return Json.reader(stream, {subfieldValues: false});
       }
 
       if (contentType === 'application/xml') {
         logger.log('debug', 'XML stream!');
-        return new MARCXML.Reader(stream, {subfieldValues: false});
+        return MARCXML.reader(stream, {subfieldValues: false});
       }
 
       if (contentType === 'application/marc') {
         logger.log('debug', 'MARC stream!');
-        return new ISO2709.Reader(stream, {subfieldValues: false});
+        return ISO2709.reader(stream, {subfieldValues: false});
       }
 
       throw new ApiError(httpStatus.UNSUPPORTED_MEDIA_TYPE, 'Invalid content-type');
