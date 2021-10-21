@@ -10,10 +10,12 @@ import createMatchInterface from '@natlibfi/melinda-record-matching';
 import validateOwnChanges from './own-authorization';
 import {updateField001ToParamId} from '../../utils';
 import {validateExistingRecord} from './validate-existing-record';
+import {inspect} from 'util';
 
 export default async function ({formatOptions, sruUrl, matchOptions}) {
   const logger = createLogger();
   const {formatRecord} = format;
+  // validationService: marc-record-validate validations from melinda-rest-api-commons
   const validationService = await validations();
   const ConversionService = conversions();
   const match = createMatchInterface(matchOptions);
@@ -36,15 +38,25 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
     const record = await unserializeAndFormatRecord(data, format, formatOptions);
     logger.silly(record);
 
+    // All other validations result in errors when they fail, only validationService returns result.failed
+    // validation result from validationService: {record, failed, messages: []}
+
     if (noop) {
+      logger.debug(`validator/index/process: Add status to noop`);
       const result = {
         status: operation === 'CREATE' ? 'CREATED' : 'UPDATED',
         ...await executeValidations()
       };
+      logger.debug(`validator/index/process: Validation result for noop: ${inspect(result, {colors: true, maxArrayLength: 3, depth: 1})}`);
+      logger.debug(`return result for noop`);
       return result;
     }
-    const result = await executeValidations();
 
+    // non-noop
+    const result = await executeValidations();
+    logger.debug(`validator/index/process: Validation result for non-noop: ${inspect(result, {colors: true, maxArrayLength: 3, depth: 1})}`);
+
+    // throw ValidationError for failed validationService for non-noop
     if (result.failed) { // eslint-disable-line functional/no-conditional-statement
       logger.debug('Validation failed');
       throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, result.messages);
@@ -105,6 +117,11 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
         logger.verbose('Checking CAT field history');
         validateRecordState(updatedRecord, existingRecord);
 
+        // Note validationService = validation.js from melinda-rest-api-commons
+        // which uses marc-record-validate
+        // currently checks only that possible f003 has value FI-MELINDA
+        // for some reason this does not work for noop CREATEs
+
         const validationResults = await validationService(updatedRecord);
         return validationResults;
       }
@@ -132,6 +149,11 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
         }
 
         logger.verbose('No matching records');
+
+        // Note validationService = validation.js from melinda-rest-api-commons
+        // which uses marc-record-validate
+        // currently checks only that possible f003 has value FI-MELINDA
+        // for some reason this does not work for noop CREATEs
 
         const validationResults = await validationService(updatedRecord);
         return validationResults;
