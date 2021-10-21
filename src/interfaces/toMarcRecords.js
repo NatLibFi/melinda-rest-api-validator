@@ -51,7 +51,7 @@ export default function (amqpOperator) {
       })
         .on('end', async () => {
           logger.info(`Read ${promises.length} records from stream`);
-          logger.info('Sending records to queue! This might take some time!');
+          logger.info(`Sending ${promises.length} records to queue! This might take some time!`);
 
           await setTimeoutPromise(500); // Makes sure that even slowest promise is in the array
           if (promises.length === 0) {
