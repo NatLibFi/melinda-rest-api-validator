@@ -1,8 +1,11 @@
 # Service for validating and queuing import records from melinda-rest-api
 
 ## Usage
-While service is in operation, if `'POLL_REQUEST'` is true, service will poll AMQP `'REQUEST'` queue and validate any incoming items.
-If `'POLL_REQUEST'` is false, service will poll mongo db if there is any job in state `'PENDING_QUEUING'`, if one is found will service stream it from bucket and QUEUE it to AMQP.
+While service is in operation:
+
+- if `'POLL_REQUEST'` is true, service will poll AMQP `'REQUEST'` queue for a prio job. It will validate the incoming record belonging, send the validated record to the job's `operation.correlationId` AMQP queue and transition the job state to `'IMPORTER.IN_QUEUE'` in Mongo.
+
+- if `'POLL_REQUEST'` is false, service will poll Mongo to find a bulk job in state `'VALIDATOR.PENDING_QUEUING'`. It will stream the jobs content from Mongo bucket to records, send the records to the job's `operation.correlationId` AMQP queue and transition the job's state to `'IMPORTER.IN_QUEUE'` in Mongo.
 
 ### Environment variables
 | Name           | Mandatory | Description                                                                                                        |
@@ -16,31 +19,77 @@ If `'POLL_REQUEST'` is false, service will poll mongo db if there is any job in 
 | LOG_LEVEL      | NO        | Log information level                                                                                              |
 
 ### Mongo
-Db: `'rest-api'`
-Table: `'queue-items'`
-Queue-item schema:
+
+Queue-item schema example for a prio job queueItem:
 ```json
 {
-	"correlationId":"FOO",
-	"cataloger":"xxx0000",
-	"operation":"UPDATE",
-	"contentType":"application/json",
-	"recordLoadParams": {
-        "pActiveLibrary": "XXX00",
-        "pInputFile": "filename.seq",
-        "pRejectFile": "filename.rej",
-        "pLogFile": "filename.syslog",
-        "pOldNew": "NEW"
-      },
-	"queueItemState":"DONE",
-	"creationTime":"2020-01-01T00:00:00.000Z",
-  "modificationTime":"2020-01-01T00:00:01.000Z",
-  "handledIds": [ "000000001","000000002"]
+"correlationId":"FOO",
+"cataloger":"xxx0000",
+"oCatalogerIn": "xxx0000",
+"operation":"UPDATE",
+"operationSettings": {
+  "noop": true,
+  "unique": false,
+  "prio": true,
+  },
+"recordLoadParams": {
+  "pActiveLibrary": "XXX00",
+  "pInputFile": "filename.seq",
+  "pRejectFile": "filename.rej",
+  "pLogFile": "filename.syslog",
+  "pOldNew": "NEW"
+  },
+"queueItemState":"DONE",
+"creationTime":"2020-01-01T00:00:00.000Z",
+"modificationTime":"2020-01-01T00:00:01.000Z",
+"handledIds": [ "000000001"],
+"rejectedIds": [],
+"errorStatus": "",
+"errorMessage": "",
+"noopValidationMessages": [],
+"loadProcessReports": []
+}
+```
+
+Queue-item schema examle for a bulk job queueItem:
+```json
+{
+"correlationId":"FOO",
+"cataloger":"xxx0000",
+"oCatalogerIn": "xxx0000",
+"operation":"UPDATE",
+"operationSettings": {
+  "prio": false,
+ },
+"recordLoadParams": {
+  "pActiveLibrary": "XXX00",
+  "pInputFile": "filename.seq",
+  "pRejectFile": "filename.rej",
+  "pLogFile": "filename.syslog",
+  "pOldNew": "NEW"
+},
+"queueItemState":"DONE",
+"creationTime":"2020-01-01T00:00:00.000Z",
+"modificationTime":"2020-01-01T00:00:01.000Z",
+"handledIds": [ "000000001","000000002"],
+"rejectedIds": ["000999999"],
+"errorStatus": "",
+"errorMessage": "",
+"loadProcessReports": [{
+  "status": 200,
+  "processId": 9999,
+  "processedAll": false,
+  "recordAmount": 3,
+  "processedAmount": 2,
+  "handledAmount": 1,
+  "rejectedAmount": 1,
+  "rejectMessages": ["Cannot overwrite a deleted record. Record 000999999 is written to rej file"]
+  }]
 }
 ```
 
 ## License and copyright
 
-Copyright (c) 2020-2020 **University Of Helsinki (The National Library Of Finland)**
+Copyright (c) 2020-2021 **University Of Helsinki (The National Library Of Finland)**
 
 This project's source code is licensed under the terms of **GNU Affero General Public License Version 3** or any later version.
