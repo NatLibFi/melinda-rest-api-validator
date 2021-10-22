@@ -61,6 +61,7 @@ Queue-item schema examle for a bulk job queueItem:
 "operationSettings": {
   "prio": false,
  },
+"contentType": "application/json",
 "recordLoadParams": {
   "pActiveLibrary": "XXX00",
   "pInputFile": "filename.seq",
