@@ -7,7 +7,6 @@ import {updateField001ToParamId} from '../utils';
 import httpStatus from 'http-status';
 import {promisify} from 'util';
 
-
 export default function (amqpOperator) {
   const setTimeoutPromise = promisify(setTimeout);
   const logger = createLogger();
@@ -25,42 +24,50 @@ export default function (amqpOperator) {
 
     return new Promise((resolve, reject) => {
       const reader = chooseAndInitReader(contentType);
-      reader.on('error', err => {
-        logError(err);
-        reject(new ApiError(httpStatus.UNPROCESSABLE_ENTITY, 'Invalid payload!'));
-      }).on('data', data => {
-        promises.push(transform(data, recordNumber)); // eslint-disable-line functional/immutable-data
-        recordNumber += 1;
+      reader
+        .on('error', err => {
+          logError(err);
+          logger.debug(`Reader error - fail whole job`);
+          // Note: other records might still be pushed to operation.correlationId queue
+          // queue is NOT removed anywhere
+          reject(new ApiError(httpStatus.UNPROCESSABLE_ENTITY, 'Invalid payload!'));
+        })
+        .on('data', data => {
+          promises.push(transform(data, recordNumber)); // eslint-disable-line functional/immutable-data
+          recordNumber += 1;
 
-        log100thQueue(recordNumber, 'read');
+          log100thQueue(recordNumber, 'read');
 
-        // This could input to Mongo also id:s of records to be handled: for updates Melinda-ID, for creates original 003+001 and temporary number
-        async function transform(record, number) {
+          // This could input to Mongo also id:s of records to be handled: for updates Melinda-ID, for creates original 003+001 and temporary number
+          // - no mongoOperator though
+
+          async function transform(record, number) {
           // Operation CREATE -> f001 new value
-          if (headers.operation === OPERATIONS.CREATE) {
+            if (headers.operation === OPERATIONS.CREATE) {
             // Field 001 value -> 000000001, 000000002, 000000003....
-            const updatedRecord = updateField001ToParamId(`${number}`, record);
+              const updatedRecord = updateField001ToParamId(`${number}`, record);
 
-            await amqpOperator.sendToQueue({queue: `${headers.operation}.${correlationId}`, correlationId, headers, data: updatedRecord.toObject()});
+              await amqpOperator.sendToQueue({queue: `${headers.operation}.${correlationId}`, correlationId, headers, data: updatedRecord.toObject()});
+              return log100thQueue(number, 'queued');
+            }
+
+            await amqpOperator.sendToQueue({queue: `${headers.operation}.${correlationId}`, correlationId, headers, data: record.toObject()});
             return log100thQueue(number, 'queued');
           }
-
-          await amqpOperator.sendToQueue({queue: `${headers.operation}.${correlationId}`, correlationId, headers, data: record.toObject()});
-          return log100thQueue(number, 'queued');
-        }
-      })
+        })
         .on('end', async () => {
           logger.verbose(`Read ${promises.length} records from stream`);
           logger.info(`Sending ${promises.length} records to queue! This might take some time! ${headers.operation}.${correlationId}`);
 
           await setTimeoutPromise(500); // Makes sure that even slowest promise is in the array
           if (promises.length === 0) {
+            logger.debug(`Got no promises from stream`);
             return reject(new ApiError(httpStatus.UNPROCESSABLE_ENTITY, 'Invalid payload!'));
           }
 
           await Promise.all(promises);
           logger.info(`Request handling done for ${correlationId}`);
-          // This could add to mongo the amount of records created totalRecordAmount
+          // This could add to mongo the amount of records created totalRecordAmount - but this has no mongoOperator
           resolve();
         });
     });

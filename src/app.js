@@ -34,6 +34,7 @@ export default async function ({
 
     // Prio Validator checks requests from amqpQueue REQUESTS
     if (pollRequest) {
+      logger.silly(`Going to checkAmqp`);
       return checkAmqp();
     }
 
@@ -116,34 +117,42 @@ export default async function ({
         }
 
         // queueItem was too old, queueItem was set to ABORT
-        // melinda-rest-api-http does not read responses for ABORT from queue:correlationID, no need to send the there
         await amqpOperator.ackMessages([message]);
-
         return initCheck();
       }
 
       // No job found
       return initCheck(true);
-    } catch (error) {
 
+    } catch (error) {
       logger.debug(`checkAmqpqueue errored: `);
       logError(error);
 
-      logger.silly(`error.status: ${error.status}`);
-      const responseStatus = error.status || '500';
-      logger.debug(`responseStatus: ${responseStatus}`);
+      // We cannot ackMessages or setStates if we do not have a message
+      if (message) {
+        logger.silly(`error.status: ${error.status}`);
+        const responseStatus = error.status || '500';
+        logger.debug(`responseStatus: ${responseStatus}`);
 
-      logger.silly(`error.message: ${error.message}, error.payload: ${error.payload}`);
-      const responsePayload = error.message || error.payload || 'Unexpected error!';
-      logger.debug(`responsePayload: ${responsePayload}`);
+        logger.silly(`error.message: ${error.message}, error.payload: ${error.payload}`);
+        const responsePayload = error.message || error.payload || 'Unexpected error!';
+        logger.debug(`responsePayload: ${responsePayload}`);
+        await amqpOperator.ackMessages([message]);
+        const {correlationId} = message.properties;
+        logger.silly(`correlationId: ${correlationId}`);
+        await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.ERROR, errorStatus: responseStatus, errorMessage: responsePayload});
+        // If we had a message we can move to next message
+        return initCheck(true);
+      }
 
-      await amqpOperator.ackMessages([message]);
+      // If we had an ApiError even without message, we can retry
+      if (error instanceof ApiError) {
+        return initCheck(true);
+      }
 
-      const {correlationId} = message.properties;
-      logger.silly(`correlationId: ${correlationId}`);
-      await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.ERROR, errorStatus: responseStatus, errorMessage: responsePayload});
-      return initCheck(true);
-
+      // otherwise throw error
+      // This should handle cases where amqp errors f.e. 'IllegalOperationError: Channel closed'
+      throw error;
     }
   }
 
@@ -162,6 +171,7 @@ export default async function ({
         const stream = await mongoOperator.getStream(correlationId);
 
         // Read stream to MarcRecords and send em to queue
+        // This is a promise that resolves when all the records are in queue and rejects if any of the records in the stream fail
         await toMarcRecords.streamToRecords({correlationId, headers: {operation, cataloger: queueItem.cataloger}, contentType, stream});
 
         // Set Mongo job state
