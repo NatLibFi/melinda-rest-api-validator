@@ -3,9 +3,9 @@
 ## Usage
 While service is in operation:
 
-- if `'POLL_REQUEST'` is true, service will poll AMQP `'REQUEST'` queue for a prio job. It will validate the incoming record belonging, send the validated record to the job's `operation.correlationId` AMQP queue and transition the job state to `'IMPORTER.IN_QUEUE'` in Mongo.
+- if `'POLL_REQUEST'` is true, service will poll `'REQUEST'` AMQP queue for a **prio** job. It will validate the incoming record, send the validated record to the job's `operation.correlationId` AMQP queue and transition the job state to `'IMPORTER.IN_QUEUE'` in Mongo.
 
-- if `'POLL_REQUEST'` is false, service will poll Mongo to find a bulk job in state `'VALIDATOR.PENDING_QUEUING'`. It will stream the jobs content from Mongo bucket to records, send the records to the job's `operation.correlationId` AMQP queue and transition the job's state to `'IMPORTER.IN_QUEUE'` in Mongo.
+- if `'POLL_REQUEST'` is false, service will poll Mongo to find a **bulk** job in state `'VALIDATOR.PENDING_QUEUING'`. It will stream the jobs content from Mongo bucket and transform it to records, send the records to the job's `operation.correlationId` AMQP queue and transition the job state to `'IMPORTER.IN_QUEUE'` in Mongo.
 
 ### Environment variables
 | Name           | Mandatory | Description                                                                                                        |
