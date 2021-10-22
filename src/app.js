@@ -111,7 +111,7 @@ export default async function ({
           logger.silly(`app/checkAmqp: sending to queue toQueue: ${inspect(toQueue, {colors: true, maxArrayLength: 3, depth: 1})}`);
           await amqpOperator.ackMessages([message]);
           await amqpOperator.sendToQueue(toQueue);
-          await mongoOperator.checkAndSetState({correlationId, state: QUEUE_ITEM_STATE.VALIDATOR.IN_QUEUE});
+          await mongoOperator.checkAndSetState({correlationId, state: QUEUE_ITEM_STATE.IMPORTER.IN_QUEUE});
 
           return initCheck();
         }
@@ -176,8 +176,10 @@ export default async function ({
         // This is a promise that resolves when all the records are in queue and rejects if any of the records in the stream fail
         await toMarcRecords.streamToRecords({correlationId, headers: {operation, cataloger: queueItem.cataloger}, contentType, stream});
 
+        // If we'd like to validate bulk job records it could be done here
+
         // Set Mongo job state
-        await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.VALIDATOR.IN_QUEUE});
+        await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.IMPORTER.IN_QUEUE});
       } catch (error) {
         if (error instanceof ApiError) {
           logError(error);
