@@ -16,7 +16,7 @@ While service is in operation:
 | OFFLINE_PERIOD | No        | Starting hour and length of offline period. e.g `'11,1'`                                                           |
 | POLL_REQUEST   | No        | A numeric presentation of boolean option to start polling AMQP `'REQUEST'` queue when process is started e.g. `1`  |
 | POLL_WAIT_TIME | No        | A number value presenting time in ms between polling. Defaults to `'1000'`                                         |
-| LOG_LEVEL      | NO        | Log information level                                                                                              |
+| LOG_LEVEL      | No        | Log information level                                                                                              |
 
 ### Mongo
 
