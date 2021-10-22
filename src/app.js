@@ -71,12 +71,12 @@ export default async function ({
           // If not-noop and validator.process fails, it errors
           // for noop failing marc-record-validate return result.failed: true
           logger.debug(`app/checkAmqp: Validation successfully done`);
-          logger.debug(`app/checkAmqp: Validation process results: ${inspect(processResult, {colors: true, maxArrayLength: 3, depth: 1})}`);
+          logger.silly(`app/checkAmqp: Validation process results: ${inspect(processResult, {colors: true, maxArrayLength: 3, depth: 1})}`);
           logger.silly(`app/checkAmqp: Validation process results: ${JSON.stringify(processResult)}`);
 
           // Process validated data
 
-          // noops are done here
+          // noops are DONE here
           const {noop} = headers;
           logger.debug(`app/checkAmqp: noop ${noop}`);
 
@@ -107,7 +107,7 @@ export default async function ({
             data: processResult.data
           };
 
-          logger.debug(`app/checkAmqp: sending to queue toQueue: ${inspect(toQueue, {colors: true, maxArrayLength: 3, depth: 1})}`);
+          logger.silly(`app/checkAmqp: sending to queue toQueue: ${inspect(toQueue, {colors: true, maxArrayLength: 3, depth: 1})}`);
           await amqpOperator.ackMessages([message]);
           await amqpOperator.sendToQueue(toQueue);
           await mongoOperator.checkAndSetState({correlationId, state: QUEUE_ITEM_STATE.VALIDATOR.IN_QUEUE});

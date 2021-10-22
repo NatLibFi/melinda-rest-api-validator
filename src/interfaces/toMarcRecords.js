@@ -15,7 +15,7 @@ export default function (amqpOperator) {
   return {streamToRecords};
 
   async function streamToRecords({correlationId, headers, contentType, stream}) {
-    logger.info('Starting to transform stream to records');
+    logger.verbose('Starting to transform stream to records');
     let recordNumber = 1; // eslint-disable-line functional/no-let
     const promises = [];
 
@@ -50,8 +50,8 @@ export default function (amqpOperator) {
         }
       })
         .on('end', async () => {
-          logger.info(`Read ${promises.length} records from stream`);
-          logger.info(`Sending ${promises.length} records to queue! This might take some time!`);
+          logger.verbose(`Read ${promises.length} records from stream`);
+          logger.info(`Sending ${promises.length} records to queue! This might take some time! ${headers.operation}.${correlationId}`);
 
           await setTimeoutPromise(500); // Makes sure that even slowest promise is in the array
           if (promises.length === 0) {
@@ -59,7 +59,7 @@ export default function (amqpOperator) {
           }
 
           await Promise.all(promises);
-          logger.info('Request handling done!');
+          logger.info(`Request handling done for ${correlationId}`);
           // This could add to mongo the amount of records created totalRecordAmount
           resolve();
         });

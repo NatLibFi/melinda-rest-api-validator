@@ -47,14 +47,14 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
         status: operation === 'CREATE' ? 'CREATED' : 'UPDATED',
         ...await executeValidations()
       };
-      logger.debug(`validator/index/process: Validation result for noop: ${inspect(result, {colors: true, maxArrayLength: 3, depth: 1})}`);
+      logger.silly(`validator/index/process: Validation result for noop: ${inspect(result, {colors: true, maxArrayLength: 3, depth: 1})}`);
       logger.debug(`return result for noop`);
       return result;
     }
 
     // non-noop
     const result = await executeValidations();
-    logger.debug(`validator/index/process: Validation result for non-noop: ${inspect(result, {colors: true, maxArrayLength: 3, depth: 1})}`);
+    logger.silly(`validator/index/process: Validation result for non-noop: ${inspect(result, {colors: true, maxArrayLength: 3, depth: 1})}`);
 
     // throw ValidationError for failed validationService for non-noop
     if (result.failed) { // eslint-disable-line functional/no-conditional-statement
