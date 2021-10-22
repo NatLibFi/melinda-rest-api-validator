@@ -165,6 +165,8 @@ export default async function ({
       // Work with queueItem
       const {correlationId} = queueItem;
       logger.silly(`Correlation id: ${correlationId}`);
+      // Set Mongo job state
+      await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.VALIDATOR.QUEUEING_IN_PROGRESS});
       try {
         const {operation, contentType} = queueItem;
         // Get stream from content
