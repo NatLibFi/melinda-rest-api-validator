@@ -1,4 +1,6 @@
 # Service for validating and queuing import records from melinda-rest-api
+![Version](https://img.shields.io/github/package-json/v/NatLibFi/melinda-rest-api-validator.svg)
+![Node Version](https://img.shields.io/node/v/@natlibfi/melinda-rest-api-validator.svg)
 
 ## Usage
 While service is in operation:
