@@ -20,6 +20,9 @@ While service is in operation:
 
 ### Mongo
 
+Db: `'rest-api'`
+Collections: `'prio'`, `'bulk'`
+
 Queue-item schema example for a prio job queueItem:
 ```json
 {

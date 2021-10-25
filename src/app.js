@@ -56,9 +56,9 @@ export default async function ({
 
         // checkAndSetState checks that the queueItem is not too old, sets state and return true if okay
         // http did createdPrio in state QUEUE_ITEM_STATE.VALIDATOR.PENDING_VALIDATION
-        const valid = await mongoOperator.checkAndSetState({correlationId, state: QUEUE_ITEM_STATE.VALIDATOR.VALIDATING});
+        const fresh = await mongoOperator.checkAndSetState({correlationId, state: QUEUE_ITEM_STATE.VALIDATOR.VALIDATING});
 
-        if (valid) {
+        if (fresh) {
           const {headers} = message.properties;
           const content = JSON.parse(message.content.toString());
 
