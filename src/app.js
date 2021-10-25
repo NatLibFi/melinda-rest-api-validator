@@ -45,7 +45,7 @@ export default async function ({
   // Check amqp for jobs
   async function checkAmqp() {
     logger.silly('Checking amqp');
-    const message = await amqpOperator.checkQueue('REQUESTS', 'raw', false);
+    const message = await amqpOperator.checkQueue({queue: 'REQUESTS', style: 'one', toRecord: false, purge: false});
     try {
       if (message) {
         // logger.debug(`app/chechAmqp: Found message: ${JSON.stringify(message)}`);
