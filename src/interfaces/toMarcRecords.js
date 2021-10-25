@@ -19,7 +19,7 @@ export default function (amqpOperator) {
     const promises = [];
 
     // Purge queue before importing records in
-    await amqpOperator.checkQueue(`${headers.operation}.${correlationId}`, 'messages', true);
+    await amqpOperator.checkQueue({queue: `${headers.operation}.${correlationId}`, style: 'messages', purge: true});
     logger.verbose('Reading stream to records');
 
     return new Promise((resolve, reject) => {

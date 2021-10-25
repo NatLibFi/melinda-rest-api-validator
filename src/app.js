@@ -46,6 +46,7 @@ export default async function ({
   async function checkAmqp() {
     logger.silly('Checking amqp');
     const message = await amqpOperator.checkQueue({queue: 'REQUESTS', style: 'one', toRecord: false, purge: false});
+    logger.silly(`Message: ${inspect(message, {colors: true, maxArrayLength: 3, depth: 2})}`);
     try {
       if (message) {
         // logger.debug(`app/chechAmqp: Found message: ${JSON.stringify(message)}`);
@@ -125,8 +126,7 @@ export default async function ({
       return initCheck(true);
 
     } catch (error) {
-      logger.debug(`checkAmqpqueue errored: `);
-      logError(error);
+      logger.debug(`checkAmqpqueue errored: ${JSON.stringify(error)}`);
 
       // We cannot ackMessages or setStates if we do not have a message
       if (message) {
@@ -144,6 +144,8 @@ export default async function ({
         // If we had a message we can move to next message
         return initCheck(true);
       }
+
+      logError(error);
 
       // If we had an ApiError even without message, we can retry
       if (error instanceof ApiError) {
