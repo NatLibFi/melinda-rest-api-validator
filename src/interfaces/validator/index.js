@@ -1,4 +1,3 @@
-/* eslint-disable max-statements */
 import deepEqual from 'deep-eql';
 import HttpStatus from 'http-status';
 import {MARCXML} from '@natlibfi/marc-record-serializers';
@@ -23,6 +22,7 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
 
   return {process};
 
+  // eslint-disable-next-line max-statements
   async function process(headers, data) {
     logger.debug(`process headers ${JSON.stringify(headers)}`);
 

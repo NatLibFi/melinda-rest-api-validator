@@ -1,4 +1,3 @@
-/* eslint-disable max-statements */
 import {promisify, inspect} from 'util';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
@@ -43,6 +42,7 @@ export default async function ({
   }
 
   // Check amqp for jobs
+  // eslint-disable-next-line max-statements
   async function checkAmqp() {
     logger.silly('Checking amqp');
     const message = await amqpOperator.checkQueue({queue: 'REQUESTS', style: 'one', toRecord: false, purge: false});
