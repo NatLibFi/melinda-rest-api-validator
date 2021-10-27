@@ -22,7 +22,6 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
 
   return {process};
 
-  // eslint-disable-next-line max-statements
   async function process(headers, data) {
     logger.debug(`process headers ${JSON.stringify(headers)}`);
 
@@ -42,6 +41,11 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
     // validation result from validationService: {record, failed, messages: []}
 
     if (noop) {
+      return processNoop();
+    }
+    return processNormal();
+
+    async function processNoop() {
       logger.debug(`validator/index/process: Add status to noop`);
       const result = {
         status: operation === 'CREATE' ? 'CREATED' : 'UPDATED',
@@ -52,17 +56,18 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
       return result;
     }
 
-    // non-noop
-    const result = await executeValidations();
-    logger.silly(`validator/index/process: Validation result for non-noop: ${inspect(result, {colors: true, maxArrayLength: 3, depth: 1})}`);
+    async function processNormal() {
+      const result = await executeValidations();
+      logger.silly(`validator/index/process: Validation result for non-noop: ${inspect(result, {colors: true, maxArrayLength: 3, depth: 1})}`);
 
-    // throw ValidationError for failed validationService for non-noop
-    if (result.failed) { // eslint-disable-line functional/no-conditional-statement
-      logger.debug('Validation failed');
-      throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, result.messages);
+      // throw ValidationError for failed validationService for non-noop
+      if (result.failed) { // eslint-disable-line functional/no-conditional-statement
+        logger.debug('Validation failed');
+        throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, result.messages);
+      }
+
+      return {headers: {operation, cataloger: cataloger.id}, data: result.record.toObject()};
     }
-
-    return {headers: {operation, cataloger: cataloger.id}, data: result.record.toObject()};
 
     async function unserializeAndFormatRecord(data, format, formatOptions) {
       try {
@@ -171,9 +176,7 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
     const existingModificationHistory = existingRecord.get(/^CAT$/u) || [];
 
     // Merge makes uuid variables to all fields and this removes those
-    const incomingModificationHistoryNoUuids = incomingModificationHistory.map(field => { // eslint-disable-line arrow-body-style
-      return {tag: field.tag, ind1: field.ind1, ind2: field.ind2, subfields: field.subfields};
-    });
+    const incomingModificationHistoryNoUuids = incomingModificationHistory.map(field => ({tag: field.tag, ind1: field.ind1, ind2: field.ind2, subfields: field.subfields}));
 
     logger.silly(`Incoming CATS:\n${JSON.stringify(incomingModificationHistoryNoUuids)}`);
     logger.silly(`Existing CATS:\n${JSON.stringify(existingModificationHistory)}`);
@@ -211,5 +214,4 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
     });
   }
 }
-
 
