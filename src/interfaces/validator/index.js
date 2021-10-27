@@ -57,7 +57,9 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
     }
 
     async function processNormal() {
+      logger.silly(`validator/index/process: Running validations for normal`);
       const result = await executeValidations();
+
       logger.silly(`validator/index/process: Validation result for non-noop: ${inspect(result, {colors: true, maxArrayLength: 3, depth: 1})}`);
 
       // throw ValidationError for failed validationService for non-noop

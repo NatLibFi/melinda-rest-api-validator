@@ -49,7 +49,7 @@ export default async function ({
 
     try {
       if (message) {
-        return handleMessage(message, mongoOperator, amqpOperator);
+        return await handleMessage(message, mongoOperator, amqpOperator);
       }
       // No job found
       return initCheck(true);
