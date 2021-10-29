@@ -44,7 +44,6 @@ describe('validateExistingRecord', () => {
     fixura: {
       reader: READERS.JSON
     },
-    // eslint-disable-next-line max-statements
     callback: ({getFixture, expectedToThrow, expectedStatus, expectedError, enabled = true}) => {
 
       if (!enabled) {

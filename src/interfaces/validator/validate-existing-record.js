@@ -1,9 +1,7 @@
-/* eslint-disable no-unused-vars */
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ValidationError, isDeletedRecord} from '@natlibfi/melinda-commons';
 import httpStatus from 'http-status';
 import createDebugLogger from 'debug';
-import error from '@natlibfi/melinda-commons/dist/error';
 
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator:validate-existing-record');
 const debugData = debug.extend('data');
@@ -17,11 +15,11 @@ export function validateExistingRecord(existingRecord) {
 
   // eslint-disable-next-line functional/no-conditional-statement
   if (isDeleted) {
-    logger.log('verbose', 'Existing record is deleted!');
+    logger.verbose('Existing record is deleted!');
     debug('Existing record is deleted!');
     throw new ValidationError(httpStatus.NOT_FOUND, 'Existing record is deleted');
   }
 
-  logger.log('debug', 'Existing record is not deleted.');
+  logger.debug('Existing record is not deleted.');
   debug('Existing record is not deleted.');
 }

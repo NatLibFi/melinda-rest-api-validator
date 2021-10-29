@@ -4,7 +4,7 @@ import {createLogger} from '@natlibfi/melinda-backend-commons';
 const logger = createLogger();
 
 export function updateField001ToParamId(id, record) {
-  logger.log('silly', `Updating F001 value to ${id}`);
+  logger.silly(`Updating F001 value to ${id}`);
   const fields = record.get(/^001$/u);
 
   if (fields.length === 0) {
