@@ -184,17 +184,16 @@ export default async function ({
 
   // Check Mongo for jobs
   async function checkMongo() {
-    logger.silly('Checking mongo');
+    //logger.silly('Checking mongo');
     const queueItem = await mongoOperator.getOne({queueItemState: QUEUE_ITEM_STATE.VALIDATOR.PENDING_QUEUING});
     if (queueItem) {
       logger.silly('Mongo queue item found');
       // Work with queueItem
-      const {correlationId} = queueItem;
+      const {correlationId, operation, contentType} = queueItem;
       logger.silly(`Correlation id: ${correlationId}`);
       // Set Mongo job state
       await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.VALIDATOR.QUEUEING_IN_PROGRESS});
       try {
-        const {operation, contentType} = queueItem;
         // Get stream from content
         const stream = await mongoOperator.getStream(correlationId);
 
@@ -208,11 +207,11 @@ export default async function ({
         await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.IMPORTER.IN_QUEUE});
       } catch (error) {
         if (error instanceof ApiError) {
-          logError(error);
-          await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.ERROR, errorMessage: error.payload});
+          logger.verbose(`validator/app/checkMongo errored ${JSON.stringify(error)}`);
+          await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.ERROR, errorMessage: error.payload, errorStatus: error.status});
           return initCheck();
         }
-
+        logError(error);
         throw error;
       }
 
