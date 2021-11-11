@@ -93,12 +93,7 @@ export default function (amqpOperator, mongoOperator, splitterOptions) {
           await Promise.all(promises);
           logger.info(`Request handling done for ${correlationId}`);
 
-          // eslint-disable-next-line functional/no-conditional-statement
-          if ((keepSplitterReport === 'ALL') || (keepSplitterReport === 'ERROR' && readerErrored)) { // eslint-disable-line no-extra-parens
-            logger.debug(`Got ${readerErrors.length} errors. Pushing report to mongo`);
-            const splitterReport = {recordNumber, sequenceNumber, readerErrors};
-            mongoOperator.pushMessages({correlationId, messages: [splitterReport], messageField: 'splitterReport'});
-          }
+          createSplitterReport();
 
           if (readerErrored && failBulkOnError) {
             logger.debug(`Reader errored, failBulkOnError active, removing the queue.`);
@@ -108,6 +103,17 @@ export default function (amqpOperator, mongoOperator, splitterOptions) {
           return resolve();
 
         });
+
+      function createSplitterReport() {
+        if ((keepSplitterReport === 'ALL') || (keepSplitterReport === 'ERROR' && readerErrored)) { // eslint-disable-line no-extra-parens
+          logger.debug(`Got ${readerErrors.length} errors. Pushing report to mongo`);
+          const splitterReport = {recordNumber, sequenceNumber, readerErrors};
+          mongoOperator.pushMessages({correlationId, messages: [splitterReport], messageField: 'splitterReport'});
+          return;
+        }
+        return;
+      }
+
     });
 
     function chooseAndInitReader(contentType) {
