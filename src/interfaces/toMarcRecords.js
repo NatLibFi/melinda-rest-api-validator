@@ -5,8 +5,10 @@ import {OPERATIONS, logError} from '@natlibfi/melinda-rest-api-commons';
 import {updateField001ToParamId} from '../utils';
 import httpStatus from 'http-status';
 import {promisify} from 'util';
+import {MarcRecordError} from '@natlibfi/marc-record';
 
-export default function (amqpOperator) {
+export default function (amqpOperator, mongoOperator, splitterOptions) {
+  const {failBulkOnError, keepSplitterReport} = splitterOptions;
   const setTimeoutPromise = promisify(setTimeout);
   const logger = createLogger();
 
@@ -14,8 +16,14 @@ export default function (amqpOperator) {
 
   async function streamToRecords({correlationId, headers, contentType, stream}) {
     logger.verbose('Starting to transform stream to records');
-    let recordNumber = 1; // eslint-disable-line functional/no-let
+    // recordNumber is counter for data-events from the reader
+    let recordNumber = 0; // eslint-disable-line functional/no-let
+    // sequenceNumber is counter for data and error events from the reader
+    let sequenceNumber = 0; // eslint-disable-line functional/no-let
+    // promises contains record promises from the reader
     const promises = [];
+    let readerErrored = false; // eslint-disable-line functional/no-let
+    const readerErrors = [];
 
     // Purge queue before importing records in
     await amqpOperator.checkQueue({queue: `${headers.operation}.${correlationId}`, style: 'messages', purge: true});
@@ -25,20 +33,37 @@ export default function (amqpOperator) {
       const reader = chooseAndInitReader(contentType);
       reader
         .on('error', err => {
+          readerErrored = true;
+          sequenceNumber += 1;
+          logger.debug(`Reader seq: ${sequenceNumber} error`);
           logError(err);
-          logger.debug(`Reader error - fail whole job`);
-          // Note: other records might still be pushed to operation.correlationId queue
-          // queue is NOT removed anywhere
-          reject(new ApiError(httpStatus.UNPROCESSABLE_ENTITY, 'Invalid payload!'));
+          const cleanErrorMessage = err.message.replace(/(?<lineBreaks>\r\n|\n|\r)/gmu, ' ');
+
+          readerErrors.push({sequenceNumber, error: cleanErrorMessage}); // eslint-disable-line functional/immutable-data
+          // eslint-disable-next-line functional/no-conditional-statement
+          if (err instanceof MarcRecordError) {
+            logger.debug(`Error is MarcRecordError`);
+          }
+          // eslint-disable-next-line functional/no-conditional-statement
+          if (failBulkOnError) {
+            reject(new ApiError(httpStatus.UNPROCESSABLE_ENTITY, `Invalid payload! (${sequenceNumber}) ${cleanErrorMessage}`));
+          }
         })
         .on('data', data => {
-          promises.push(transform(data, recordNumber)); // eslint-disable-line functional/immutable-data
+          sequenceNumber += 1;
+          logger.silly(`Reader sequence: ${sequenceNumber} data`);
+
+          if (readerErrored && failBulkOnError) {
+            logger.silly(`Reader already errored, no need to handle data.`);
+            return;
+          }
           recordNumber += 1;
+          logger.silly(`Record number ${recordNumber}`);
+          promises.push(transform(data, recordNumber)); // eslint-disable-line functional/immutable-data
 
           log100thQueue(recordNumber, 'read');
 
           // This could input to Mongo also id:s of records to be handled: for updates Melinda-ID, for creates original 003+001 and temporary number
-          // - no mongoOperator though
 
           async function transform(record, number) {
           // Operation CREATE -> f001 new value
@@ -55,19 +80,33 @@ export default function (amqpOperator) {
           }
         })
         .on('end', async () => {
-          logger.verbose(`Read ${promises.length} records from stream`);
+          await setTimeoutPromise(500); // Makes sure that even slowest promise is in the array
+          logger.verbose(`Read ${promises.length} records from stream (${recordNumber} recs, ${readerErrors.length} errors from ${sequenceNumber} reader events.)`);
           logger.info(`Sending ${promises.length} records to queue! This might take some time! ${headers.operation}.${correlationId}`);
 
-          await setTimeoutPromise(500); // Makes sure that even slowest promise is in the array
+          // eslint-disable-next-line functional/no-conditional-statement
           if (promises.length === 0) {
-            logger.debug(`Got no promises from stream`);
-            return reject(new ApiError(httpStatus.UNPROCESSABLE_ENTITY, 'Invalid payload!'));
+            logger.debug(`Got no record promises from reader stream`);
+            reject(new ApiError(httpStatus.UNPROCESSABLE_ENTITY, 'Invalid payload!'));
           }
 
           await Promise.all(promises);
           logger.info(`Request handling done for ${correlationId}`);
-          // This could add to mongo the amount of records created totalRecordAmount - but this has no mongoOperator
-          resolve();
+
+          // eslint-disable-next-line functional/no-conditional-statement
+          if ((keepSplitterReport === 'ALL') || (keepSplitterReport === 'ERROR' && readerErrored)) { // eslint-disable-line no-extra-parens
+            logger.debug(`Got ${readerErrors.length} errors. Pushing report to mongo`);
+            const splitterReport = {recordNumber, sequenceNumber, readerErrors};
+            mongoOperator.pushMessages({correlationId, messages: [splitterReport], messageField: 'splitterReport'});
+          }
+
+          if (readerErrored && failBulkOnError) {
+            logger.debug(`Reader errored, failBulkOnError active, removing the queue.`);
+            amqpOperator.removeQueue(`${headers.operation}.${correlationId}`);
+            return resolve();
+          }
+          return resolve();
+
         });
     });
 
@@ -75,6 +114,7 @@ export default function (amqpOperator) {
       logger.debug(`toMarcRecords/chooseAndInitReader: Choosing reader for contentType: ${contentType}`);
       if (contentType === 'application/alephseq') {
         logger.debug('AlephSeq stream!');
+        // 3rd param true: genF001fromSysNo
         return AlephSequential.reader(stream, {subfieldValues: false}, true);
       }
 
