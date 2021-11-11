@@ -10,15 +10,18 @@ While service is in operation:
 - if `'POLL_REQUEST'` is false, service will poll Mongo to find a **bulk** job in state `'VALIDATOR.PENDING_QUEUING'`. It will stream the jobs content from Mongo bucket and transform it to records, send the records to the job's `operation.correlationId` AMQP queue and transition the job state to `'IMPORTER.IN_QUEUE'` in Mongo.
 
 ### Environment variables
-| Name           | Mandatory | Description                                                                                                        |
-|----------------|-----------|--------------------------------------------------------------------------------------------------------------------|
-| AMQP_URL       | Yes       | A serialized object of AMQP connection config                                                                      |
-| SRU_URL_BIB    | Yes       | A serialized URL addres to SRU                                                                                     |
-| MONGO_URI      | No        | A serialized URL address of Melinda-rest-api's import queue database. Defaults to `'mongodb://localhost:27017/db'` |
-| OFFLINE_PERIOD | No        | Starting hour and length of offline period. e.g `'11,1'`                                                           |
-| POLL_REQUEST   | No        | A numeric presentation of boolean option to start polling AMQP `'REQUEST'` queue when process is started e.g. `1`  |
-| POLL_WAIT_TIME | No        | A number value presenting time in ms between polling. Defaults to `'1000'`                                         |
-| LOG_LEVEL      | No        | Log information level                                                                                              |
+| Name                 | Mandatory | Description                                                                                                        |
+|----------------------|-----------|--------------------------------------------------------------------------------------------------------------------|
+| AMQP_URL             | Yes       | A serialized object of AMQP connection config                                                                      |
+| SRU_URL_BIB          | Yes       | A serialized URL addres to SRU                                                                                     |
+| MONGO_URI            | No        | A serialized URL address of Melinda-rest-api's import queue database. Defaults to `'mongodb://localhost:27017/db'` |
+| OFFLINE_PERIOD       | No        | Starting hour and length of offline period. e.g `'11,1'`                                                           |
+| POLL_REQUEST         | No        | A numeric presentation of boolean option to start polling AMQP `'REQUEST'` queue when process is started e.g. `1`  |
+| POLL_WAIT_TIME       | No        | A number value presenting time in ms between polling. Defaults to `'1000'`                                         |
+| FAIL_BULK_ON_ERROR   | No        | A numeric presentation of boolean option to fail whole bulk, if reading payload to records errors. Defaults to `true`. |
+| KEEP_SPLITTER_REPORT | No        | When to keep information about bulk payload splitting process in the queueItem. Options `ALL/NONE/ERROR`. Defaults to `ERROR`. | 
+| LOG_LEVEL            | No        | Log information level                                                                                              |
+
 
 ### Mongo
 
@@ -90,7 +93,15 @@ Queue-item schema examle for a bulk job queueItem:
   "handledAmount": 1,
   "rejectedAmount": 1,
   "rejectMessages": ["Cannot overwrite a deleted record. Record 000999999 is written to rej file"]
+  }],
+"splitterReport": [{
+  "recordNumber": 0,
+  "sequenceNumber": 2,
+  "readerErrors": [{
+    "sequenceNumber": 1,
+    "error": "Record is invalid"
   }]
+ }]
 }
 ```
 

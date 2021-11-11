@@ -16,6 +16,13 @@ export const mongoUri = readEnvironmentVariable('MONGO_URI', {defaultValue: 'mon
 
 const recordType = readEnvironmentVariable('RECORD_TYPE');
 
+export const splitterOptions = {
+  // failBulkError: fail processing whole bulk of records if there's error on serializing a record
+  failBulkOnError: readEnvironmentVariable('FAIL_BULK_ON_ERROR', {defaultValue: 1, format: v => parseBoolean(v)}),
+  // keepSplitterReport: ALL/NONE/ERROR
+  keepSplitterReport: readEnvironmentVariable('KEEP_SPLITTER_REPORT', {defaultValue: 'ERROR'})
+};
+
 export const validatorOptions = {
   formatOptions: generateFormatOptions(),
   sruUrl: readEnvironmentVariable('SRU_URL'),

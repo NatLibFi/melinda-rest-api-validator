@@ -8,14 +8,14 @@ import toMarcRecordFactory from './interfaces/toMarcRecords';
 const setTimeoutPromise = promisify(setTimeout);
 
 export default async function ({
-  pollRequest, pollWaitTime, amqpUrl, mongoUri, validatorOptions
+  pollRequest, pollWaitTime, amqpUrl, mongoUri, validatorOptions, splitterOptions
 }) {
   const logger = createLogger();
   const collection = pollRequest ? 'prio' : 'bulk';
   const mongoOperator = await mongoFactory(mongoUri, collection);
   const amqpOperator = await amqpFactory(amqpUrl);
   const validator = await validatorFactory(validatorOptions);
-  const toMarcRecords = await toMarcRecordFactory(amqpOperator);
+  const toMarcRecords = await toMarcRecordFactory(amqpOperator, mongoOperator, splitterOptions);
 
   logger.info(`Started Melinda-rest-api-validator: ${pollRequest ? 'PRIORITY' : 'BULK'}`);
 
@@ -142,14 +142,19 @@ export default async function ({
   }
 
   async function setNormalResult(headers, correlationId, processResult, mongoOperator) {
+    const operationQueue = `${processResult.headers.operation}.${correlationId}`;
+
+    // Purge queue before importing records in
+    await amqpOperator.checkQueue({queue: operationQueue, style: 'messages', purge: true});
 
     // Normal (non-noop) data to queue operation.correlationId
     const toQueue = {
       correlationId,
-      queue: `${processResult.headers.operation}.${correlationId}`,
+      queue: operationQueue,
       headers: processResult.headers || headers,
       data: processResult.data
     };
+
 
     logger.silly(`app/checkAmqp: sending to queue toQueue: ${inspect(toQueue, {colors: true, maxArrayLength: 3, depth: 1})}`);
     await amqpOperator.sendToQueue(toQueue);
@@ -192,7 +197,7 @@ export default async function ({
       const {correlationId, operation, contentType} = queueItem;
       logger.silly(`Correlation id: ${correlationId}`);
       // Set Mongo job state
-      await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.VALIDATOR.QUEUEING_IN_PROGRESS});
+      await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.VALIDATOR.QUEUING_IN_PROGRESS});
       try {
         // Get stream from content
         const stream = await mongoOperator.getStream(correlationId);
