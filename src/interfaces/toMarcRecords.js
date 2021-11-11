@@ -104,7 +104,9 @@ export default function (amqpOperator, mongoOperator, splitterOptions) {
 
         });
 
+      // Note: splitterReport is created only if the reader emit an end event
       function createSplitterReport() {
+        logger.debug(`Creating splitterReport to queueItem if needed`);
         if ((keepSplitterReport === 'ALL') || (keepSplitterReport === 'ERROR' && readerErrored)) { // eslint-disable-line no-extra-parens
           logger.debug(`Got ${readerErrors.length} errors. Pushing report to mongo`);
           const splitterReport = {recordNumber, sequenceNumber, readerErrors};
