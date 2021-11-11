@@ -142,14 +142,19 @@ export default async function ({
   }
 
   async function setNormalResult(headers, correlationId, processResult, mongoOperator) {
+    const operationQueue = `${processResult.headers.operation}.${correlationId}`;
+
+    // Purge queue before importing records in
+    await amqpOperator.checkQueue({queue: operationQueue, style: 'messages', purge: true});
 
     // Normal (non-noop) data to queue operation.correlationId
     const toQueue = {
       correlationId,
-      queue: `${processResult.headers.operation}.${correlationId}`,
+      queue: operationQueue,
       headers: processResult.headers || headers,
       data: processResult.data
     };
+
 
     logger.silly(`app/checkAmqp: sending to queue toQueue: ${inspect(toQueue, {colors: true, maxArrayLength: 3, depth: 1})}`);
     await amqpOperator.sendToQueue(toQueue);
