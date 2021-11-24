@@ -31,7 +31,7 @@
 		"_test:dev": "npm run lint:dev && npm run test:base -- src/**/*.spec.js && npm run coverage",
 		"coverage": "nyc check-coverage --per-file",
 		"build": "babel src --source-maps --copy-files --delete-dir-on-start --out-dir=dist --minified",
-		"dev": "NODE_ENV=development cross-env DEBUG=1 nodemon"
+		"dev": "NODE_ENV=development cross-env nodemon"
 	},
 	"dependencies": {
 		"@babel/runtime": "^7.15.4",

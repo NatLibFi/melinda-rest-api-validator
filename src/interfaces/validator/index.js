@@ -10,14 +10,18 @@ import validateOwnChanges from './own-authorization';
 import {updateField001ToParamId} from '../../utils';
 import {validateExistingRecord} from './validate-existing-record';
 import {inspect} from 'util';
+//import createDebugLogger from 'debug';
 
-export default async function ({formatOptions, sruUrl, matchOptions}) {
+//const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator');
+//const debugData = debug.extend('data');
+
+export default async function ({formatOptions, sruUrl, matchOptionsList}) {
   const logger = createLogger();
   const {formatRecord} = format;
   // validationService: marc-record-validate validations from melinda-rest-api-commons
   const validationService = await validations();
   const ConversionService = conversions();
-  const match = createMatchInterface(matchOptions);
+  const matchers = matchOptionsList.map(matchOptions => createMatchInterface(matchOptions));
   const sruClient = createSruClient({url: sruUrl, recordSchema: 'marcxml', retrieveAll: false, maximumRecordsPerRequest: 1});
 
   return {process};
@@ -147,11 +151,12 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
 
       if (unique) {
         logger.verbose('Attempting to find matching records in the SRU');
-        const matchResults = await match(updatedRecord);
 
-        if (matchResults.length > 0) { // eslint-disable-line functional/no-conditional-statement
-          logger.verbose('Matching record has been found');
-          logger.silly(JSON.stringify(matchResults.map(({candidate: {id}, probability}) => ({id, probability}))));
+        logger.debug(`There are ${matchers.length} matchers with matchOptions: ${JSON.stringify(matchOptionsList)}`);
+
+        const matchResults = await iterateMatchersUntilMatchIsFound(matchers, updatedRecord);
+        // eslint-disable-next-line functional/no-conditional-statement
+        if (matchResults.length > 0) {
           throw new ValidationError(HttpStatus.CONFLICT, matchResults.map(({candidate: {id}}) => id));
         }
 
@@ -170,6 +175,58 @@ export default async function ({formatOptions, sruUrl, matchOptions}) {
       return validationResults;
     }
   }
+
+  // eslint-disable-next-line max-statements
+  async function iterateMatchersUntilMatchIsFound(matchers, updatedRecord, matcherCount = 0, matcherNoRunCount = 0) {
+
+    const [matcher] = matchers;
+
+    // eslint-disable-next-line functional/no-conditional-statement
+    if (matcher) {
+
+      // eslint-disable-next-line no-param-reassign
+      matcherCount += 1;
+
+      logger.debug(`Running matcher ${matcherCount}`);
+      logger.silly(`MatchingOptions for matcher ${matcherCount}: ${JSON.stringify(matchOptionsList[matcherCount - 1])}`);
+
+      try {
+
+        const matchResults = await matcher(updatedRecord);
+
+        if (matchResults.length > 0) { // eslint-disable-line functional/no-conditional-statement
+
+          logger.verbose('verbose', `Matching record has been found in matcher ${matcherCount}`);
+          logger.silly(`${JSON.stringify(matchResults.map(({candidate: {id}, probability}) => ({id, probability})))}`);
+
+          return matchResults;
+        }
+
+        logger.debug(`No matching record from matcher ${matcherCount}`);
+        return iterateMatchersUntilMatchIsFound(matchers.slice(1), updatedRecord, matcherCount, matcherNoRunCount);
+
+      } catch (err) {
+
+        if (err.message === 'Generated query list contains no queries') {
+          logger.debug(`Matcher ${matcherCount} did not run: ${err.message}`);
+          // eslint-disable-next-line no-param-reassign
+          matcherNoRunCount += 1;
+          return iterateMatchersUntilMatchIsFound(matchers.slice(1), updatedRecord, matcherCount, matcherNoRunCount);
+        }
+
+        throw err;
+      }
+    }
+
+    logger.debug(`All ${matcherCount} matchers handled, ${matcherNoRunCount} did not run`);
+    // eslint-disable-next-line functional/no-conditional-statement
+    if (matcherNoRunCount === matcherCount) {
+      logger.debug(`None of the matchers resulted in candidates`);
+      throw new ValidationError(HttpStatus.BAD_REQUEST, 'Generated query list contains no queries');
+    }
+    return [];
+  }
+
 
   // Checks that the modification history is identical
   function validateRecordState(incomingRecord, existingRecord) {
