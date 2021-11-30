@@ -10,6 +10,8 @@ import validateOwnChanges from './own-authorization';
 import {updateField001ToParamId} from '../../utils';
 import {validateExistingRecord} from './validate-existing-record';
 import {inspect} from 'util';
+import {MarcRecord} from '@natlibfi/marc-record';
+
 //import createDebugLogger from 'debug';
 
 //const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator');
@@ -81,9 +83,9 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
         logger.silly(`Format: ${format}`);
         const unzerialized = await ConversionService.unserialize(data, format);
         logger.silly(`Unserialized data: ${JSON.stringify(unzerialized)}`);
-        const record = await formatRecord(unzerialized, formatOptions);
-        logger.silly(`Formated record:\n${JSON.stringify(record)}`);
-        return record;
+        const recordObject = await formatRecord(unzerialized, formatOptions);
+        logger.silly(`Formated recordObject:\n${JSON.stringify(recordObject)}`);
+        return new MarcRecord(recordObject);
       } catch (err) {
         logger.debug(`unserializeAndFormatRecord errored:`);
         logError(err);
@@ -187,7 +189,8 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       // eslint-disable-next-line no-param-reassign
       matcherCount += 1;
 
-      logger.debug(`Running matcher ${matcherCount}`);
+      const matcherName = matchOptionsList[matcherCount - 1].matchPackageName;
+      logger.debug(`Running matcher ${matcherCount}: ${matcherName}`);
       logger.silly(`MatchingOptions for matcher ${matcherCount}: ${JSON.stringify(matchOptionsList[matcherCount - 1])}`);
 
       try {
@@ -196,22 +199,41 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
 
         if (matchResults.length > 0) { // eslint-disable-line functional/no-conditional-statement
 
-          logger.verbose('verbose', `Matching record has been found in matcher ${matcherCount}`);
+          logger.verbose('verbose', `Matching record has been found in matcher ${matcherCount} (${matcherName})`);
           logger.silly(`${JSON.stringify(matchResults.map(({candidate: {id}, probability}) => ({id, probability})))}`);
 
           return matchResults;
         }
 
-        logger.debug(`No matching record from matcher ${matcherCount}`);
+        logger.debug(`No matching record from matcher ${matcherCount} (${matcherName})`);
         return iterateMatchersUntilMatchIsFound(matchers.slice(1), updatedRecord, matcherCount, matcherNoRunCount);
 
       } catch (err) {
 
         if (err.message === 'Generated query list contains no queries') {
-          logger.debug(`Matcher ${matcherCount} did not run: ${err.message}`);
+          logger.debug(`Matcher ${matcherCount} (${matcherName}) did not run: ${err.message}`);
           // eslint-disable-next-line no-param-reassign
           matcherNoRunCount += 1;
+
+          // If CONTENT -matcher or last matcher to run did not generate queries, match is not reliable
+          if (matcherName === 'CONTENT' || matchers.length <= 1) {
+            logger.verbose(`Matcher ${matcherCount} (${matcherName}) could not generate search queries.`);
+            throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, err.message);
+          }
+
           return iterateMatchersUntilMatchIsFound(matchers.slice(1), updatedRecord, matcherCount, matcherNoRunCount);
+        }
+
+        // SRU SruSearchErrors are 200-responses that include diagnostics from SRU server
+        if (err.message.startsWith('SRU SruSearchError')) {
+          logger.verbose(`Matcher ${matcherCount} (${matcherName}) resulted in SRU search error: ${err.message}`);
+          throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, err.message);
+        }
+
+        // SRU unexpected errors: non-200 responses from SRU server etc.
+        if (err.message.startsWith('SRU error')) {
+          logger.verbose(`Matcher ${matcherCount} (${matcherName}) resulted in SRU unexpected error: ${err.message}`);
+          throw err;
         }
 
         throw err;
@@ -222,7 +244,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
     // eslint-disable-next-line functional/no-conditional-statement
     if (matcherNoRunCount === matcherCount) {
       logger.debug(`None of the matchers resulted in candidates`);
-      throw new ValidationError(HttpStatus.BAD_REQUEST, 'Generated query list contains no queries');
+      throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, 'Generated query list contains no queries');
     }
     return [];
   }
