@@ -85,7 +85,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
         logger.silly(`Unserialized data: ${JSON.stringify(unzerialized)}`);
         const recordObject = await formatRecord(unzerialized, formatOptions);
         logger.silly(`Formated recordObject:\n${JSON.stringify(recordObject)}`);
-        return new MarcRecord(recordObject);
+        return new MarcRecord(recordObject, {subfieldValues: false});
       } catch (err) {
         logger.debug(`unserializeAndFormatRecord errored:`);
         logError(err);
