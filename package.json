@@ -14,7 +14,7 @@
 		"url": "git@github.com:NatLibFi/melinda-rest-api-validator.git"
 	},
 	"license": "AGPL-3.0+",
-	"version": "2.1.0",
+	"version": "2.2.1-alpha.2",
 	"main": "./dist/index.js",
 	"engines": {
 		"node": ">=14"
@@ -31,31 +31,31 @@
 		"_test:dev": "npm run lint:dev && npm run test:base -- src/**/*.spec.js && npm run coverage",
 		"coverage": "nyc check-coverage --per-file",
 		"build": "babel src --source-maps --copy-files --delete-dir-on-start --out-dir=dist --minified",
-		"dev": "NODE_ENV=development cross-env DEBUG=1 nodemon"
+		"dev": "NODE_ENV=development cross-env nodemon"
 	},
 	"dependencies": {
-		"@babel/runtime": "^7.15.4",
-		"@natlibfi/marc-record": "^6.1.2",
-		"@natlibfi/marc-record-serializers": "^8.0.2",
+		"@babel/runtime": "^7.16.3",
+		"@natlibfi/marc-record": "^7.0.0",
+		"@natlibfi/marc-record-serializers": "^8.0.4",
 		"@natlibfi/melinda-backend-commons": "^2.0.5",
-		"@natlibfi/melinda-commons": "^12.0.0",
-		"@natlibfi/melinda-record-matching": "^1.0.10",
-		"@natlibfi/melinda-rest-api-commons": "^2.0.1",
-		"@natlibfi/sru-client": "^4.1.0",
+		"@natlibfi/melinda-commons": "^12.0.2",
+		"@natlibfi/melinda-record-matching": "2.0.1",
+		"@natlibfi/melinda-rest-api-commons": "^2.1.2",
+		"@natlibfi/sru-client": "^5.0.0",
 		"deep-eql": "^4.0.0",
 		"http-status": "^1.5.0",
 		"moment": "^2.29.1"
 	},
 	"devDependencies": {
-		"@babel/cli": "^7.15.7",
-		"@babel/core": "^7.15.8",
-		"@babel/node": "^7.15.8",
-		"@babel/preset-env": "^7.15.8",
-		"@babel/register": "^7.15.3",
+		"@babel/cli": "^7.16.0",
+		"@babel/core": "^7.16.0",
+		"@babel/node": "^7.16.0",
+		"@babel/preset-env": "^7.16.4",
+		"@babel/register": "^7.16.0",
+		"@babel/eslint-parser": "^7.16.3",
 		"@natlibfi/eslint-config-melinda-backend": "^1.1.1",
 		"@natlibfi/fixugen-http-server": "^1.0.4",
 		"@natlibfi/fixura": "^2.2.1",
-		"@babel/eslint-parser": "^7.15.8",
 		"babel-plugin-istanbul": "^6.1.1",
 		"babel-plugin-rewire": "^1.2.0",
 		"chai": "^4.3.4",
@@ -63,8 +63,8 @@
 		"cross-env": "^7.0.3",
 		"eslint": "^7.32.0",
 		"mocha": "^9.1.3",
-		"mock-fs": "^5.1.1",
-		"nodemon": "^2.0.14",
+		"mock-fs": "^5.1.2",
+		"nodemon": "^2.0.15",
 		"nyc": "^15.1.0"
 	},
 	"eslintConfig": {
