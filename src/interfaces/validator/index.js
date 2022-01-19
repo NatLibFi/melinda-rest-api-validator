@@ -156,7 +156,8 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
 
         logger.debug(`There are ${matchers.length} matchers with matchOptions: ${JSON.stringify(matchOptionsList)}`);
 
-        const matchResults = await iterateMatchersUntilMatchIsFound(matchers, updatedRecord);
+        const matchResults = await iterateMatchersUntilMatchIsFound({matchers, matchOptionsList, updatedRecord});
+        logger.verbose(JSON.stringify(matchResults));
         // eslint-disable-next-line functional/no-conditional-statement
         if (matchResults.length > 0) {
           throw new ValidationError(HttpStatus.CONFLICT, matchResults.map(({candidate: {id}}) => id));
@@ -179,9 +180,10 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
   }
 
   // eslint-disable-next-line max-statements
-  async function iterateMatchersUntilMatchIsFound(matchers, updatedRecord, matcherCount = 0, matcherNoRunCount = 0) {
+  async function iterateMatchersUntilMatchIsFound({matchers, matchOptionsList, updatedRecord, matcherCount = 0, matcherNoRunCount = 0}) {
 
     const [matcher] = matchers;
+    const [matchOptions] = matchOptionsList;
 
     // eslint-disable-next-line functional/no-conditional-statement
     if (matcher) {
@@ -189,24 +191,29 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       // eslint-disable-next-line no-param-reassign
       matcherCount += 1;
 
-      const matcherName = matchOptionsList[matcherCount - 1].matchPackageName;
+      const matcherName = matchOptions.matchPackageName;
       logger.debug(`Running matcher ${matcherCount}: ${matcherName}`);
-      logger.silly(`MatchingOptions for matcher ${matcherCount}: ${JSON.stringify(matchOptionsList[matcherCount - 1])}`);
+      logger.silly(`MatchingOptions for matcher ${matcherCount}: ${JSON.stringify(matchOptions)}`);
 
       try {
 
         const matchResults = await matcher(updatedRecord);
+        const matchAmount = matchResults.matches.length;
+        const {matches, matchStatus} = matchResults;
+        logger.verbose(`Matcher result: ${JSON.stringify(matchResults)}`);
 
-        if (matchResults.length > 0) { // eslint-disable-line functional/no-conditional-statement
+        if (matchAmount > 0) { // eslint-disable-line functional/no-conditional-statement
 
-          logger.verbose('verbose', `Matching record has been found in matcher ${matcherCount} (${matcherName})`);
-          logger.silly(`${JSON.stringify(matchResults.map(({candidate: {id}, probability}) => ({id, probability})))}`);
+          logger.verbose(`Matching record(s) (${matchAmount}) has been found in matcher ${matcherCount} (${matcherName})`);
+          logger.verbose(`MatchStatus for matching records(s) ${JSON.stringify(matchStatus)})`);
 
-          return matchResults;
+          logger.silly(`${JSON.stringify(matches.map(({candidate: {id}, probability}) => ({id, probability})))}`);
+
+          return matches;
         }
 
         logger.debug(`No matching record from matcher ${matcherCount} (${matcherName})`);
-        return iterateMatchersUntilMatchIsFound(matchers.slice(1), updatedRecord, matcherCount, matcherNoRunCount);
+        return iterateMatchersUntilMatchIsFound({matchers: matchers.slice(1), matchOptionsList: matchOptionsList.slice(1), updatedRecord, matcherCount, matcherNoRunCount});
 
       } catch (err) {
 
