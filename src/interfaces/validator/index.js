@@ -160,7 +160,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
         logger.verbose(JSON.stringify(matchResults));
         // eslint-disable-next-line functional/no-conditional-statement
         if (matchResults.length > 0) {
-          throw new ValidationError(HttpStatus.CONFLICT, matchResults.map(({candidate: {id}}) => id));
+          throw new ValidationError(HttpStatus.CONFLICT, {message: 'Duplicates in database.', ids: matchResults.map(({candidate: {id}}) => id)});
         }
 
         logger.verbose('No matching records');
