@@ -160,7 +160,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
         logger.verbose(JSON.stringify(matchResults));
         // eslint-disable-next-line functional/no-conditional-statement
         if (matchResults.length > 0) {
-          throw new ValidationError(HttpStatus.CONFLICT, {message: 'Duplicates in database.', ids: matchResults.map(({candidate: {id}}) => id)});
+          throw new ValidationError(HttpStatus.CONFLICT, {message: 'Duplicates in database', ids: matchResults.map(({candidate: {id}}) => id)});
         }
 
         logger.verbose('No matching records');
@@ -284,7 +284,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
 
     if (matcherFalseZeroCount > 0) {
       logger.debug(`${matcherFalseZeroCount} matchers returned no matches, but did not check all possible candidates`);
-      throw new ValidationError(HttpStatus.CONFLICT, 'Matcher found too many candidates to check');
+      throw new ValidationError(HttpStatus.CONFLICT, {message: 'Matcher found too many candidates to check'});
     }
 
     return [];
@@ -304,7 +304,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
     logger.silly(`Existing CATS:\n${JSON.stringify(existingModificationHistory)}`);
 
     if (deepEqual(incomingModificationHistoryNoUuids, existingModificationHistory) === false) { // eslint-disable-line functional/no-conditional-statement
-      throw new ValidationError(HttpStatus.CONFLICT, 'Modification history mismatch (CAT)');
+      throw new ValidationError(HttpStatus.CONFLICT, {message: 'Modification history mismatch (CAT)'});
     }
   }
 
