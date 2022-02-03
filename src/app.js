@@ -180,7 +180,7 @@ export default async function ({
 
     logger.silly(`error.message: ${error.message}, error.payload: ${error.payload}`);
     const responsePayload = error.message || error.payload || 'Unexpected error!';
-    logger.debug(`responsePayload: ${responsePayload}`);
+    logger.debug(`responsePayload: ${JSON.stringify(responsePayload)}`);
 
     await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.ERROR, errorStatus: responseStatus, errorMessage: responsePayload});
     // If we had a message we can move to next message
