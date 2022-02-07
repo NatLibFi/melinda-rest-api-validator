@@ -12,10 +12,12 @@ export default async function ({
 }) {
   const logger = createLogger();
   const collection = pollRequest ? 'prio' : 'bulk';
+  const logCollection = pollRequest ? 'logPrio' : 'logBulk';
   const mongoOperator = await mongoFactory(mongoUri, collection);
+  const mongoLogOperator = await mongoFactory(mongoUri, logCollection);
   const amqpOperator = await amqpFactory(amqpUrl);
   const validator = await validatorFactory(validatorOptions);
-  const toMarcRecords = await toMarcRecordFactory(amqpOperator, mongoOperator, splitterOptions);
+  const toMarcRecords = await toMarcRecordFactory(amqpOperator, mongoOperator, splitterOptions, mongoLogOperator);
 
   logger.info(`Started Melinda-rest-api-validator: ${pollRequest ? 'PRIORITY' : 'BULK'}`);
 
@@ -49,7 +51,7 @@ export default async function ({
 
     try {
       if (message) {
-        return await handleMessage(message, mongoOperator, amqpOperator);
+        return await handleMessage(message, mongoOperator, amqpOperator, mongoLogOperator);
       }
       // No job found
       return initCheck(true);
@@ -79,7 +81,7 @@ export default async function ({
     }
   }
 
-  async function handleMessage(message, mongoOperator, amqpOperator) {
+  async function handleMessage(message, mongoOperator, amqpOperator, mongoLogOperator) {
     // logger.debug(`app/chechAmqp: Found message: ${JSON.stringify(message)}`);
     // Work with message
     const {correlationId} = message.properties;
@@ -89,7 +91,7 @@ export default async function ({
     // http did createPrio in state QUEUE_ITEM_STATE.VALIDATOR.PENDING_VALIDATION
     const fresh = await mongoOperator.checkAndSetState({correlationId, state: QUEUE_ITEM_STATE.VALIDATOR.VALIDATING});
     if (fresh) {
-      return processFreshMessage({message, mongoOperator, amqpOperator});
+      return processFreshMessage({message, mongoOperator, amqpOperator, mongoLogOperator});
     }
     // queueItem was too old, queueItem was set to ABORT
     await amqpOperator.ackMessages([message]);
@@ -117,17 +119,17 @@ export default async function ({
     logger.silly(`app/checkAmqp: Validation process results: ${JSON.stringify(processResult)}`);
 
     await amqpOperator.ackMessages([message]);
-    return processValidated({headers, correlationId, processResult, mongoOperator});
+    return processValidated({headers, correlationId, processResult, mongoOperator, mongoLogOperator});
   }
 
-  function processValidated({headers, correlationId, processResult, mongoOperator}) {
+  function processValidated({headers, correlationId, processResult, mongoOperator, mongoLogOperator}) {
     // Process validated data
     // noops are DONE here
     const {noop} = headers;
     logger.debug(`app/checkAmqp: noop ${noop}`);
 
     if (noop) {
-      return setNoopResult(correlationId, processResult, mongoOperator);
+      return setNoopResult(correlationId, processResult, mongoOperator, mongoLogOperator);
     }
 
     /* Validator could change the operation type
@@ -138,10 +140,10 @@ export default async function ({
     }
     */
 
-    return setNormalResult(headers, correlationId, processResult, mongoOperator);
+    return setNormalResult({headers, correlationId, processResult, mongoOperator, mongoLogOperator});
   }
 
-  async function setNormalResult(headers, correlationId, processResult, mongoOperator) {
+  async function setNormalResult({headers, correlationId, processResult, mongoOperator, mongoLogOperator}) {
     const operationQueue = `${processResult.headers.operation}.${correlationId}`;
 
     // Purge queue before importing records in
@@ -159,20 +161,24 @@ export default async function ({
     logger.silly(`app/checkAmqp: sending to queue toQueue: ${inspect(toQueue, {colors: true, maxArrayLength: 3, depth: 1})}`);
     await amqpOperator.sendToQueue(toQueue);
     await mongoOperator.checkAndSetState({correlationId, state: QUEUE_ITEM_STATE.IMPORTER.IN_QUEUE});
+    mongoLogOperator.checkAndSetState({correlationId, state: QUEUE_ITEM_STATE.IMPORTER.IN_QUEUE});
 
     return initCheck();
   }
 
-  async function setNoopResult(correlationId, processResult, mongoOperator) {
+  async function setNoopResult(correlationId, processResult, mongoOperator, mongoLogOperator) {
     const validationMessage = {status: processResult.status, failed: processResult.failed, messages: processResult.messages};
     logger.debug(`${JSON.stringify(validationMessage)}`);
 
     await mongoOperator.pushMessages({correlationId, messageField: 'noopValidationMessages', messages: [validationMessage]});
+    mongoLogOperator.pushMessages({correlationId, messageField: 'noopValidationMessages', messages: [validationMessage]});
+
     await mongoOperator.checkAndSetState({correlationId, state: QUEUE_ITEM_STATE.DONE});
+    mongoLogOperator.checkAndSetState({correlationId, state: QUEUE_ITEM_STATE.DONE});
     return initCheck();
   }
 
-  async function setError(error, correlationId, mongoOperator) {
+  async function setError(error, correlationId, mongoOperator, mongoLogOperator) {
 
     logger.silly(`error.status: ${error.status}`);
     const responseStatus = error.status || '500';
@@ -183,11 +189,14 @@ export default async function ({
     logger.debug(`responsePayload: ${JSON.stringify(responsePayload)}`);
 
     await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.ERROR, errorStatus: responseStatus, errorMessage: responsePayload});
+    mongoLogOperator.setState({correlationId, state: QUEUE_ITEM_STATE.ERROR, errorStatus: responseStatus, errorMessage: responsePayload});
+
     // If we had a message we can move to next message
     return initCheck(true);
   }
 
   // Check Mongo for jobs
+  // eslint-disable-next-line max-statements
   async function checkMongo() {
     //logger.silly('Checking mongo');
     const queueItem = await mongoOperator.getOne({queueItemState: QUEUE_ITEM_STATE.VALIDATOR.PENDING_QUEUING});
@@ -198,6 +207,8 @@ export default async function ({
       logger.silly(`Correlation id: ${correlationId}`);
       // Set Mongo job state
       await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.VALIDATOR.QUEUING_IN_PROGRESS});
+      mongoLogOperator.setState({correlationId, state: QUEUE_ITEM_STATE.VALIDATOR.QUEUING_IN_PROGRESS});
+
       try {
         // Get stream from content
         const stream = await mongoOperator.getStream(correlationId);
@@ -210,10 +221,14 @@ export default async function ({
 
         // Set Mongo job state
         await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.IMPORTER.IN_QUEUE});
+        mongoLogOperator.setState({correlationId, state: QUEUE_ITEM_STATE.IMPORTER.IN_QUEUE});
+
       } catch (error) {
         if (error instanceof ApiError) {
           logger.verbose(`validator/app/checkMongo errored ${JSON.stringify(error)}`);
           await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.ERROR, errorMessage: error.payload, errorStatus: error.status});
+          mongoLogOperator.setState({correlationId, state: QUEUE_ITEM_STATE.ERROR, errorMessage: error.payload, errorStatus: error.status});
+
           return initCheck();
         }
         logError(error);

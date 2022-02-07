@@ -1,0 +1,14 @@
+
+{
+"matchMergeLog": {
+    "_id": "uuid4, automaattinen",
+    "correlationId": "uuid4, correlationId",
+    "matchResults": "matchResults, ei tietueita?",
+    "matchValidationResults": "matchValidationResults",
+    "incomingRecord": "record",
+    "databaseRecord": "record",
+    "mergedRecord": "record",
+    "mergeProfileUsed": ""
+}
+}
+

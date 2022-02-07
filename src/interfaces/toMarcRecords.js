@@ -7,7 +7,7 @@ import httpStatus from 'http-status';
 import {promisify} from 'util';
 import {MarcRecordError} from '@natlibfi/marc-record';
 
-export default function (amqpOperator, mongoOperator, splitterOptions) {
+export default function (amqpOperator, mongoOperator, splitterOptions, mongoLogOperator) {
   const {failBulkOnError, keepSplitterReport} = splitterOptions;
   const setTimeoutPromise = promisify(setTimeout);
   const logger = createLogger();
@@ -111,6 +111,7 @@ export default function (amqpOperator, mongoOperator, splitterOptions) {
           logger.debug(`Got ${readerErrors.length} errors. Pushing report to mongo`);
           const splitterReport = {recordNumber, sequenceNumber, readerErrors};
           mongoOperator.pushMessages({correlationId, messages: [splitterReport], messageField: 'splitterReport'});
+          mongoLogOperator.pushMessages({correlationId, messages: [splitterReport], messageField: 'splitterReport'});
           return;
         }
         return;

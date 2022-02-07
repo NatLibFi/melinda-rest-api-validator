@@ -13,7 +13,7 @@ import {inspect} from 'util';
 import {MarcRecord} from '@natlibfi/marc-record';
 import matchValidation from './match-validation-mock';
 import merger from './merge-mock';
-import matcherService from './match';
+import * as matcherService from './match';
 
 //import createDebugLogger from 'debug';
 
@@ -26,7 +26,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
   // validationService: marc-record-validate validations from melinda-rest-api-commons
   const validationService = await validations();
   const ConversionService = conversions();
-  // should we have here matcherService?
+  // should we have here matcherService? commons mongo/amqp
   const matchers = matchOptionsList.map(matchOptions => createMatchInterface(matchOptions));
   const sruClient = createSruClient({url: sruUrl, recordSchema: 'marcxml', retrieveAll: false, maximumRecordsPerRequest: 1});
 
@@ -65,16 +65,18 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
         status: operation === 'CREATE' ? 'CREATED' : 'UPDATED',
         ...await executeValidations()
       };
-      logger.silly(`validator/index/process: Validation result for noop: ${inspect(result, {colors: true, maxArrayLength: 3, depth: 1})}`);
+      logger.debug(`validator/index/process: Validation result for noop: ${inspect(result, {colors: true, maxArrayLength: 3, depth: 1})}`);
       logger.debug(`return result for noop`);
       return result;
     }
 
     async function processNormal() {
       logger.silly(`validator/index/process: Running validations for normal`);
-      const result = await executeValidations();
+      const {result, operationAfterValidation} = await executeValidations();
+      const newOperation = operationAfterValidation === 'merge' ? 'UPDATE' : operationAfterValidation;
 
-      logger.silly(`validator/index/process: Validation result for non-noop: ${inspect(result, {colors: true, maxArrayLength: 3, depth: 1})}`);
+      logger.debug(`validator/index/process: Validation result for non-noop: ${inspect(result, {colors: true, maxArrayLength: 3, depth: 1})}`);
+      logger.debug(`validator/index/process: operationAfterValidation: ${operationAfterValidation}, newOperation: ${newOperation}, original operation: ${operation}`);
 
       // throw ValidationError for failed validationService for non-noop
       if (result.failed) { // eslint-disable-line functional/no-conditional-statement
@@ -82,7 +84,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
         throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, result.messages);
       }
 
-      return {headers: {operation, cataloger: cataloger.id}, data: result.record.toObject()};
+      return {headers: {operation: newOperation, cataloger: cataloger.id}, data: result.record.toObject()};
     }
 
     async function unserializeAndFormatRecord(data, format, formatOptions) {
@@ -107,28 +109,31 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       logger.verbose('Validating the record');
 
       if (operation === OPERATIONS.UPDATE) {
-        return updateValidations();
+        return updateValidations({updateId: id, updateRecord: record, updateOperation: operation});
       }
 
       return createValidations();
     }
 
-    async function updateValidations() {
-      logger.verbose('Validations for UPDATE operation');
+    // eslint-disable-next-line max-statements
+    async function updateValidations({updateId = id, updateRecord = record, updateOperation = operation}) {
+      logger.verbose(`Validations for UPDATE operation (${updateOperation})`);
+      logger.debug(JSON.stringify(updateId));
+      //logger.debug(JSON.stringify(updateRecord));
 
       // merge for updates
 
-      if (id) {
-        const updatedRecord = updateField001ToParamId(`${id}`, record);
+      if (updateId) {
+        const updatedRecord = updateField001ToParamId(`${updateId}`, updateRecord);
         logger.silly(`Updated record:\n${JSON.stringify(updatedRecord)}`);
 
-        logger.verbose(`Reading record ${id} from SRU`);
-        const existingRecord = await getRecord(id);
+        logger.verbose(`Reading record ${updateId} from SRU`);
+        const existingRecord = await getRecord(updateId);
         logger.silly(`Record from SRU: ${JSON.stringify(existingRecord)}`);
 
         if (!existingRecord) {
-          logger.debug(`Record ${id} was not found from SRU.`);
-          throw new ValidationError(HttpStatus.NOT_FOUND, `Cannot find record ${id} to update`);
+          logger.debug(`Record ${updateId} was not found from SRU.`);
+          throw new ValidationError(HttpStatus.NOT_FOUND, `Cannot find record ${updateId} to update`);
         }
 
         // aleph-record-load-api cannot currently update a record if the existing record is deleted
@@ -147,15 +152,16 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
         // for some reason this does not work for noop CREATEs
 
         const validationResults = await validationService(updatedRecord);
-        return validationResults;
+        return {result: validationResults, operationAfterValidation: updateOperation};
       }
 
       logger.debug('No id in headers');
       throw new ValidationError(HttpStatus.BAD_REQUEST, 'Update id missing!');
     }
 
+    // eslint-disable-next-line max-statements
     async function createValidations() {
-      logger.verbose('Validations for CREATE operation');
+      logger.verbose(`Validations for CREATE operation. Unique: ${unique}, merge: ${merge}`);
       const updatedRecord = updateField001ToParamId('1', record);
       logger.silly(`Updated record:\n${JSON.stringify(updatedRecord)}`);
 
@@ -168,7 +174,6 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
         logger.debug(`There are ${matchers.length} matchers with matchOptions: ${JSON.stringify(matchOptionsList)}`);
 
         // This should use different matchOptions for merge and non-merge cases
-
         const matchResults = await matcherService.iterateMatchersUntilMatchIsFound({matchers, matchOptionsList, updatedRecord});
         logger.verbose(JSON.stringify(matchResults));
         // eslint-disable-next-line functional/no-conditional-statement
@@ -179,7 +184,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
         // eslint-disable-next-line functional/no-conditional-statement
         if (matchResults.length > 0 && merge) {
           logger.debug(`Found matches (${matchResults.length} for merging)`);
-          return mergeMatchResults(matchResults);
+          return mergeMatchResults(updatedRecord, matchResults);
         }
 
         logger.verbose('No matching records');
@@ -190,46 +195,88 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
         // for some reason this does not work for noop CREATEs
 
         const validationResults = await validationService(updatedRecord);
-        return validationResults;
+        return {result: validationResults, operationAfterValidation: operation};
       }
 
+      logger.debug('No unique');
       const validationResults = await validationService(updatedRecord);
-      return validationResults;
+      return {result: validationResults, operationAfterValidation: operation};
     }
 
-    function mergeMatchResults(matchResults) {
+    async function mergeMatchResults(record, matchResults) {
       logger.debug(`We have matchResults here: ${JSON.stringify(matchResults)}`);
 
+
       // run matchValidation for record & matchResults
-      // run merge based on matchValidation results
+      // -> choose the best possible match
+      // -> if none of the matches are valid, what to do?
+
+      // Is the match mergeable?
+      // Which of the records should be preferred
 
       matchValidation();
 
+      // run merge based on matchValidation results
+
+      // base = preferred record, in this case the matching datastore record
+      // source = non-preferred record, in this case the incoming record
+
       const mergeRequest = {
-        base: record,
-        source: matchResults[0].candidate.record
+        source: record,
+        sourceId: undefined,
+        base: matchResults[0].candidate.record,
+        baseId: matchResults[0].candidate.id
       };
 
-      merger(mergeRequest);
-      throw new ValidationError(HttpStatus.CONFLICT, {message: 'Duplicates in database, merge flag true, cannot merge yet', ids: matchResults.map(({candidate: {id}}) => id)});
+      try {
+
+        // mergeResult.id: recordId in the database to be updated with the merged record
+        // mergeResult.record: merged record that can be used to update the database record
+        // mergeResult.report: report from merge -> to be saved to mongo etc
+        // mergeResult.status: true
+        // mergeResult.error: possible errors
+
+        const mergeResult = await merger(mergeRequest);
+        return handleMergeResult(mergeResult, matchResults);
+
+      } catch (err) {
+        logger.debug(`mergeMatchResults errored:`);
+
+        // if error was about merging try the next best valid match
+        // -> if all matches error merging semantically?
+
+        logError(err);
+        throw err;
+        // throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, `Parsing input data failed. ${cleanErrorMessage}`);
+      }
+
     }
-  }
 
+    function handleMergeResult(mergeResult, matchResults) {
+      logger.debug(`Got mergeResult: ${JSON.stringify(mergeResult)}`);
+      logger.debug(`Got matchResults: ${JSON.stringify(matchResults)}`);
 
-  // Checks that the modification history is identical
-  function validateRecordState(incomingRecord, existingRecord) {
-    const logger = createLogger();
-    const incomingModificationHistory = Array.isArray(incomingRecord) ? incomingRecord : incomingRecord.get(/^CAT$/u);
-    const existingModificationHistory = existingRecord.get(/^CAT$/u) || [];
+      // run update validations
+      return updateValidations({updateId: mergeResult.id, updateRecord: new MarcRecord(mergeResult.record, {subfieldValues: false}), updateOperation: 'merge'});
 
-    // Merge makes uuid variables to all fields and this removes those
-    const incomingModificationHistoryNoUuids = incomingModificationHistory.map(field => ({tag: field.tag, ind1: field.ind1, ind2: field.ind2, subfields: field.subfields}));
+    // throw new ValidationError(HttpStatus.CONFLICT, {message: 'Duplicates in database, merge flag true, cannot merge yet', ids: matchResults.map(({candidate: {id}}) => id)});
+    }
 
-    logger.silly(`Incoming CATS:\n${JSON.stringify(incomingModificationHistoryNoUuids)}`);
-    logger.silly(`Existing CATS:\n${JSON.stringify(existingModificationHistory)}`);
+    // Checks that the modification history is identical
+    function validateRecordState(incomingRecord, existingRecord) {
+      const logger = createLogger();
+      const incomingModificationHistory = Array.isArray(incomingRecord) ? incomingRecord : incomingRecord.get(/^CAT$/u);
+      const existingModificationHistory = existingRecord.get(/^CAT$/u) || [];
 
-    if (deepEqual(incomingModificationHistoryNoUuids, existingModificationHistory) === false) { // eslint-disable-line functional/no-conditional-statement
-      throw new ValidationError(HttpStatus.CONFLICT, {message: 'Modification history mismatch (CAT)'});
+      // Merge makes uuid variables to all fields and this removes those
+      const incomingModificationHistoryNoUuids = incomingModificationHistory.map(field => ({tag: field.tag, ind1: field.ind1, ind2: field.ind2, subfields: field.subfields}));
+
+      logger.silly(`Incoming CATS:\n${JSON.stringify(incomingModificationHistoryNoUuids)}`);
+      logger.silly(`Existing CATS:\n${JSON.stringify(existingModificationHistory)}`);
+
+      if (deepEqual(incomingModificationHistoryNoUuids, existingModificationHistory) === false) { // eslint-disable-line functional/no-conditional-statement
+        throw new ValidationError(HttpStatus.CONFLICT, {message: 'Modification history mismatch (CAT)'});
+      }
     }
   }
 
