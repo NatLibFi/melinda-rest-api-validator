@@ -17,3 +17,22 @@ export function updateField001ToParamId(id, record) {
 
   return record;
 }
+
+
+// This should find also SIDs & standard identifiers
+
+export function getIncomingIdFromRecord(record) {
+  const [f003] = record.get(/^003$/u);
+  const [f001] = record.get(/^001$/u);
+
+  if (f003 && f001) {
+    return `(${f003.value})${f001.value}`;
+  }
+
+  if (f001) {
+    return `${f001.value}`;
+  }
+
+  return undefined;
+
+}

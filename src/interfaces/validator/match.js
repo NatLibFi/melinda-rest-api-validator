@@ -6,7 +6,7 @@ import {Error as ValidationError} from '@natlibfi/melinda-commons';
 const logger = createLogger();
 
 // eslint-disable-next-line max-statements
-export async function iterateMatchersUntilMatchIsFound({matchers, matchOptionsList, updatedRecord, matcherCount = 0, matcherNoRunCount = 0, matcherFalseZeroCount = 0}) {
+export async function iterateMatchersUntilMatchIsFound({matchers, matchOptionsList, updatedRecord, matcherCount = 0, matcherNoRunCount = 0, matcherFalseZeroCount = 0, matcherReports = {}}) {
 
   const [matcher] = matchers;
   const [matchOptions] = matchOptionsList;
@@ -66,7 +66,8 @@ export async function iterateMatchersUntilMatchIsFound({matchers, matchOptionsLi
       }
 
       logger.debug(`No matching record from matcher ${matcherCount} (${matcherName})`);
-      return iterateMatchersUntilMatchIsFound({matchers: matchers.slice(1), matchOptionsList: matchOptionsList.slice(1), updatedRecord, matcherCount, matcherNoRunCount, matcherFalseZeroCount});
+
+      return iterateMatchersUntilMatchIsFound({matchers: matchers.slice(1), matchOptionsList: matchOptionsList.slice(1), updatedRecord, matcherCount, matcherNoRunCount, matcherFalseZeroCount, matcherReports});
 
     } catch (err) {
 
@@ -81,7 +82,7 @@ export async function iterateMatchersUntilMatchIsFound({matchers, matchOptionsLi
           throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, err.message);
         }
 
-        return iterateMatchersUntilMatchIsFound({matchers: matchers.slice(1), matchOptionsList: matchOptionsList.slice(1), updatedRecord, matcherCount, matcherNoRunCount, matcherFalseZeroCount});
+        return iterateMatchersUntilMatchIsFound({matchers: matchers.slice(1), matchOptionsList: matchOptionsList.slice(1), updatedRecord, matcherCount, matcherNoRunCount, matcherFalseZeroCount, matcherReports});
       }
 
       // SRU SruSearchErrors are 200-responses that include diagnostics from SRU server
