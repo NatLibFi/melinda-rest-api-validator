@@ -36,3 +36,14 @@ export function getIncomingIdFromRecord(record) {
   return undefined;
 
 }
+
+export function getIdFromRecord(record) {
+  const [f001] = record.get(/^001$/u);
+
+  if (f001) {
+    return `${f001.value}`;
+  }
+
+  return undefined;
+
+}

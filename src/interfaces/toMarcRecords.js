@@ -2,12 +2,12 @@ import {Json, MARCXML, AlephSequential, ISO2709} from '@natlibfi/marc-record-ser
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
 import {OPERATIONS, logError} from '@natlibfi/melinda-rest-api-commons';
-import {updateField001ToParamId, getIncomingIdFromRecord} from '../utils';
+import {updateField001ToParamId, getIncomingIdFromRecord, getIdFromRecord} from '../utils';
 import httpStatus from 'http-status';
 import {promisify} from 'util';
 import {MarcRecordError} from '@natlibfi/marc-record';
 
-export default function (amqpOperator, mongoOperator, splitterOptions, mongoLogOperator) {
+export default function (amqpOperator, mongoOperator, splitterOptions) {
   const {failBulkOnError, keepSplitterReport} = splitterOptions;
   const setTimeoutPromise = promisify(setTimeout);
   const logger = createLogger();
@@ -69,11 +69,13 @@ export default function (amqpOperator, mongoOperator, splitterOptions, mongoLogO
           async function transform(record, number) {
 
             const incomingId = getIncomingIdFromRecord(record);
+            const {id} = headers.id || getIdFromRecord(record);
             const newHeaders = {
               incoming: {
                 incomingId: incomingId || number,
                 incomingSeq: number
               },
+              id,
               ...headers
             };
 
@@ -82,10 +84,12 @@ export default function (amqpOperator, mongoOperator, splitterOptions, mongoLogO
               // Field 001 value -> 000000001, 000000002, 000000003....
               const updatedRecord = updateField001ToParamId(`${number}`, record);
 
+              // If we would like to use validations for bulk, this could send records to the some kind of valdation queue instead
               await amqpOperator.sendToQueue({queue: `${headers.operation}.${correlationId}`, correlationId, headers: newHeaders, data: updatedRecord.toObject()});
               return log100thQueue(number, 'queued');
             }
 
+            // If we would like to use validations for bulk, this could send records to the some kind of valdation queue instead
             await amqpOperator.sendToQueue({queue: `${headers.operation}.${correlationId}`, correlationId, headers: newHeaders, data: record.toObject()});
             return log100thQueue(number, 'queued');
           }
@@ -122,7 +126,6 @@ export default function (amqpOperator, mongoOperator, splitterOptions, mongoLogO
           logger.debug(`Got ${readerErrors.length} errors. Pushing report to mongo`);
           const splitterReport = {recordNumber, sequenceNumber, readerErrors};
           mongoOperator.pushMessages({correlationId, messages: [splitterReport], messageField: 'splitterReport'});
-          mongoLogOperator.pushMessages({correlationId, messages: [splitterReport], messageField: 'splitterReport'});
           return;
         }
         return;

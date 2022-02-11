@@ -5,7 +5,6 @@ import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ValidationError} from '@natlibfi/melinda-commons';
 import {validations, conversions, format, OPERATIONS, logError} from '@natlibfi/melinda-rest-api-commons';
 import createSruClient from '@natlibfi/sru-client';
-import createMatchInterface from '@natlibfi/melinda-record-matching';
 import validateOwnChanges from './own-authorization';
 import {updateField001ToParamId, getIncomingIdFromRecord} from '../../utils';
 import {validateExistingRecord} from './validate-existing-record';
@@ -14,6 +13,7 @@ import {MarcRecord} from '@natlibfi/marc-record';
 import matchValidation from './match-validation-mock';
 import merger from './merge-mock';
 import * as matcherService from './match';
+import createMatchInterface from '@natlibfi/melinda-record-matching';
 
 //import createDebugLogger from 'debug';
 
@@ -22,6 +22,7 @@ import * as matcherService from './match';
 
 export default async function ({formatOptions, sruUrl, matchOptionsList}) {
   const logger = createLogger();
+  // format: format record to Melinda/Aleph internal format ($w(FI-MELINDA) -> $w(FIN01) etc.)
   const {formatRecord} = format;
   // validationService: marc-record-validate validations from melinda-rest-api-commons
   const validationService = await validations();
@@ -41,17 +42,26 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       format,
       cataloger
     } = headers;
+
     const id = headers.id || undefined;
     const unique = headers.unique || undefined;
     const merge = headers.merge || undefined;
+    const prio = headers.prio || undefined;
+    const incoming = headers.incoming || undefined;
 
-    const record = await unserializeAndFormatRecord(data, format, formatOptions);
-    const incomingId = id || await getIncomingIdFromRecord(record);
-    logger.debug(`Incoming id: ${incomingId}`);
+    // for prioTasks unserialize and format, for bulk tasks just format - bulk option needs testing
+    const record = prio ? await unserializeAndFormatRecord(data, format, formatOptions) : new MarcRecord(formatRecord(data, formatOptions));
+
+    const incomingId = incoming ? incoming.incomingId : getIncomingIdFromRecord(record);
+    const incomingSeq = incoming ? incoming.incomingSeq : '1';
+
+    logger.debug(`Incoming id: ${incomingId}, incoming seq: ${incomingSeq}`);
     logger.silly(record);
 
     // All other validations result in errors when they fail, only validationService returns result.failed
+    // for bulk we should catch these errors, because we might want to handle non-erroring records
     // validation result from validationService: {record, failed, messages: []}
+    // should we get {record, failed, messages: [], error} -response also from other validations?
 
     //if (noop) {
     //  return processNoop();
@@ -77,21 +87,29 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
 
     async function processNormal() {
       logger.silly(`validator/index/process: Running validations for normal (${incomingId})`);
-      const {result, operationAfterValidation, mergeValidationResult} = await executeValidations();
-      const newOperation = operationAfterValidation === 'merge' ? 'UPDATE' : operationAfterValidation;
 
-      logger.debug(`validator/index/process: Validation result for non-noop: ${inspect(result, {colors: true, maxArrayLength: 3, depth: 1})}`);
-      logger.debug(`validator/index/process: operationAfterValidation: ${operationAfterValidation}, newOperation: ${newOperation}, original operation: ${operation}`);
-      logger.debug(`validator/index/process: mergeValidationResult: ${mergeValidationResult}`);
+      try {
+        const {result, operationAfterValidation, mergeValidationResult} = await executeValidations();
+        const newOperation = operationAfterValidation === 'merge' ? 'UPDATE' : operationAfterValidation;
+
+        logger.debug(`validator/index/process: Validation result for non-noop: ${inspect(result, {colors: true, maxArrayLength: 3, depth: 1})}`);
+        logger.debug(`validator/index/process: operationAfterValidation: ${operationAfterValidation}, newOperation: ${newOperation}, original operation: ${operation}`);
+        logger.debug(`validator/index/process: mergeValidationResult: ${mergeValidationResult}`);
 
 
-      // throw ValidationError for failed validationService
-      if (result.failed) { // eslint-disable-line functional/no-conditional-statement
-        logger.debug('Validation failed');
-        throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, result.messages);
+        // throw ValidationError for failed validationService
+        if (result.failed) { // eslint-disable-line functional/no-conditional-statement
+          logger.debug('Validation failed');
+          throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, result.messages);
+        }
+
+        return {headers: {operation: newOperation, cataloger: cataloger.id, incoming: {incomingId, incomingSeq: '1'}}, data: result.record.toObject(), mergeValidationResult};
+
+      } catch (error) {
+        logger.debug(`validation errored`);
+        // this could add errors to logMongo
+        throw error;
       }
-
-      return {headers: {operation: newOperation, cataloger: cataloger.id, incoming: {incomingId, incomingSeq: '1'}}, data: result.record.toObject(), mergeValidationResult};
     }
 
     async function unserializeAndFormatRecord(data, format, formatOptions) {
@@ -100,6 +118,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
         logger.silly(`Format: ${format}`);
         const unzerialized = await ConversionService.unserialize(data, format);
         logger.silly(`Unserialized data: ${JSON.stringify(unzerialized)}`);
+        // Format record - currently for bibs edit $0 and $w ISILs to Aleph internar library codes
         const recordObject = await formatRecord(unzerialized, formatOptions);
         logger.silly(`Formated recordObject:\n${JSON.stringify(recordObject)}`);
         return new MarcRecord(recordObject, {subfieldValues: false});
@@ -142,11 +161,15 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
           throw new ValidationError(HttpStatus.NOT_FOUND, `Cannot find record ${updateId} to update`);
         }
 
+        const formattedExistingRecord = formatRecord(existingRecord, formatOptions);
+        logger.silly(`Formatted record from SRU: ${JSON.stringify(formattedExistingRecord)}`);
+
         // aleph-record-load-api cannot currently update a record if the existing record is deleted
         logger.verbose('Checking whether the existing record is deleted');
         validateExistingRecord(existingRecord);
 
         // Merge for updates (do not run if record is already merged CREATE)
+        // Note: incoming record is formatted ($w(FIN01)), existing record is t ($w(FI-MELINDA))
         const updateMergeNeeded = merge && updateOperation !== 'merge';
         const {mergedRecord: updatedRecordAfterMerge, mergeValidationResult: mergeValidationResultAfterMerge} = updateMergeNeeded ? await mergeRecordForUpdates({record: updatedRecord, existingRecord, id: updateId}) : {mergedRecord: updatedRecord, mergeValidationResult};
         logger.debug(`We needed merge for UPDATE: ${updateMergeNeeded}`);
@@ -177,6 +200,8 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
     // eslint-disable-next-line max-statements
     async function createValidations() {
       logger.verbose(`Validations for CREATE operation. Unique: ${unique}, merge: ${merge}`);
+
+      // Do we need this?
       const updatedRecord = updateField001ToParamId('1', record);
       logger.silly(`Updated record:\n${JSON.stringify(updatedRecord)}`);
 
@@ -187,8 +212,8 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
         logger.verbose('Attempting to find matching records in the SRU');
 
         logger.debug(`There are ${matchers.length} matchers with matchOptions: ${JSON.stringify(matchOptionsList)}`);
-
         // This should use different matchOptions for merge and non-merge cases
+        // Note: incoming record is formatted ($w(FIN01)), existing records from SRU are not ($w(FI-MELINDA))
         const matchResults = await matcherService.iterateMatchersUntilMatchIsFound({matchers, matchOptionsList, updatedRecord});
         logger.verbose(JSON.stringify(matchResults));
         // eslint-disable-next-line functional/no-conditional-statement
@@ -221,6 +246,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
     async function mergeMatchResults(record, matchResults) {
       logger.debug(`We have matchResults here: ${JSON.stringify(matchResults)}`);
 
+      // Note: incoming record is formatted ($w(FIN01)), existing record is not ($w(FI-MELINDA))
 
       // run matchValidation for record & matchResults
       // -> choose the best possible match
@@ -284,7 +310,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       const mergeResult = await merger(mergeRequest);
       logger.debug(JSON.stringify(mergeResult));
       const mergeValidationResult = {merged: true, mergedId: id};
-      return {mergedRecord: new MarcRecord(mergeResult.record), mergeValidationResult};
+      return {mergedRecord: new MarcRecord(mergeResult.record, {subfieldValues: false}), mergeValidationResult};
     }
 
     function handleMergeResult(mergeResult) {
@@ -301,9 +327,11 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
     // Checks that the modification history is identical
     function validateRecordState(incomingRecord, existingRecord) {
       const logger = createLogger();
+      // why the incomingRecord would be an array? is this also a relic from merge-UI?
       const incomingModificationHistory = Array.isArray(incomingRecord) ? incomingRecord : incomingRecord.get(/^CAT$/u);
       const existingModificationHistory = existingRecord.get(/^CAT$/u) || [];
 
+      // the next is not needed? this is not used with Merge-UI?
       // Merge makes uuid variables to all fields and this removes those
       const incomingModificationHistoryNoUuids = incomingModificationHistory.map(field => ({tag: field.tag, ind1: field.ind1, ind2: field.ind2, subfields: field.subfields}));
 
