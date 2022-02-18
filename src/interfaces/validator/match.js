@@ -48,6 +48,9 @@ export async function iterateMatchersUntilMatchIsFound({matchers, matchOptionsLi
 
       logger.verbose(`Matcher result: ${JSON.stringify(matchResults)}`);
 
+      // How we should handle cases, where matchResult is false, but we did get match(es)?
+      // Should we return also information about the matcher that hit the match (to recognize matches by recordIDs vs other matches?)
+
       if (matchAmount > 0) { // eslint-disable-line functional/no-conditional-statement
 
         logger.verbose(`Matching record(s) (${matchAmount}) has been found in matcher ${matcherCount} (${matcherName})`);

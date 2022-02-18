@@ -86,7 +86,7 @@ export default async function ({
     // logger.debug(`app/chechAmqp: Found message: ${JSON.stringify(message)}`);
     // Work with message
     const {correlationId} = message.properties;
-    logger.silly(`app/checkAmqp: Found message for correlationId: ${correlationId}`);
+    logger.debug(`app/checkAmqp: Found message for correlationId: ${correlationId}`);
 
     // checkAndSetState checks that the queueItem is not too old, sets state and return true if okay
     // http did createPrio in state QUEUE_ITEM_STATE.VALIDATOR.PENDING_VALIDATION
