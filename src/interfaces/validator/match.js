@@ -56,7 +56,7 @@ export async function iterateMatchersUntilMatchIsFound({matchers, matchOptionsLi
         logger.verbose(`Matching record(s) (${matchAmount}) has been found in matcher ${matcherCount} (${matcherName})`);
         logger.verbose(`MatchStatus for matching records(s) ${JSON.stringify(matchStatus)})`);
 
-        logger.silly(`${JSON.stringify(matches.map(({candidate: {id}, probability}) => ({id, probability})))}`);
+        logger.debug(`${JSON.stringify(matches.map(({candidate: {id}, probability}) => ({id, probability})))}`);
 
         return matches;
       }

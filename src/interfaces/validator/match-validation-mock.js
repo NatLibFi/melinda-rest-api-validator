@@ -2,9 +2,9 @@ import createDebugLogger from 'debug';
 import matchValidator from '@natlibfi/melinda-record-match-validator';
 
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator:match-validation-mock');
-//const debugData = debug.extend('data');
+const debugData = debug.extend('data');
 
-export function matchValidationForMatchResults(record, matchResult) {
+export function matchValidationForMatchResults(record, matchResults) {
 
   // matches : array of matching candidate records
   // - candidate.id
@@ -15,10 +15,15 @@ export function matchValidationForMatchResults(record, matchResult) {
   // - matchQuery (if returnQuery option is true)
 
 
-  debug(`Sort matchResult by probability`);
-  const sortedMatchResults = matchResult.sort((a, b) => a.probability > b.probability ? 1 : -1);
+  debug(`Sort matchResults by probability`);
+  debugData(`Original: ${JSON.stringify(matchResults.map(({candidate: {id}, probability}) => ({id, probability})))}))}`);
 
-  debug(`Run matchValidation for sorted Record`);
+  const matchResultClone = matchResults;
+  // eslint-disable-next-line functional/immutable-data
+  const sortedMatchResults = matchResultClone.sort((a, b) => a.probability > b.probability ? 1 : -1);
+  debugData(`Sorted: ${JSON.stringify(sortedMatchResults.map(({candidate: {id}, probability}) => ({id, probability})))}))}`);
+
+  debug(`Run matchValidation for sorted records`);
 
   const matchResultsAndMatchValidations = sortedMatchResults.map(match => {
     const matchValidationResult = matchValidation(record, match.candidate.record);

@@ -10,7 +10,7 @@ import {updateField001ToParamId, getIncomingIdFromRecord} from '../../utils';
 import {validateExistingRecord} from './validate-existing-record';
 import {inspect} from 'util';
 import {MarcRecord} from '@natlibfi/marc-record';
-import {matchValidation} from './match-validation-mock';
+import {matchValidationForMatchResults} from './match-validation-mock';
 import merger from './merge-mock';
 import * as matcherService from './match';
 import createMatchInterface from '@natlibfi/melinda-record-matching';
@@ -215,7 +215,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
         // This should use different matchOptions for merge and non-merge cases
         // Note: incoming record is formatted ($w(FIN01)), existing records from SRU are not ($w(FI-MELINDA))
         const matchResults = await matcherService.iterateMatchersUntilMatchIsFound({matchers, matchOptionsList, updatedRecord});
-        logger.verbose(JSON.stringify(matchResults));
+        logger.debug(JSON.stringify(matchResults.map(({candidate: {id}, probability}) => ({id, probability}))));
         // eslint-disable-next-line functional/no-conditional-statement
         if (matchResults.length > 0 && !merge) {
           throw new ValidationError(HttpStatus.CONFLICT, {message: 'Duplicates in database', ids: matchResults.map(({candidate: {id}}) => id)});
@@ -223,7 +223,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
 
         // eslint-disable-next-line functional/no-conditional-statement
         if (matchResults.length > 0 && merge) {
-          logger.debug(`Found matches (${matchResults.length} for merging)`);
+          logger.debug(`Found matches (${matchResults.length}) for merging.`);
           return validateAndMergeMatchResults(updatedRecord, matchResults);
         }
 
@@ -245,7 +245,8 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
 
     async function validateAndMergeMatchResults(record, matchResults) {
       try {
-        logger.debug(`We have matchResults here: ${JSON.stringify(matchResults)}`);
+        logger.debug(`We have matchResults (${matchResults.length}) here: ${JSON.stringify(matchResults.map(({candidate: {id}, probability}) => ({id, probability})))}`);
+        logger.silly(` ${JSON.stringify(matchResults)}`);
 
         // Note: incoming record is formatted ($w(FIN01)), existing record is not ($w(FI-MELINDA))
 
@@ -258,8 +259,9 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
 
         // currently handles just one record, should handle several matches
 
-        const matchValidationResult = await matchValidation(record, matchResults[0].candidate.record);
-        logger.debug(`MatchValidationResult: ${JSON.stringify(matchValidationResult)}`);
+        const matchValidationResult = await matchValidationForMatchResults(record, matchResults);
+        logger.debug(`MatchValidationResult: ${inspect(matchValidationResult.matchResultsAndMatchValidations, {colors: true, maxArrayLength: 3, depth: 1})}}`);
+
         logger.debug(matchValidationResult.action);
 
         if (matchValidationResult.action === false) {

@@ -56,11 +56,35 @@ function generateMatchOptions(validatorMatchPackage) {
 }
 
 function generateMaxMatches(validatorMatchPackage) {
+  if (validatorMatchPackage === 'IDS') {
+    const value = 1;
+    debug(`MaxMatches for ${validatorMatchPackage} is defined in in config: ${value}`);
+    return value;
+  }
+
+  if (validatorMatchPackage === 'CONTENT') {
+    const value = 10;
+    debug(`MaxMatches for ${validatorMatchPackage} is defined in in config: ${value}`);
+    return value;
+  }
+
   debug(`MaxMatches for ${validatorMatchPackage} uses environment variable`);
   return readEnvironmentVariable('MAX_MATCHES', {defaultValue: 1, format: v => Number(v)});
 }
 
 function generateMaxCandidates(validatorMatchPackage) {
+  if (validatorMatchPackage === 'IDS') {
+    const value = 50;
+    debug(`MaxCandidates for ${validatorMatchPackage} is defined in in config: ${value}`);
+    return value;
+  }
+
+  if (validatorMatchPackage === 'CONTENT') {
+    const value = 50;
+    debug(`MaxCandidates for ${validatorMatchPackage} is defined in in config: ${value}`);
+    return value;
+  }
+
   debug(`MaxCandidates for ${validatorMatchPackage} uses environment variable`);
   return readEnvironmentVariable('MAX_CANDIDATES', {defaultValue: 25, format: v => Number(v)});
 }
