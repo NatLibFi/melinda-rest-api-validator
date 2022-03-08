@@ -1,7 +1,7 @@
 import {promisify, inspect} from 'util';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
-import {mongoFactory, amqpFactory, logError, QUEUE_ITEM_STATE} from '@natlibfi/melinda-rest-api-commons';
+import {mongoFactory, amqpFactory, logError, QUEUE_ITEM_STATE, IMPORT_JOB_STATE} from '@natlibfi/melinda-rest-api-commons';
 import validatorFactory from './interfaces/validator';
 import toMarcRecordFactory from './interfaces/toMarcRecords';
 
@@ -39,6 +39,7 @@ export default async function ({
 
     // Bulk Validator should check here for bulk queueItems in state VALIDATOR.PENDING_VALIDATION
     // and then start validating them
+
     // Bulk Validator checks Mongo for bulk queueItems in state VALIDATOR.PENDING_QUEUING
     return checkMongo();
   }
@@ -137,7 +138,9 @@ export default async function ({
     if (processResult.headers !== undefined && processResult.headers.operation !== headers.operation) {
       logger.debug(`Validation changed operation from ${headers.operation} to ${processResult.headers.operation}`);
 
+      // we should set the importJobState here too ? or later?
       await mongoOperator.setOperation({correlationId, operation: processResult.headers.operation});
+      await mongoOperator.setOperations({correlationId, addOperation: processResult.headers.operation, removeOperation: headers.operation});
     }
 
     if (noop) {
@@ -148,7 +151,8 @@ export default async function ({
   }
 
   async function setNormalResult({headers, correlationId, processResult, mongoOperator}) {
-    const operationQueue = `${processResult.headers.operation}.${correlationId}`;
+    const newOperation = processResult.headers.operation;
+    const operationQueue = `${newOperation}.${correlationId}`;
 
     // Purge queue before importing records in
     await amqpOperator.checkQueue({queue: operationQueue, style: 'messages', purge: true});
@@ -164,11 +168,16 @@ export default async function ({
 
     logger.silly(`app/checkAmqp: sending to queue toQueue: ${inspect(toQueue, {colors: true, maxArrayLength: 3, depth: 1})}`);
     await amqpOperator.sendToQueue(toQueue);
+    await mongoOperator.checkAndSetImportJobStates({correlationId, state: {[newOperation]: IMPORT_JOB_STATE.PENDING}});
+
+    // if we're validating bulk, check here whether the whole VALIDATE.correlationId is empty
+    // also, bulk does not need to check timeouts
     await mongoOperator.checkAndSetState({correlationId, state: QUEUE_ITEM_STATE.IMPORTER.IN_QUEUE});
 
     return initCheck();
   }
 
+  // do we have noops for bulk?
   async function setNoopResult({correlationId, processResult, mongoOperator}) {
 
     const status = processResult.headers.operation === 'CREATE' ? 'CREATED' : 'UPDATED';

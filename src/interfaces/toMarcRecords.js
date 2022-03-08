@@ -68,13 +68,11 @@ export default function (amqpOperator, mongoOperator, splitterOptions) {
 
           async function transform(record, number) {
 
-            const incomingId = getIncomingIdFromRecord(record);
+            const sourceId = getIncomingIdFromRecord(record);
             const {id} = headers.id || getIdFromRecord(record);
             const newHeaders = {
-              incoming: {
-                incomingId: incomingId || number,
-                incomingSeq: number
-              },
+              sourceId,
+              blobf001: number,
               id,
               ...headers
             };
