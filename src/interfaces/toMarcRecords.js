@@ -6,6 +6,7 @@ import {updateField001ToParamId, getIncomingIdFromRecord, getIdFromRecord} from 
 import httpStatus from 'http-status';
 import {promisify} from 'util';
 import {MarcRecordError} from '@natlibfi/marc-record';
+import {QUEUE_ITEM_STATE} from '@natlibfi/melinda-rest-api-commons/dist/constants';
 
 export default function (amqpOperator, mongoOperator, splitterOptions) {
   const {failBulkOnError, keepSplitterReport} = splitterOptions;
@@ -14,7 +15,7 @@ export default function (amqpOperator, mongoOperator, splitterOptions) {
 
   return {streamToRecords};
 
-  async function streamToRecords({correlationId, headers, contentType, stream}) {
+  async function streamToRecords({correlationId, headers, contentType, stream, validateRecords = false}) {
     logger.verbose('Starting to transform stream to records');
     // recordNumber is counter for data-events from the reader
     let recordNumber = 0; // eslint-disable-line functional/no-let
@@ -63,7 +64,6 @@ export default function (amqpOperator, mongoOperator, splitterOptions) {
 
           log100thQueue(recordNumber, 'read');
 
-
           // This could input to Mongo also id:s of records to be handled: for updates Melinda-ID, for creates original 003+001 and temporary number
 
           async function transform(record, number) {
@@ -77,18 +77,11 @@ export default function (amqpOperator, mongoOperator, splitterOptions) {
               ...headers
             };
 
-            // Operation CREATE -> f001 new value
-            if (headers.operation === OPERATIONS.CREATE) {
-              // Field 001 value -> 000000001, 000000002, 000000003....
-              const updatedRecord = updateField001ToParamId(`${number}`, record);
+            // Operation CREATE -> f001 new value -> 000000001, 000000002, 000000003....
+            const recordToQueue = headers.operation === OPERATIONS.CREATE ? updateField001ToParamId(`${number}`, record) : record;
+            const queue = validateRecords ? `${QUEUE_ITEM_STATE.VALIDATOR.PENDING_VALIDATION}.${correlationId}` : `${headers.operation}.${correlationId}`;
 
-              // If we would like to use validations for bulk, this could send records to the some kind of valdation queue instead
-              await amqpOperator.sendToQueue({queue: `${headers.operation}.${correlationId}`, correlationId, headers: newHeaders, data: updatedRecord.toObject()});
-              return log100thQueue(number, 'queued');
-            }
-
-            // If we would like to use validations for bulk, this could send records to the some kind of valdation queue instead
-            await amqpOperator.sendToQueue({queue: `${headers.operation}.${correlationId}`, correlationId, headers: newHeaders, data: record.toObject()});
+            await amqpOperator.sendToQueue({queue, correlationId, headers: newHeaders, data: recordToQueue.toObject()});
             return log100thQueue(number, 'queued');
           }
         })
