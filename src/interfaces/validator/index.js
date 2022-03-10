@@ -47,16 +47,21 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
     const unique = headers.unique || undefined;
     const merge = headers.merge || undefined;
     const prio = headers.prio || undefined;
-    const incoming = headers.incoming || undefined;
+    //const incoming = headers.incoming || undefined;
 
     // for prioTasks unserialize and format, for bulk tasks just format - bulk option needs testing
     const record = prio ? await unserializeAndFormatRecord(data, format, formatOptions) : new MarcRecord(formatRecord(data, formatOptions));
 
+    const sourceId = headers.sourceId || id || getIncomingIdFromRecord(record);
+    const blobf001 = headers.blobf001 || '1';
+    logger.debug(`SourceId: ${sourceId}, blobf001: ${blobf001}`);
+
+    /*
     const incomingId = incoming ? incoming.incomingId : getIncomingIdFromRecord(record);
     const incomingSeq = incoming ? incoming.incomingSeq : '1';
 
-    logger.debug(`Incoming id: ${incomingId}, incoming seq: ${incomingSeq}`);
     logger.silly(record);
+  */
 
     // All other validations result in errors when they fail, only validationService returns result.failed
     // for bulk we should catch these errors, because we might want to handle non-erroring records
@@ -86,7 +91,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
     */
 
     async function processNormal() {
-      logger.silly(`validator/index/process: Running validations for normal (${incomingId})`);
+      logger.silly(`validator/index/process: Running validations for normal (${sourceId})`);
 
       try {
         const {result, operationAfterValidation, mergeValidationResult} = await executeValidations();
@@ -103,10 +108,11 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
           throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, result.messages);
         }
 
-        return {headers: {operation: newOperation, cataloger: cataloger.id, incoming: {incomingId, incomingSeq: '1'}}, data: result.record.toObject(), mergeValidationResult};
+        return {headers: {operation: newOperation, cataloger, sourceId, blobf001}, data: result.record.toObject(), mergeValidationResult};
 
       } catch (error) {
-        logger.debug(`validation errored`);
+        logger.debug(`processNormal: validation errored: ${error}`);
+        logError(error);
         // this could add errors to logMongo
         throw error;
       }
@@ -176,8 +182,15 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
         logger.debug(`Original incoming record: ${updatedRecord}`);
         logger.debug(`Incoming record after merge: ${updatedRecordAfterMerge}`);
 
-        logger.verbose('Checking LOW-tag authorization');
-        validateOwnChanges(cataloger.authorization, updatedRecordAfterMerge, existingRecord);
+        // bulk does not have cataloger.authorization
+        // eslint-disable-next-line functional/no-conditional-statement
+        if (cataloger.authorization) {
+          logger.verbose('Checking LOW-tag authorization');
+          validateOwnChanges(cataloger.authorization, updatedRecordAfterMerge, existingRecord);
+        // eslint-disable-next-line functional/no-conditional-statement
+        } else {
+          logger.verbose(`No cataloger.authorization available for checking LOW-tags`);
+        }
 
         logger.verbose('Checking CAT field history');
         validateRecordState(updatedRecordAfterMerge, existingRecord);
@@ -353,7 +366,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
     function validateRecordState(incomingRecord, existingRecord) {
       const logger = createLogger();
       // why the incomingRecord would be an array? is this also a relic from merge-UI?
-      const incomingModificationHistory = Array.isArray(incomingRecord) ? incomingRecord : incomingRecord.get(/^CAT$/u);
+      const incomingModificationHistory = Array.isArray(incomingRecord) ? incomingRecord : incomingRecord.get(/^CAT$/u) || [];
       const existingModificationHistory = existingRecord.get(/^CAT$/u) || [];
 
       // the next is not needed? this is not used with Merge-UI?
@@ -364,8 +377,10 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       logger.silly(`Existing CATS:\n${JSON.stringify(existingModificationHistory)}`);
 
       if (deepEqual(incomingModificationHistoryNoUuids, existingModificationHistory) === false) { // eslint-disable-line functional/no-conditional-statement
+        logger.debug(`validateRecordState: failure`);
         throw new ValidationError(HttpStatus.CONFLICT, {message: 'Modification history mismatch (CAT)'});
       }
+      logger.debug(`validateRecordState: OK`);
     }
   }
 

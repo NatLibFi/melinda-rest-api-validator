@@ -69,7 +69,7 @@ export default function (amqpOperator, mongoOperator, splitterOptions) {
           async function transform(record, number) {
 
             const sourceId = getIncomingIdFromRecord(record);
-            const {id} = headers.id || getIdFromRecord(record);
+            const id = headers.id || getIdFromRecord(record);
             const newHeaders = {
               sourceId,
               blobf001: number,
@@ -81,6 +81,8 @@ export default function (amqpOperator, mongoOperator, splitterOptions) {
             const recordToQueue = headers.operation === OPERATIONS.CREATE ? updateField001ToParamId(`${number}`, record) : record;
             const queue = validateRecords ? `${QUEUE_ITEM_STATE.VALIDATOR.PENDING_VALIDATION}.${correlationId}` : `${headers.operation}.${correlationId}`;
 
+            logger.debug(`validateRecords: ${validateRecords}`);
+            logger.debug(`queue: ${queue}, newHeaders ${JSON.stringify(newHeaders)}`);
             await amqpOperator.sendToQueue({queue, correlationId, headers: newHeaders, data: recordToQueue.toObject()});
             return log100thQueue(number, 'queued');
           }

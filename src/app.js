@@ -60,11 +60,11 @@ export default async function ({
 
       // We cannot ackMessages or setStates if we do not have a message
       if (message) {
-        const {correlationId} = message.properties;
+        const {correlationId, headers} = message.properties;
         logger.silly(`correlationId: ${correlationId}`);
         await amqpOperator.ackMessages([message]);
 
-        return setError({error, correlationId, mongoOperator, prio});
+        return setError({headers, error, correlationId, mongoOperator, prio});
       }
 
       logError(error);
@@ -103,6 +103,8 @@ export default async function ({
       }
 
       await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.IMPORTER.IN_QUEUE});
+
+      amqpOperator.removeQueue(validatorQueue);
       return initCheck();
 
     } catch (error) {
@@ -110,11 +112,11 @@ export default async function ({
 
       // We cannot ackMessages we do not have a message
       if (message) {
-        const {correlationId} = message.properties;
+        const {correlationId, headers} = message.properties;
         logger.silly(`correlationId: ${correlationId}`);
         await amqpOperator.ackMessages([message]);
 
-        return setError({error, correlationId, mongoOperator, prio});
+        return setError({headers, error, correlationId, mongoOperator, prio});
       }
 
       logError(error);
@@ -158,7 +160,7 @@ export default async function ({
 
     logger.silly(`app/checkAmqp: content ${inspect(content, {colors: true, maxArrayLength: 3, depth: 1})}}`);
     // validator.process returns:
-    //     no-noop: {headers: {operation, cataloger: cataloger.id, incoming: incomingId, incomingSeq}, data: result.record.toObject()};
+    //     no-noop: {headers: {operation, cataloger: cataloger.id, sourceId, blobF001}, data: result.record.toObject()};
     //     noop:    {status, record, failed, messages} - no headers!
 
     logger.silly(`app/checkAmqp: Actually validating`);
@@ -228,13 +230,14 @@ export default async function ({
 
     // eslint-disable-next-line functional/no-conditional-statement
     if (prio) {
-      await mongoOperator.checkAndSetImportJobStates({correlationId, state: {[newOperation]: IMPORT_JOB_STATE.PENDING}});
+      logger.debug(`FOO`);
+      await mongoOperator.checkAndSetImportJobState({correlationId, operation: newOperation, importJobState: IMPORT_JOB_STATE.IN_QUEUE});
       await mongoOperator.checkAndSetState({correlationId, state: QUEUE_ITEM_STATE.IMPORTER.IN_QUEUE});
     }
 
     // eslint-disable-next-line functional/no-conditional-statement
     if (!prio) {
-      await mongoOperator.setImportJobStates({correlationId, state: {[newOperation]: IMPORT_JOB_STATE.PENDING}});
+      await mongoOperator.setImportJobState({correlationId, operation: newOperation, importJobState: IMPORT_JOB_STATE.IN_QUEUE});
     }
 
     return initCheck();
@@ -255,7 +258,9 @@ export default async function ({
     return initCheck();
   }
 
-  async function setError({error, correlationId, mongoOperator, prio}) {
+  async function setError({error, correlationId, mongoOperator, prio, headers = undefined}) {
+
+    logger.debug(`Headers: ${JSON.stringify(headers)}`);
 
     logger.silly(`error.status: ${error.status}`);
     const responseStatus = error.status || '500';
@@ -272,10 +277,9 @@ export default async function ({
 
     // for bulk, push validatorErrors to validatorErrorMessages - we need better handling for this
     // eslint-disable-next-line functional/no-conditional-statement
-    if (!prio) {
-      logger.debug(`Validator error for bulk`);
-      await mongoOperator.pushMessages({correlationId, messages: [JSON.stringify(error)], messageField: 'validatorErrorMessages'});
-    }
+    logger.debug(`Validator error (specially for bulk) for bulk`);
+    const errorHeaders = {sourceId: headers.sourceId, sequence: headers.blobf001};
+    await mongoOperator.pushMessages({correlationId, messages: [{errorHeaders, error}], messageField: 'validatorErrors'});
 
     // If we had a message we can move to next message
     return initCheck(true);
@@ -285,7 +289,7 @@ export default async function ({
   // eslint-disable-next-line max-statements
   async function checkMongo({mongoOperator, amqpOperator, prio}) {
 
-    logger.debug(prio);
+    //logger.silly(prio);
 
     const queueItemValidating = await mongoOperator.getOne({queueItemState: QUEUE_ITEM_STATE.VALIDATOR.VALIDATING});
 
@@ -316,16 +320,20 @@ export default async function ({
       try {
         // Get stream from content
         const stream = await mongoOperator.getStream(correlationId);
+        const validateRecords = true;
 
         // Read stream to MarcRecords and send em to queue
         // This is a promise that resolves when all the records are in queue and rejects if any of the records in the stream fail
-        await toMarcRecords.streamToRecords({correlationId, headers: {operation, cataloger: queueItemPendingQueuing.cataloger}, contentType, stream});
+        await toMarcRecords.streamToRecords({correlationId, headers: {operation, cataloger: queueItemPendingQueuing.cataloger}, contentType, stream, validateRecords});
 
         // If we'd like to validate/match/merge bulk job records it could be done here
 
         // Set Mongo job state
         // This should setState to VALIDATOR.PENDING_VALIDATION if we're validationg bulk jobs
-        await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.IMPORTER.IN_QUEUE});
+
+        const newState = validateRecords ? QUEUE_ITEM_STATE.VALIDATOR.PENDING_VALIDATION : QUEUE_ITEM_STATE.IMPORTER.IN_QUEUE;
+
+        await mongoOperator.setState({correlationId, state: newState});
 
       } catch (error) {
         if (error instanceof ApiError) {
