@@ -37,19 +37,21 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
   async function process(headers, data) {
     logger.debug(`process headers ${JSON.stringify(headers)}`);
 
+    // currently batchBulk streamBulk does not have these headers, just format, prio has, streamBulk?
     const {
       operation,
       format,
-      cataloger
+      cataloger,
+      operationSettings
     } = headers;
 
     const id = headers.id || undefined;
-    const unique = headers.unique || undefined;
-    const merge = headers.merge || undefined;
-    const prio = headers.prio || undefined;
-    //const incoming = headers.incoming || undefined;
+    const unique = operationSettings.unique || undefined;
+    const merge = operationSettings.merge || undefined;
+    const prio = operationSettings.prio || undefined;
 
     // for prioTasks unserialize and format, for bulk tasks just format - bulk option needs testing
+    // also: batchBulk needs to be underialized?
     const record = prio ? await unserializeAndFormatRecord(data, format, formatOptions) : new MarcRecord(formatRecord(data, formatOptions));
 
     const sourceId = headers.sourceId || id || getIncomingIdFromRecord(record);
@@ -231,7 +233,9 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
         logger.debug(JSON.stringify(matchResults.map(({candidate: {id}, probability}) => ({id, probability}))));
         // eslint-disable-next-line functional/no-conditional-statement
         if (matchResults.length > 0 && !merge) {
-          throw new ValidationError(HttpStatus.CONFLICT, {message: 'Duplicates in database', ids: matchResults.map(({candidate: {id}}) => id)});
+          const errorMessage = JSON.stringify({message: 'Duplicates in database', ids: matchResults.map(({candidate: {id}}) => id)});
+          logger.debug(errorMessage);
+          throw new ValidationError(HttpStatus.CONFLICT, errorMessage);
         }
 
         // eslint-disable-next-line functional/no-conditional-statement

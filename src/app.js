@@ -43,7 +43,7 @@ export default async function ({
   }
 
   // Check amqp for jobs in 'REQUESTS' AMQP queue for prio
-  async function checkAmqpForRequests({prio}) {
+  async function checkAmqpForRequests({mongoOperator, amqpOperator, prio}) {
     logger.silly('Checking amqp');
     const message = await amqpOperator.checkQueue({queue: 'REQUESTS', style: 'one', toRecord: false, purge: false});
     logger.silly(`Message: ${inspect(message, {colors: true, maxArrayLength: 3, depth: 2})}`);
@@ -102,6 +102,9 @@ export default async function ({
         return initCheck();
       }
 
+      // this should check whether we have anything in queues?
+      // possibly also set importQueueStates here, so we don't need to set them everytime?
+
       await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.IMPORTER.IN_QUEUE});
 
       amqpOperator.removeQueue(validatorQueue);
@@ -153,9 +156,11 @@ export default async function ({
 
   async function processFreshMessage({message, mongoOperator, amqpOperator, prio}) {
 
+    // different contents in headers here? batchBulk has just format
     const {headers} = message.properties;
     const {correlationId} = message.properties;
 
+    // content data: streambulk: recordObject, prio & batchbulk: messageBody to unserializeAndFormat to record
     const content = JSON.parse(message.content.toString());
 
     logger.silly(`app/checkAmqp: content ${inspect(content, {colors: true, maxArrayLength: 3, depth: 1})}}`);
@@ -180,7 +185,7 @@ export default async function ({
     // noops are DONE here
 
     // bulks probably don't have noop?
-    const {noop} = headers;
+    const {noop} = headers.operationSettings;
     logger.debug(`app/checkAmqp: noop ${noop}`);
 
     // Validator could change the operation type
@@ -289,30 +294,33 @@ export default async function ({
   // eslint-disable-next-line max-statements
   async function checkMongo({mongoOperator, amqpOperator, prio}) {
 
-    //logger.silly(prio);
+    // bulk jobs for validation
 
     const queueItemValidating = await mongoOperator.getOne({queueItemState: QUEUE_ITEM_STATE.VALIDATOR.VALIDATING});
 
     if (queueItemValidating) {
       logger.silly('Mongo queue item found');
-      const {correlationId, noop} = queueItemValidating;
-      return checkAmqpForBulkPendingValidation({correlationId, mongoOperator, amqpOperator, prio, noop});
+      // do we need to forward other stuff from queuItem? batchBulk validatorQueue messages have just format in headers?
+      // as comparison prioMessages in PENDING_VALIDATION.correlationId queue have
+      const {correlationId, operationSettings} = queueItemValidating;
+      return checkAmqpForBulkPendingValidation({correlationId, mongoOperator, amqpOperator, prio, noop: operationSettings.noop});
     }
 
     const queueItemPendingValidation = await mongoOperator.getOne({queueItemState: QUEUE_ITEM_STATE.VALIDATOR.PENDING_VALIDATION});
 
     if (queueItemPendingValidation) {
       logger.silly('Mongo queue item found');
-      const {correlationId, noop} = queueItemPendingValidation;
+      const {correlationId, operationSettings} = queueItemPendingValidation;
       await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.VALIDATOR.VALIDATING});
-      return checkAmqpForBulkPendingValidation({correlationId, mongoOperator, amqpOperator, prio, noop});
+      return checkAmqpForBulkPendingValidation({correlationId, mongoOperator, amqpOperator, prio, noop: operationSettings.noop});
     }
 
+    // bulk job for splitting stream to records
     const queueItemPendingQueuing = await mongoOperator.getOne({queueItemState: QUEUE_ITEM_STATE.VALIDATOR.PENDING_QUEUING});
     if (queueItemPendingQueuing) {
       logger.silly('Mongo queue item found');
       // Work with queueItem
-      const {correlationId, operation, contentType} = queueItemPendingQueuing;
+      const {correlationId, operation, contentType, operationSettings} = queueItemPendingQueuing;
       logger.silly(`Correlation id: ${correlationId}`);
       // Set Mongo job state
       await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.VALIDATOR.QUEUING_IN_PROGRESS});
@@ -320,11 +328,11 @@ export default async function ({
       try {
         // Get stream from content
         const stream = await mongoOperator.getStream(correlationId);
-        const validateRecords = true;
+        const validateRecords = operationSettings.validate;
 
         // Read stream to MarcRecords and send em to queue
         // This is a promise that resolves when all the records are in queue and rejects if any of the records in the stream fail
-        await toMarcRecords.streamToRecords({correlationId, headers: {operation, cataloger: queueItemPendingQueuing.cataloger}, contentType, stream, validateRecords});
+        await toMarcRecords.streamToRecords({correlationId, headers: {operation, cataloger: queueItemPendingQueuing.cataloger, operationSettings: queueItemPendingQueuing.operationSettings}, contentType, stream, validateRecords});
 
         // If we'd like to validate/match/merge bulk job records it could be done here
 
@@ -334,6 +342,10 @@ export default async function ({
         const newState = validateRecords ? QUEUE_ITEM_STATE.VALIDATOR.PENDING_VALIDATION : QUEUE_ITEM_STATE.IMPORTER.IN_QUEUE;
 
         await mongoOperator.setState({correlationId, state: newState});
+        // eslint-disable-next-line functional/no-conditional-statement
+        if (!validateRecords) {
+          await mongoOperator.setImportJobState({correlationId, operation, importJobState: IMPORT_JOB_STATE.IN_QUEUE});
+        }
 
       } catch (error) {
         if (error instanceof ApiError) {

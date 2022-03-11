@@ -16,7 +16,9 @@ export default function (amqpOperator, mongoOperator, splitterOptions) {
   return {streamToRecords};
 
   async function streamToRecords({correlationId, headers, contentType, stream, validateRecords = false}) {
-    logger.verbose('Starting to transform stream to records');
+    logger.verbose(`Starting to transform stream to records`);
+    logger.debug(`ValidateRecords: ${validateRecords}`);
+    logger.debug(`Headers: ${JSON.stringify(headers)}`);
     // recordNumber is counter for data-events from the reader
     let recordNumber = 0; // eslint-disable-line functional/no-let
     // sequenceNumber is counter for data and error events from the reader
