@@ -19,6 +19,7 @@ export default function (amqpOperator, mongoOperator, splitterOptions) {
     logger.verbose(`Starting to transform stream to records`);
     logger.debug(`ValidateRecords: ${validateRecords}`);
     logger.debug(`Headers: ${JSON.stringify(headers)}`);
+    logger.debug(`ContentType: ${JSON.stringify(contentType)}`);
     // recordNumber is counter for data-events from the reader
     let recordNumber = 0; // eslint-disable-line functional/no-let
     // sequenceNumber is counter for data and error events from the reader
@@ -31,6 +32,7 @@ export default function (amqpOperator, mongoOperator, splitterOptions) {
     // Purge queue before importing records in
     await amqpOperator.checkQueue({queue: `${headers.operation}.${correlationId}`, style: 'messages', purge: true});
     logger.verbose('Reading stream to records');
+    logger.debug(`Headers: ${JSON.stringify(headers)}`);
 
     return new Promise((resolve, reject) => {
       const reader = chooseAndInitReader(contentType);
@@ -70,6 +72,7 @@ export default function (amqpOperator, mongoOperator, splitterOptions) {
 
           async function transform(record, number) {
 
+            logger.debug(`Adding record information to the headers`);
             const sourceId = getIncomingIdFromRecord(record);
             const id = headers.id || getIdFromRecord(record);
             const newHeaders = {

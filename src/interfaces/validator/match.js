@@ -6,7 +6,7 @@ import {Error as ValidationError} from '@natlibfi/melinda-commons';
 const logger = createLogger();
 
 // eslint-disable-next-line max-statements
-export async function iterateMatchersUntilMatchIsFound({matchers, matchOptionsList, updatedRecord, matcherCount = 0, matcherNoRunCount = 0, matcherFalseZeroCount = 0, matcherReports = {}}) {
+export async function iterateMatchersUntilMatchIsFound({matchers, matchOptionsList, record, matcherCount = 0, matcherNoRunCount = 0, matcherFalseZeroCount = 0, matcherReports = {}}) {
 
   const [matcher] = matchers;
   const [matchOptions] = matchOptionsList;
@@ -41,7 +41,7 @@ export async function iterateMatchersUntilMatchIsFound({matchers, matchOptionsLi
       // - only one stopReason is returned (if there would be several possible stopReasons, stopReason is picked in the above order)
       // - currently stopReason can be non-empty also in cases where status is true, if matcher hit the stop reason when handling the last available candidate record
 
-      const matchResults = await matcher(updatedRecord);
+      const matchResults = await matcher(record);
 
       const {matches, matchStatus} = matchResults;
       const matchAmount = matches.length;
@@ -70,7 +70,7 @@ export async function iterateMatchersUntilMatchIsFound({matchers, matchOptionsLi
 
       logger.debug(`No matching record from matcher ${matcherCount} (${matcherName})`);
 
-      return iterateMatchersUntilMatchIsFound({matchers: matchers.slice(1), matchOptionsList: matchOptionsList.slice(1), updatedRecord, matcherCount, matcherNoRunCount, matcherFalseZeroCount, matcherReports});
+      return iterateMatchersUntilMatchIsFound({matchers: matchers.slice(1), matchOptionsList: matchOptionsList.slice(1), record, matcherCount, matcherNoRunCount, matcherFalseZeroCount, matcherReports});
 
     } catch (err) {
 
@@ -85,7 +85,7 @@ export async function iterateMatchersUntilMatchIsFound({matchers, matchOptionsLi
           throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, err.message);
         }
 
-        return iterateMatchersUntilMatchIsFound({matchers: matchers.slice(1), matchOptionsList: matchOptionsList.slice(1), updatedRecord, matcherCount, matcherNoRunCount, matcherFalseZeroCount, matcherReports});
+        return iterateMatchersUntilMatchIsFound({matchers: matchers.slice(1), matchOptionsList: matchOptionsList.slice(1), record, matcherCount, matcherNoRunCount, matcherFalseZeroCount, matcherReports});
       }
 
       // SRU SruSearchErrors are 200-responses that include diagnostics from SRU server

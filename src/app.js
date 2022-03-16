@@ -102,6 +102,15 @@ export default async function ({
         return initCheck();
       }
 
+      /*
+      const messagesInCreateQueue = await amqpOperator.checkQueue({queue: `CREATE.${correlationId}`, style: 'messages'});
+      const messagesInUpdateQueue = await amqpOperator.checkQueue({queue: `UPDATE.${correlationId}`, style: 'messages'});
+
+      if (messagesInCreateQueue || messagesInUpdateQueue) {
+
+      }
+      */
+
       // this should check whether we have anything in queues?
       // possibly also set importQueueStates here, so we don't need to set them everytime?
 
@@ -184,7 +193,6 @@ export default async function ({
     // Process validated data
     // noops are DONE here
 
-    // bulks probably don't have noop?
     const {noop} = headers.operationSettings;
     logger.debug(`app/checkAmqp: noop ${noop}`);
 
@@ -301,7 +309,7 @@ export default async function ({
     if (queueItemValidating) {
       logger.silly('Mongo queue item found');
       // do we need to forward other stuff from queuItem? batchBulk validatorQueue messages have just format in headers?
-      // as comparison prioMessages in PENDING_VALIDATION.correlationId queue have
+      // as comparison prioMessages in PENDING_VALIDATION.correlationId queue have more complete headers
       const {correlationId, operationSettings} = queueItemValidating;
       return checkAmqpForBulkPendingValidation({correlationId, mongoOperator, amqpOperator, prio, noop: operationSettings.noop});
     }
@@ -320,7 +328,7 @@ export default async function ({
     if (queueItemPendingQueuing) {
       logger.silly('Mongo queue item found');
       // Work with queueItem
-      const {correlationId, operation, contentType, operationSettings} = queueItemPendingQueuing;
+      const {correlationId, operation, contentType, cataloger, operationSettings} = queueItemPendingQueuing;
       logger.silly(`Correlation id: ${correlationId}`);
       // Set Mongo job state
       await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.VALIDATOR.QUEUING_IN_PROGRESS});
@@ -331,13 +339,11 @@ export default async function ({
         const validateRecords = operationSettings.validate;
 
         // Read stream to MarcRecords and send em to queue
-        // This is a promise that resolves when all the records are in queue and rejects if any of the records in the stream fail
-        await toMarcRecords.streamToRecords({correlationId, headers: {operation, cataloger: queueItemPendingQueuing.cataloger, operationSettings: queueItemPendingQueuing.operationSettings}, contentType, stream, validateRecords});
+        // This is a promise that resolves when all the records are in queue and (currently always, this should be set by operationSettings.failOnError) rejects if any of the records in the stream fail
+        await toMarcRecords.streamToRecords({correlationId, headers: {operation, cataloger, operationSettings}, contentType, stream, validateRecords});
 
-        // If we'd like to validate/match/merge bulk job records it could be done here
-
-        // Set Mongo job state
-        // This should setState to VALIDATOR.PENDING_VALIDATION if we're validationg bulk jobs
+        // setState to VALIDATOR.PENDING_VALIDATION if we're validating the bulk job
+        // setState to IMPORTER.IN_QUEUE if we're not validating the bulk job
 
         const newState = validateRecords ? QUEUE_ITEM_STATE.VALIDATOR.PENDING_VALIDATION : QUEUE_ITEM_STATE.IMPORTER.IN_QUEUE;
 

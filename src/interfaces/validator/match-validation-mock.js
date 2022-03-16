@@ -4,7 +4,7 @@ import matchValidator from '@natlibfi/melinda-record-match-validator';
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator:match-validation-mock');
 const debugData = debug.extend('data');
 
-export function matchValidationForMatchResults(record, matchResults) {
+export async function matchValidationForMatchResults(record, matchResults) {
 
   // matches : array of matching candidate records
   // - candidate.id
@@ -20,12 +20,12 @@ export function matchValidationForMatchResults(record, matchResults) {
 
   const matchResultClone = matchResults;
   // eslint-disable-next-line functional/immutable-data
-  const sortedMatchResults = matchResultClone.sort((a, b) => a.probability > b.probability ? 1 : -1);
+  const sortedMatchResults = await matchResultClone.sort((a, b) => a.probability > b.probability ? 1 : -1);
   debugData(`Sorted: ${JSON.stringify(sortedMatchResults.map(({candidate: {id}, probability}) => ({id, probability})))}))}`);
 
-  debug(`Run matchValidation for sorted records`);
+  debug(`Run matchValidation for sorted matches`);
 
-  const matchResultsAndMatchValidations = sortedMatchResults.map(match => {
+  const matchResultsAndMatchValidations = await sortedMatchResults.map(match => {
     const matchValidationResult = matchValidation(record, match.candidate.record);
     return {
       matchValidationResult,
@@ -34,7 +34,6 @@ export function matchValidationForMatchResults(record, matchResults) {
   });
 
   debug(JSON.stringify(matchResultsAndMatchValidations));
-
   return {record, matchResultsAndMatchValidations};
 
 }
@@ -50,9 +49,10 @@ export async function matchValidationRecordArray(record, matchResultRecords, val
 }
 */
 
-export async function matchValidation(recordA, recordB) {
+// melinda-record-match-validation is *NOT* async
+export function matchValidation(recordA, recordB) {
   debug(`Run match-validation here`);
-  const matchValidationResult = await matchValidator(recordA, recordB);
+  const matchValidationResult = matchValidator(recordA, recordB);
   debug(matchValidationResult);
   return matchValidationResult;
 }
