@@ -372,8 +372,8 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       // Merge makes uuid variables to all fields and this removes those
       const incomingModificationHistoryNoUuids = incomingModificationHistory.map(field => ({tag: field.tag, ind1: field.ind1, ind2: field.ind2, subfields: field.subfields}));
 
-      logger.silly(`Incoming CATS:\n${JSON.stringify(incomingModificationHistoryNoUuids)}`);
-      logger.silly(`Existing CATS:\n${JSON.stringify(existingModificationHistory)}`);
+      logger.silly(`Incoming CATS (${incomingModificationHistoryNoUuids.length}) :\n${JSON.stringify(incomingModificationHistoryNoUuids)}`);
+      logger.silly(`Existing CATS (${existingModificationHistory.length}) :\n${JSON.stringify(existingModificationHistory)}`);
 
       if (deepEqual(incomingModificationHistoryNoUuids, existingModificationHistory) === false) { // eslint-disable-line functional/no-conditional-statement
         logger.debug(`validateRecordState: failure`);
