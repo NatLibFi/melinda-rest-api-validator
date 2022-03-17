@@ -233,7 +233,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
         // eslint-disable-next-line functional/no-conditional-statement
         if (matchResults.length > 0 && headers.operationSettings.merge) {
           logger.debug(`Found matches (${matchResults.length}) for merging.`);
-          return validateAndMergeMatchResults(record, matchResults);
+          return validateAndMergeMatchResults(record, matchResults, formatOptions);
         }
 
         logger.verbose('No matching records');
@@ -252,7 +252,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       return {result: validationResults, operationAfterValidation: headers.operation};
     }
 
-    async function validateAndMergeMatchResults(record, matchResults) {
+    async function validateAndMergeMatchResults(record, matchResults, formatOptions) {
       try {
         logger.debug(`We have matchResults (${matchResults.length}) here: ${JSON.stringify(matchResults.map(({candidate: {id}, probability}) => ({id, probability})))}`);
         logger.silly(` ${JSON.stringify(matchResults)}`);
@@ -264,7 +264,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
         // Is the match mergeable?
         // Which of the records should be preferred
 
-        const matchValidationResults = await matchValidationForMatchResults(record, matchResults);
+        const matchValidationResults = await matchValidationForMatchResults(record, matchResults, formatOptions);
         //        logger.debug(`MatchValidationResult: ${inspect(matchValidationResult.matchResultsAndMatchValidations, {colors: true, maxArrayLength: 3, depth: 1})}}`);
         logger.debug(`MatchValidationResults: ${inspect(matchValidationResults, {colors: true, maxArrayLength: 3, depth: 2})}}`);
 

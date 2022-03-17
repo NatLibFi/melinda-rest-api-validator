@@ -1,10 +1,13 @@
 import createDebugLogger from 'debug';
 import matchValidator from '@natlibfi/melinda-record-match-validator';
+import {MarcRecord} from '@natlibfi/marc-record';
+import {format} from '@natlibfi/melinda-rest-api-commons';
 
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator:match-validation-mock');
 const debugData = debug.extend('data');
 
-export async function matchValidationForMatchResults(record, matchResults) {
+export async function matchValidationForMatchResults(record, matchResults, formatOptions) {
+  const {formatRecord} = format;
 
   // matches : array of matching candidate records
   // - candidate.id
@@ -24,9 +27,10 @@ export async function matchValidationForMatchResults(record, matchResults) {
   debugData(`Sorted: ${JSON.stringify(sortedMatchResults.map(({candidate: {id}, probability}) => ({id, probability})))}))}`);
 
   debug(`Run matchValidation for sorted matches`);
+  // format candidate to MelindaInternalFormat
 
   const matchResultsAndMatchValidations = await sortedMatchResults.map(match => {
-    const matchValidationResult = matchValidation(record, match.candidate.record);
+    const matchValidationResult = matchValidation(record, new MarcRecord(formatRecord(record, formatOptions)));
     return {
       matchValidationResult,
       ...match
@@ -37,17 +41,6 @@ export async function matchValidationForMatchResults(record, matchResults) {
   return {record, matchResultsAndMatchValidations};
 
 }
-
-/*
-export async function matchValidationRecordArray(record, matchResultRecords, validateUntilValid = true) {
-  debug(``);
-  const matchValidationResults = await matchResultRecords.forEach(matchedRecord => {
-    return matchValidation(record, matchedRecord);
-  });
-
-  return {record, matchResultRecords};
-}
-*/
 
 // melinda-record-match-validation is *NOT* async
 export function matchValidation(recordA, recordB) {
