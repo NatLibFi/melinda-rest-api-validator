@@ -72,7 +72,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
         const {result, operationAfterValidation, mergeValidationResult} = await executeValidations({record, headers});
 
         // If the incoming record was merged in the validationProcess, update operation to 'UPDATE'
-        const newOperation = operationAfterValidation === 'merge' ? 'UPDATE' : operationAfterValidation;
+        const newOperation = operationAfterValidation === 'updateAfterMerge' ? 'UPDATE' : operationAfterValidation;
 
         logger.debug(`validator/index/process: Validation result: ${inspect(result, {colors: true, maxArrayLength: 3, depth: 1})}`);
         logger.debug(`validator/index/process: operationAfterValidation: ${operationAfterValidation}, newOperation: ${newOperation}, original operation: ${headers.operation}`);
@@ -157,7 +157,9 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
         validateExistingRecord(existingRecord);
 
         // Merge for updates (do not run if record is already merged CREATE)
-        const updateMergeNeeded = headers.operationSettings.merge && updateOperation !== 'merge';
+        logger.debug(`Check whether merge is needed for update`);
+        logger.debug(`headers: ${headers}, updateOperation: ${updateOperation}`);
+        const updateMergeNeeded = headers.operationSettings.merge && updateOperation !== 'updateAfterMerge';
         const {mergedRecord: updatedRecordAfterMerge, mergeValidationResult: mergeValidationResultAfterMerge} = updateMergeNeeded ? await mergeRecordForUpdates({record: updatedRecord, existingRecord, id: updateId}) : {mergedRecord: updatedRecord, mergeValidationResult};
 
         // eslint-disable-next-line functional/no-conditional-statement
@@ -354,7 +356,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       const mergeValidationResult = {merged: mergeResult.status, mergedId: mergeResult.id};
 
       // run update validations
-      return updateValidations({updateId: mergeResult.id, updateRecord: new MarcRecord(mergeResult.record, {subfieldValues: false}), updateOperation: 'merge', mergeValidationResult});
+      return updateValidations({updateId: mergeResult.id, updateRecord: new MarcRecord(mergeResult.record, {subfieldValues: false}), updateOperation: 'updateAfterMerge', mergeValidationResult, headers});
 
     // throw new ValidationError(HttpStatus.CONFLICT, {message: 'Duplicates in database, merge flag true, cannot merge yet', ids: matchResults.map(({candidate: {id}}) => id)});
     }

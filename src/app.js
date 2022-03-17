@@ -326,7 +326,7 @@ export default async function ({
     // bulk job for splitting stream to records
     const queueItemPendingQueuing = await mongoOperator.getOne({queueItemState: QUEUE_ITEM_STATE.VALIDATOR.PENDING_QUEUING});
     if (queueItemPendingQueuing) {
-      logger.silly('Mongo queue item found');
+      logger.silly('Mongo queueItem found');
       // Work with queueItem
       const {correlationId, operation, contentType, cataloger, operationSettings} = queueItemPendingQueuing;
       logger.silly(`Correlation id: ${correlationId}`);
