@@ -1,5 +1,5 @@
 import createDebugLogger from 'debug';
-import matchValidator from '@natlibfi/melinda-record-match-validator';
+import matchValidator from 'melinda-record-match-validator';
 import {MarcRecord} from '@natlibfi/marc-record';
 import {format} from '@natlibfi/melinda-rest-api-commons';
 

@@ -41,7 +41,7 @@
 		"@natlibfi/melinda-backend-commons": "^2.0.5",
 		"@natlibfi/melinda-commons": "^12.0.3",
 		"@natlibfi/melinda-marc-record-merge-reducers": "^1.0.0-alpha.2",
-		"@natlibfi/melinda-record-match-validator": "git://github.com/NatLibFi/melinda-record-match-validator.git#dev",
+		"melinda-record-match-validator": "^1.0.0-alpha.2",
 		"@natlibfi/melinda-record-matching": "^2.1.0",
 		"@natlibfi/melinda-rest-api-commons": "^2.2.0-alpha.7",
 		"@natlibfi/sru-client": "^5.0.1",
