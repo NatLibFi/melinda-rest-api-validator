@@ -10,8 +10,8 @@ export default (ownTags, incomingRecord, existingRecord) => {
 
   function getLowTags() {
     if (existingRecord) {
-      const incomingTags = get(incomingRecord) || [];
-      const existingTags = get(existingRecord) || [];
+      const incomingTags = get(incomingRecord);
+      const existingTags = get(existingRecord);
 
       const additions = incomingTags.reduce((acc, tag) => existingTags.includes(tag) ? acc : acc.concat(tag), []);
 
@@ -21,7 +21,7 @@ export default (ownTags, incomingRecord, existingRecord) => {
       return additions.concat(removals).reduce((acc, tag) => acc.includes(tag) ? acc : acc.concat(tag), []);
     }
 
-    return get(incomingRecord) || [];
+    return get(incomingRecord);
 
     // Get unique tags
     function get(record) {
