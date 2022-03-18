@@ -1,4 +1,3 @@
-import deepEqual from 'deep-eql';
 import HttpStatus from 'http-status';
 import {MARCXML} from '@natlibfi/marc-record-serializers';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
@@ -14,6 +13,7 @@ import {matchValidationForMatchResults} from './match-validation-mock';
 import merger from './merge-mock';
 import * as matcherService from './match';
 import createMatchInterface from '@natlibfi/melinda-record-matching';
+import {validateRecordState} from './validate-record-state';
 
 //import createDebugLogger from 'debug';
 
@@ -167,6 +167,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
           logger.debug(`We needed merge for UPDATE: ${updateMergeNeeded}`);
           logger.debug(`Original incoming record: ${updatedRecord}`);
           logger.debug(`Incoming record after merge: ${updatedRecordAfterMerge}`);
+          // get here diff for records
         }
 
         // bulk does not have cataloger.authorization
@@ -265,18 +266,19 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
         // Which of the records should be preferred
 
         const matchValidationResults = await matchValidationForMatchResults(record, matchResults, formatOptions);
-        //        logger.debug(`MatchValidationResult: ${inspect(matchValidationResult.matchResultsAndMatchValidations, {colors: true, maxArrayLength: 3, depth: 1})}}`);
         logger.debug(`MatchValidationResults: ${inspect(matchValidationResults, {colors: true, maxArrayLength: 3, depth: 2})}}`);
 
+        // We should check all results?
         const [firstResult] = matchValidationResults.matchResultsAndMatchValidations;
 
-        logger.debug(`firstResults ${inspect(firstResult, {colors: true, maxArrayLength: 3, depth: 2})}}`);
+        logger.debug(`firstResult: ${inspect(firstResult, {colors: true, maxArrayLength: 3, depth: 2})}}`);
 
         if (firstResult.matchValidationResult.action === false) {
           throw new ValidationError(HttpStatus.CONFLICT, `MatchValidation failed. ${firstResult.message}`);
         }
         logger.debug(firstResult.matchValidationResult.action);
-        logger.debug(`We did not catch action`);
+        logger.debug(`Action from matchValidation: ${firstResult.matchValidationResult.action}`);
+
 
         // Note this does not do anything about matchValidationResults yet
         return mergeValidatedMatchResults(record, matchResults);
@@ -361,53 +363,31 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
     // throw new ValidationError(HttpStatus.CONFLICT, {message: 'Duplicates in database, merge flag true, cannot merge yet', ids: matchResults.map(({candidate: {id}}) => id)});
     }
 
-    // Checks that the modification history is identical
-    function validateRecordState(incomingRecord, existingRecord) {
-      const logger = createLogger();
-      // why the incomingRecord would be an array? is this also a relic from merge-UI?
-      const incomingModificationHistory = Array.isArray(incomingRecord) ? incomingRecord : incomingRecord.get(/^CAT$/u) || [];
-      const existingModificationHistory = existingRecord.get(/^CAT$/u) || [];
+    function getRecord(id) {
+      return new Promise((resolve, reject) => {
+        let promise; // eslint-disable-line functional/no-let
 
-      // the next is not needed? this is not used with Merge-UI?
-      // Merge makes uuid variables to all fields and this removes those
-      const incomingModificationHistoryNoUuids = incomingModificationHistory.map(field => ({tag: field.tag, ind1: field.ind1, ind2: field.ind2, subfields: field.subfields}));
+        sruClient.searchRetrieve(`rec.id=${id}`)
+          .on('record', xmlString => {
+            promise = MARCXML.from(xmlString, {subfieldValues: false});
+          })
+          .on('end', async () => {
+            if (promise) {
+              try {
+                const record = await promise;
+                resolve(record);
+              } catch (err) {
+                reject(err);
+              }
 
-      logger.silly(`Incoming CATS (${incomingModificationHistoryNoUuids.length}) :\n${JSON.stringify(incomingModificationHistoryNoUuids)}`);
-      logger.silly(`Existing CATS (${existingModificationHistory.length}) :\n${JSON.stringify(existingModificationHistory)}`);
-
-      if (deepEqual(incomingModificationHistoryNoUuids, existingModificationHistory) === false) { // eslint-disable-line functional/no-conditional-statement
-        logger.debug(`validateRecordState: failure`);
-        throw new ValidationError(HttpStatus.CONFLICT, {message: 'Modification history mismatch (CAT)'});
-      }
-      logger.debug(`validateRecordState: OK`);
-    }
-  }
-
-  function getRecord(id) {
-    return new Promise((resolve, reject) => {
-      let promise; // eslint-disable-line functional/no-let
-
-      sruClient.searchRetrieve(`rec.id=${id}`)
-        .on('record', xmlString => {
-          promise = MARCXML.from(xmlString, {subfieldValues: false});
-        })
-        .on('end', async () => {
-          if (promise) {
-            try {
-              const record = await promise;
-              resolve(record);
-            } catch (err) {
-              reject(err);
+              //logger.debug('No record promise from sru');
+              return;
             }
 
-            //logger.debug('No record promise from sru');
-            return;
-          }
-
-          resolve();
-        })
-        .on('error', err => reject(err));
-    });
+            resolve();
+          })
+          .on('error', err => reject(err));
+      });
+    }
   }
 }
-
