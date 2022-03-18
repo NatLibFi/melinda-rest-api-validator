@@ -1,0 +1,5 @@
+{
+    "description": "(DISABLED) It should not throw error for undefined/empty value in subfields",
+    "expectedToThrow": false,
+    "enabled": false
+  }
