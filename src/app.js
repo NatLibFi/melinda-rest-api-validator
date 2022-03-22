@@ -170,9 +170,14 @@ export default async function ({
     const {correlationId} = message.properties;
 
     // content data: streambulk: recordObject, prio & batchbulk: messageBody to unserializeAndFormat to record
-    const content = JSON.parse(message.content.toString());
+    const messageContentString = message.content.toString();
+    logger.silly(`messageContentString: ${messageContentString}`);
 
-    logger.silly(`app/checkAmqp: content ${inspect(content, {colors: true, maxArrayLength: 3, depth: 1})}}`);
+    const content = JSON.parse(messageContentString);
+
+    logger.silly(`app/checkAmqp: content ${content}`);
+    //
+    //logger.silly(`app/checkAmqp: content ${inspect(content, {colors: true, maxArrayLength: 3, depth: 1})}}`);
     // validator.process returns:
     //     no-noop: {headers: {operation, cataloger: cataloger.id, sourceId, blobF001}, data: result.record.toObject()};
     //     noop:    {status, record, failed, messages} - no headers!
