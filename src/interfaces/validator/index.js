@@ -14,6 +14,7 @@ import merger from './merge-mock';
 import * as matcherService from './match';
 import createMatchInterface from '@natlibfi/melinda-record-matching';
 import {validateRecordState} from './validate-record-state';
+import {detailedDiff} from 'deep-object-diff';
 
 //import createDebugLogger from 'debug';
 
@@ -168,6 +169,8 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
           logger.debug(`Original incoming record: ${updatedRecord}`);
           logger.debug(`Incoming record after merge: ${updatedRecordAfterMerge}`);
           // get here diff for records
+          logger.debug(`Changes merge makes to existing record: ${inspect(detailedDiff(existingRecord, updatedRecordAfterMerge), {colors: true, depth: 5})}`);
+          //logger.debug(`Changes merge makes to incoming record: ${inspect(detailedDiff(updatedRecord, updatedRecordAfterMerge), {colors: true, depth: 5})}`);
         }
 
         // bulk does not have cataloger.authorization
