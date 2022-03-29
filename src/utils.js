@@ -1,4 +1,4 @@
-import {toAlephId} from '@natlibfi/melinda-commons';
+import {toAlephId, getRecordTitle, getRecordStandardIdentifiers} from '@natlibfi/melinda-commons';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 
 const logger = createLogger();
@@ -16,6 +16,16 @@ export function updateField001ToParamId(id, record) {
   fields[0].value = toAlephId(id); // eslint-disable-line functional/immutable-data
 
   return record;
+}
+
+//
+
+export function getRecordMetadata(record, number) {
+  const sourceId = getIncomingIdFromRecord(record);
+  const title = getRecordTitle(record);
+  const standardIdentifiers = getRecordStandardIdentifiers(record);
+  const blobSequence = number || '1';
+  return {sourceId, blobSequence, title, standardIdentifiers};
 }
 
 

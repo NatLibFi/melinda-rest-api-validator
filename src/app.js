@@ -296,8 +296,8 @@ export default async function ({
     // for bulk, push validatorErrors to validatorErrorMessages - we need better handling for this
     // eslint-disable-next-line functional/no-conditional-statement
     logger.debug(`Validator error (specially for bulk) for bulk`);
-    const errorHeaders = {sourceId: headers.sourceId, sequence: headers.blobf001};
-    await mongoOperator.pushMessages({correlationId, messages: [{errorHeaders, error}], messageField: 'validatorErrors'});
+    const {recordMetadata} = headers;
+    await mongoOperator.pushMessages({correlationId, messages: [{recordMetadata, error}], messageField: 'validatorErrors'});
 
     // If we had a message we can move to next message
     return initCheck(true);

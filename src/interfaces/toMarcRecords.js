@@ -2,11 +2,12 @@ import {Json, MARCXML, AlephSequential, ISO2709} from '@natlibfi/marc-record-ser
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
 import {OPERATIONS, logError} from '@natlibfi/melinda-rest-api-commons';
-import {updateField001ToParamId, getIncomingIdFromRecord, getIdFromRecord} from '../utils';
+import {updateField001ToParamId, getIdFromRecord, getRecordMetadata} from '../utils';
 import httpStatus from 'http-status';
 import {promisify} from 'util';
 import {MarcRecordError} from '@natlibfi/marc-record';
 import {QUEUE_ITEM_STATE} from '@natlibfi/melinda-rest-api-commons/dist/constants';
+
 
 export default function (amqpOperator, mongoOperator, splitterOptions) {
   const {failBulkOnError, keepSplitterReport} = splitterOptions;
@@ -73,11 +74,11 @@ export default function (amqpOperator, mongoOperator, splitterOptions) {
           async function transform(record, number) {
 
             logger.debug(`Adding record information to the headers`);
-            const sourceId = getIncomingIdFromRecord(record);
+            const recordMetadata = getRecordMetadata(record, number);
             const id = headers.id || getIdFromRecord(record);
+
             const newHeaders = {
-              sourceId,
-              blobf001: number,
+              recordMetadata,
               id,
               ...headers
             };
