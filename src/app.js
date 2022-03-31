@@ -261,8 +261,7 @@ export default async function ({
     return initCheck();
   }
 
-  // do we have noops for bulk?
-  async function setNoopResult({correlationId, processResult, mongoOperator, prio}) {
+  async function setNoopResult({correlationId, processResult, mongoOperator, prio, headers = undefined}) {
 
     const status = processResult.headers.operation === 'CREATE' ? 'CREATED' : 'UPDATED';
     const validationMessage = {status, failed: processResult.failed, messages: processResult.messages ? processResult.messages.concat(processResult.mergeValidationResult) : [processResult.mergeValidationResult]};
@@ -273,6 +272,12 @@ export default async function ({
     if (prio) {
       await mongoOperator.checkAndSetState({correlationId, state: QUEUE_ITEM_STATE.DONE});
     }
+
+    const recordResponseItem = createRecordResponseItem({responseStatus: status, responsePayload: validationMessage, headers});
+    await addRecordResponseItem({recordResponseItem, correlationId, mongoOperator, type: 'handledRecords'});
+
+    // Should these noops go to handledRecords?
+
     return initCheck();
   }
 
@@ -293,14 +298,27 @@ export default async function ({
       await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.ERROR, errorStatus: responseStatus, errorMessage: responsePayload});
     }
 
-    // for bulk, push validatorErrors to validatorErrorMessages - we need better handling for this
-    // eslint-disable-next-line functional/no-conditional-statement
-    logger.debug(`Validator error (specially for bulk) for bulk`);
-    const {recordMetadata} = headers;
-    await mongoOperator.pushMessages({correlationId, messages: [{recordMetadata, error}], messageField: 'validatorErrors'});
+    const recordResponseItem = createRecordResponseItem({responseStatus, responsePayload, headers});
+    await addRecordResponseItem({recordResponseItem, correlationId, mongoOperator, type: 'rejectedRecords'});
 
     // If we had a message we can move to next message
     return initCheck(true);
+  }
+
+  function createRecordResponseItem({responsePayload, responseStatus, headers}) {
+    const recordResponseItem = {
+      status: responseStatus,
+      melindaId: headers.id || undefined,
+      recordMetadata: headers.recordMetadata || undefined,
+      message: responsePayload
+    };
+    return recordResponseItem;
+  }
+
+  async function addRecordResponseItem({recordResponseItem, correlationId, mongoOperator, type}) {
+    const messageField = type;
+    await mongoOperator.pushMessages({correlationId, messages: [recordResponseItem], messageField});
+    return true;
   }
 
   // Check Mongo for jobs

@@ -65,6 +65,8 @@ export default function (amqpOperator, mongoOperator, splitterOptions) {
           }
           recordNumber += 1;
           logger.silly(`Record number ${recordNumber}`);
+
+          // Should we use sequenceNumber instead of recordNumber here?
           promises.push(transform(data, recordNumber)); // eslint-disable-line functional/immutable-data
 
           log100thQueue(recordNumber, 'read');
@@ -89,6 +91,9 @@ export default function (amqpOperator, mongoOperator, splitterOptions) {
 
             logger.debug(`validateRecords: ${validateRecords}`);
             logger.debug(`queue: ${queue}, newHeaders ${JSON.stringify(newHeaders)}`);
+
+            // Noops go also to the queue, ok if validate is true, not ok if validate is not true
+            // Currently importer errors if it gets a queueItem with noop === true
             await amqpOperator.sendToQueue({queue, correlationId, headers: newHeaders, data: recordToQueue.toObject()});
             return log100thQueue(number, 'queued');
           }
