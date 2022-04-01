@@ -4,6 +4,7 @@ import {Error as ApiError} from '@natlibfi/melinda-commons';
 import {mongoFactory, amqpFactory, logError, QUEUE_ITEM_STATE, IMPORT_JOB_STATE} from '@natlibfi/melinda-rest-api-commons';
 import validatorFactory from './interfaces/validator';
 import toMarcRecordFactory from './interfaces/toMarcRecords';
+import httpStatus from 'http-status';
 
 const setTimeoutPromise = promisify(setTimeout);
 
@@ -264,19 +265,31 @@ export default async function ({
   async function setNoopResult({correlationId, processResult, mongoOperator, prio, headers = undefined}) {
 
     const status = processResult.headers.operation === 'CREATE' ? 'CREATED' : 'UPDATED';
-    const validationMessage = {status, failed: processResult.failed, messages: processResult.messages ? processResult.messages.concat(processResult.mergeValidationResult) : [processResult.mergeValidationResult]};
+    const id = processResult.headers.operation === 'CREATE' ? '000000000' : processResult.headers.id;
+
+    logger.debug();
+
+    const failed = processResult.failed || undefined;
+    const processMessages = processResult.messages || [];
+    const mergeMessages = processResult.mergeValidationResult || [];
+    const messages = processMessages.concat(mergeMessages);
+
+    const validationMessage = failed ? {failed, messages} : undefined;
+
+    // mergeValidationResult = {merged: true/false, mergedId: id};
+
+    //const validationMessage = {failed: processResult.failed || undefined, messages: processResult.messages ? processResult.messages.concat(processResult.mergeValidationResult) : [processResult.mergeValidationResult]};
     logger.debug(`${JSON.stringify(validationMessage)}`);
 
-    await mongoOperator.pushMessages({correlationId, messageField: 'noopValidationMessages', messages: [validationMessage]});
+    //await mongoOperator.pushMessages({correlationId, messageField: 'noopValidationMessages', messages: [validationMessage]});
     // eslint-disable-next-line functional/no-conditional-statement
     if (prio) {
       await mongoOperator.checkAndSetState({correlationId, state: QUEUE_ITEM_STATE.DONE});
     }
 
-    const recordResponseItem = createRecordResponseItem({responseStatus: status, responsePayload: validationMessage, headers});
-    await addRecordResponseItem({recordResponseItem, correlationId, mongoOperator, type: 'handledRecords'});
-
-    // Should these noops go to handledRecords?
+    // Add recordResponse to records in queueItem
+    const recordResponseItem = createRecordResponseItem({responseStatus: status, responsePayload: validationMessage, recordMetadata: headers.recordMetadata, id});
+    await addRecordResponseItem({recordResponseItem, correlationId, mongoOperator});
 
     return initCheck();
   }
@@ -298,26 +311,38 @@ export default async function ({
       await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.ERROR, errorStatus: responseStatus, errorMessage: responsePayload});
     }
 
-    const recordResponseItem = createRecordResponseItem({responseStatus, responsePayload, headers});
-    await addRecordResponseItem({recordResponseItem, correlationId, mongoOperator, type: 'rejectedRecords'});
+    // Add recordResponse to queueItem
+    const recordResponseItem = createRecordResponseItem({responseStatus, responsePayload, recordMetadata: headers.recordMetadata, id: headers.id});
+    await addRecordResponseItem({recordResponseItem, correlationId, mongoOperator});
 
     // If we had a message we can move to next message
     return initCheck(true);
   }
 
-  function createRecordResponseItem({responsePayload, responseStatus, headers}) {
+  function createRecordResponseItem({responsePayload, responseStatus, recordMetadata, id}) {
     const recordResponseItem = {
-      status: responseStatus,
-      melindaId: headers.id || undefined,
-      recordMetadata: headers.recordMetadata || undefined,
+      status: getRecordResponseStatus(responseStatus, responsePayload),
+      melindaId: id || undefined,
+      recordMetadata: recordMetadata || undefined,
       message: responsePayload
     };
     return recordResponseItem;
   }
 
-  async function addRecordResponseItem({recordResponseItem, correlationId, mongoOperator, type}) {
-    const messageField = type;
-    await mongoOperator.pushMessages({correlationId, messages: [recordResponseItem], messageField});
+  function getRecordResponseStatus(responseStatus, responsePayload) {
+    if (['UPDATED', 'CREATED'].includes(responseStatus)) {
+      return responseStatus;
+    }
+    logger.verbose(`Response status: ${responseStatus} responsePayload: ${responsePayload}`);
+    const responseStatusName = httpStatus[`${responseStatus}_NAME`];
+    logger.verbose(`Response status name: ${responseStatusName}`);
+
+
+    return responseStatusName;
+  }
+
+  async function addRecordResponseItem({recordResponseItem, correlationId, mongoOperator}) {
+    await mongoOperator.pushMessages({correlationId, messages: [recordResponseItem], messageField: 'records'});
     return true;
   }
 
