@@ -4,6 +4,7 @@ import {Error as ApiError} from '@natlibfi/melinda-commons';
 import {mongoFactory, amqpFactory, logError, QUEUE_ITEM_STATE, IMPORT_JOB_STATE} from '@natlibfi/melinda-rest-api-commons';
 import validatorFactory from './interfaces/validator';
 import toMarcRecordFactory from './interfaces/toMarcRecords';
+import {createRecordResponseItem, addRecordResponseItem} from './utils';
 import httpStatus from 'http-status';
 
 const setTimeoutPromise = promisify(setTimeout);
@@ -299,7 +300,7 @@ export default async function ({
     logger.debug(`Headers: ${JSON.stringify(headers)}`);
 
     logger.silly(`error.status: ${error.status}`);
-    const responseStatus = error.status || '500';
+    const responseStatus = error.status || httpStatus.INTERNAL_SERVER_ERROR;
     logger.debug(`responseStatus: ${responseStatus}`);
 
     logger.silly(`error.message: ${error.message}, error.payload: ${error.payload}`);
@@ -319,32 +320,6 @@ export default async function ({
     return initCheck(true);
   }
 
-  function createRecordResponseItem({responsePayload, responseStatus, recordMetadata, id}) {
-    const recordResponseItem = {
-      status: getRecordResponseStatus(responseStatus, responsePayload),
-      melindaId: id || undefined,
-      recordMetadata: recordMetadata || undefined,
-      message: responsePayload
-    };
-    return recordResponseItem;
-  }
-
-  function getRecordResponseStatus(responseStatus, responsePayload) {
-    if (['UPDATED', 'CREATED'].includes(responseStatus)) {
-      return responseStatus;
-    }
-    logger.verbose(`Response status: ${responseStatus} responsePayload: ${responsePayload}`);
-    const responseStatusName = httpStatus[`${responseStatus}_NAME`];
-    logger.verbose(`Response status name: ${responseStatusName}`);
-
-
-    return responseStatusName;
-  }
-
-  async function addRecordResponseItem({recordResponseItem, correlationId, mongoOperator}) {
-    await mongoOperator.pushMessages({correlationId, messages: [recordResponseItem], messageField: 'records'});
-    return true;
-  }
 
   // Check Mongo for jobs
   // eslint-disable-next-line max-statements

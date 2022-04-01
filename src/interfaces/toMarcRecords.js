@@ -2,7 +2,7 @@ import {Json, MARCXML, AlephSequential, ISO2709} from '@natlibfi/marc-record-ser
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
 import {OPERATIONS, logError} from '@natlibfi/melinda-rest-api-commons';
-import {updateField001ToParamId, getIdFromRecord, getRecordMetadata} from '../utils';
+import {updateField001ToParamId, getIdFromRecord, getRecordMetadata, createRecordResponseItem, addRecordResponseItem} from '../utils';
 import httpStatus from 'http-status';
 import {promisify} from 'util';
 import {MarcRecordError} from '@natlibfi/marc-record';
@@ -50,6 +50,10 @@ export default function (amqpOperator, mongoOperator, splitterOptions) {
           if (err instanceof MarcRecordError) {
             logger.debug(`Error is MarcRecordError`);
           }
+
+          const recordResponseItem = createRecordResponseItem({responseStatus: httpStatus.UNPROCESSABLE_ENTITY, responsePayload: cleanErrorMessage, recordMetadata: getRecordMetadata(undefined, sequenceNumber), id: undefined});
+          addRecordResponseItem({recordResponseItem, correlationId, mongoOperator});
+
           // eslint-disable-next-line functional/no-conditional-statement
           if (failBulkOnError) {
             reject(new ApiError(httpStatus.UNPROCESSABLE_ENTITY, `Invalid payload! (${sequenceNumber}) ${cleanErrorMessage}`));
@@ -67,7 +71,7 @@ export default function (amqpOperator, mongoOperator, splitterOptions) {
           logger.silly(`Record number ${recordNumber}`);
 
           // Should we use sequenceNumber instead of recordNumber here?
-          promises.push(transform(data, recordNumber)); // eslint-disable-line functional/immutable-data
+          promises.push(transform(data, sequenceNumber)); // eslint-disable-line functional/immutable-data
 
           log100thQueue(recordNumber, 'read');
 
@@ -77,7 +81,7 @@ export default function (amqpOperator, mongoOperator, splitterOptions) {
 
             logger.debug(`Adding record information to the headers`);
             const recordMetadata = getRecordMetadata(record, number);
-            const id = headers.id || getIdFromRecord(record);
+            const id = headers.operation === OPERATIONS.CREATE ? number : getIdFromRecord(record);
 
             const newHeaders = {
               recordMetadata,
