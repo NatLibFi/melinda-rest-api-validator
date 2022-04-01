@@ -1,12 +1,11 @@
 import {Json, MARCXML, AlephSequential, ISO2709} from '@natlibfi/marc-record-serializers';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
-import {OPERATIONS, logError} from '@natlibfi/melinda-rest-api-commons';
-import {updateField001ToParamId, getIdFromRecord, getRecordMetadata, createRecordResponseItem, addRecordResponseItem} from '../utils';
+import {updateField001ToParamId, getIdFromRecord, getRecordMetadata} from '../utils';
 import httpStatus from 'http-status';
 import {promisify} from 'util';
 import {MarcRecordError} from '@natlibfi/marc-record';
-import {QUEUE_ITEM_STATE} from '@natlibfi/melinda-rest-api-commons/dist/constants';
+import {OPERATIONS, logError, QUEUE_ITEM_STATE, createRecordResponseItem, addRecordResponseItem} from '@natlibfi/melinda-rest-api-commons';
 
 
 export default function (amqpOperator, mongoOperator, splitterOptions) {

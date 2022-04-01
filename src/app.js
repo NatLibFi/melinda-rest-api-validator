@@ -1,10 +1,9 @@
 import {promisify, inspect} from 'util';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
-import {mongoFactory, amqpFactory, logError, QUEUE_ITEM_STATE, IMPORT_JOB_STATE} from '@natlibfi/melinda-rest-api-commons';
+import {mongoFactory, amqpFactory, logError, QUEUE_ITEM_STATE, IMPORT_JOB_STATE, OPERATIONS, createRecordResponseItem, addRecordResponseItem} from '@natlibfi/melinda-rest-api-commons';
 import validatorFactory from './interfaces/validator';
 import toMarcRecordFactory from './interfaces/toMarcRecords';
-import {createRecordResponseItem, addRecordResponseItem} from './utils';
 import httpStatus from 'http-status';
 
 const setTimeoutPromise = promisify(setTimeout);
@@ -313,7 +312,7 @@ export default async function ({
     }
 
     // Add recordResponse to queueItem
-    const recordResponseItem = createRecordResponseItem({responseStatus, responsePayload, recordMetadata: headers.recordMetadata, id: headers.id});
+    const recordResponseItem = createRecordResponseItem({responseStatus, responsePayload, recordMetadata: headers.recordMetadata, id: headers.operation === OPERATIONS.CREATE ? '000000000' : headers.id});
     await addRecordResponseItem({recordResponseItem, correlationId, mongoOperator});
 
     // If we had a message we can move to next message
