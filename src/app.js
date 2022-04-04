@@ -358,21 +358,28 @@ export default async function ({
       try {
         // Get stream from content
         const stream = await mongoOperator.getStream(correlationId);
-        const validateRecords = operationSettings.validate;
+
+        const validateRecords = operationSettings.validate || operationSettings.merge || operationSettings.unique || false;
+        const failOnError = operationSettings.failOnError || undefined;
+        const noop = operationSettings.noop || false;
 
         // Read stream to MarcRecords and send em to queue
         // This is a promise that resolves when all the records are in queue and (currently always, this should be set by operationSettings.failOnError) rejects if any of the records in the stream fail
-        await toMarcRecords.streamToRecords({correlationId, headers: {operation, cataloger, operationSettings}, contentType, stream, validateRecords});
+        await toMarcRecords.streamToRecords({correlationId, headers: {operation, cataloger, operationSettings}, contentType, stream, validateRecords, failOnError, noop});
 
         // setState to VALIDATOR.PENDING_VALIDATION if we're validating the bulk job
         // setState to IMPORTER.IN_QUEUE if we're not validating the bulk job
 
-        const newState = validateRecords ? QUEUE_ITEM_STATE.VALIDATOR.PENDING_VALIDATION : QUEUE_ITEM_STATE.IMPORTER.IN_QUEUE;
+        if (noop) {
+          await await mongoOperator.setState({correlationId, state: 'DONE'});
+          return initCheck();
+        }
 
+        const newState = validateRecords ? QUEUE_ITEM_STATE.VALIDATOR.PENDING_VALIDATION : QUEUE_ITEM_STATE.IMPORTER.IN_QUEUE;
         await mongoOperator.setState({correlationId, state: newState});
-        // eslint-disable-next-line functional/no-conditional-statement
         if (!validateRecords) {
           await mongoOperator.setImportJobState({correlationId, operation, importJobState: IMPORT_JOB_STATE.IN_QUEUE});
+          return initCheck();
         }
 
       } catch (error) {
@@ -382,8 +389,9 @@ export default async function ({
 
           return initCheck();
         }
+        // If error is not ApiError, queueItem is stuck in QUEUEING_IN_PROGRESS - should this be handled somehow
         logError(error);
-        throw error;
+        throw new Error(error);
       }
 
       return initCheck();
@@ -394,4 +402,3 @@ export default async function ({
   }
 
 }
-

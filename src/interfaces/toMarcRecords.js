@@ -15,9 +15,10 @@ export default function (amqpOperator, mongoOperator, splitterOptions) {
 
   return {streamToRecords};
 
-  async function streamToRecords({correlationId, headers, contentType, stream, validateRecords = false}) {
+  // failBulkOnError env option is used as failOnError if failOnError is not given as a parameter
+  async function streamToRecords({correlationId, headers, contentType, stream, failOnError = failBulkOnError, validateRecords = false, noop = false}) {
     logger.verbose(`Starting to transform stream to records`);
-    logger.debug(`ValidateRecords: ${validateRecords}`);
+    logger.debug(`ValidateRecords: ${validateRecords}, failOnError: ${failOnError}, noop: ${noop}`);
     logger.debug(`Headers: ${JSON.stringify(headers)}`);
     logger.debug(`ContentType: ${JSON.stringify(contentType)}`);
     // recordNumber is counter for data-events from the reader
@@ -28,6 +29,7 @@ export default function (amqpOperator, mongoOperator, splitterOptions) {
     const promises = [];
     let readerErrored = false; // eslint-disable-line functional/no-let
     const readerErrors = [];
+
 
     // Purge queue before importing records in
     await amqpOperator.checkQueue({queue: `${headers.operation}.${correlationId}`, style: 'messages', purge: true});
@@ -54,7 +56,7 @@ export default function (amqpOperator, mongoOperator, splitterOptions) {
           addRecordResponseItem({recordResponseItem, correlationId, mongoOperator});
 
           // eslint-disable-next-line functional/no-conditional-statement
-          if (failBulkOnError) {
+          if (failOnError) {
             reject(new ApiError(httpStatus.UNPROCESSABLE_ENTITY, `Invalid payload! (${sequenceNumber}) ${cleanErrorMessage}`));
           }
         })
@@ -62,19 +64,17 @@ export default function (amqpOperator, mongoOperator, splitterOptions) {
           sequenceNumber += 1;
           logger.silly(`Reader sequence: ${sequenceNumber} data`);
 
-          if (readerErrored && failBulkOnError) {
+          if (readerErrored && failOnError) {
             logger.silly(`Reader already errored, no need to handle data.`);
             return;
           }
           recordNumber += 1;
           logger.silly(`Record number ${recordNumber}`);
 
-          // Should we use sequenceNumber instead of recordNumber here?
+          // SequenceNumber instead of recordNumber here - failed 'records' count as records
           promises.push(transform(data, sequenceNumber)); // eslint-disable-line functional/immutable-data
 
           log100thQueue(recordNumber, 'read');
-
-          // This could input to Mongo also id:s of records to be handled: for updates Melinda-ID, for creates original 003+001 and temporary number
 
           async function transform(record, number) {
 
@@ -95,10 +95,18 @@ export default function (amqpOperator, mongoOperator, splitterOptions) {
             logger.debug(`validateRecords: ${validateRecords}`);
             logger.debug(`queue: ${queue}, newHeaders ${JSON.stringify(newHeaders)}`);
 
-            // Noops go also to the queue, ok if validate is true, not ok if validate is not true
-            // Currently importer errors if it gets a queueItem with noop === true
-            await amqpOperator.sendToQueue({queue, correlationId, headers: newHeaders, data: recordToQueue.toObject()});
-            return log100thQueue(number, 'queued');
+            // Noops with no validation do not need to go to the queue
+            if (validateRecords || !noop) {
+              await amqpOperator.sendToQueue({queue, correlationId, headers: newHeaders, data: recordToQueue.toObject()});
+              return log100thQueue(number, 'queued');
+            }
+
+            const status = headers.operation === OPERATIONS.CREATE ? 'CREATED' : 'UPDATED';
+            const melindaId = headers.operation === OPERATIONS.CREATE ? '000000000' : id;
+            const recordResponseItem = createRecordResponseItem({responseStatus: status, responsePayload: 'Record read from stream. Noop.', recordMetadata, id: melindaId});
+            addRecordResponseItem({recordResponseItem, correlationId, mongoOperator});
+
+            return log100thQueue(number, 'noop response created');
           }
         })
         .on('end', async () => {
@@ -117,8 +125,8 @@ export default function (amqpOperator, mongoOperator, splitterOptions) {
 
           createSplitterReport();
 
-          if (readerErrored && failBulkOnError) {
-            logger.debug(`Reader errored, failBulkOnError active, removing the queue.`);
+          if (readerErrored && failOnError) {
+            logger.debug(`Reader errored, failOnError active, removing the queue.`);
             amqpOperator.removeQueue(`${headers.operation}.${correlationId}`);
             return resolve();
           }
