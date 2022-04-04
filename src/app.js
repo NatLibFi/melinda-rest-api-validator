@@ -306,13 +306,15 @@ export default async function ({
     const responsePayload = error.message || error.payload || 'Unexpected error!';
     logger.debug(`responsePayload: ${JSON.stringify(responsePayload)}`);
 
+    const {recordMetadata} = error.payload ? error.payload : undefined;
+
     // eslint-disable-next-line functional/no-conditional-statement
     if (prio) {
       await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.ERROR, errorStatus: responseStatus, errorMessage: responsePayload});
     }
 
     // Add recordResponse to queueItem
-    const recordResponseItem = createRecordResponseItem({responseStatus, responsePayload, recordMetadata: headers.recordMetadata, id: headers.operation === OPERATIONS.CREATE ? '000000000' : headers.id});
+    const recordResponseItem = createRecordResponseItem({responseStatus, responsePayload, recordMetadata, id: headers.operation === OPERATIONS.CREATE ? '000000000' : headers.id});
     await addRecordResponseItem({recordResponseItem, correlationId, mongoOperator});
 
     // If we had a message we can move to next message
