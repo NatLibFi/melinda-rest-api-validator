@@ -71,6 +71,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
         // throw ValidationError for failed validationService
         if (result.failed) { // eslint-disable-line functional/no-conditional-statement
           logger.debug('Validation failed');
+          // this needs recordMetadata
           throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, result.messages);
         }
 
@@ -220,9 +221,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
         logger.debug(JSON.stringify(matchResults.map(({candidate: {id}, probability}) => ({id, probability}))));
         // eslint-disable-next-line functional/no-conditional-statement
         if (matchResults.length > 0 && !operationSettings.merge) {
-          //const errorMessage = JSON.stringify({message: 'Duplicates in database', ids: matchResults.map(({candidate: {id}}) => id)});
-          const errorPayload = {message: 'Duplicates in database', ids: matchResults.map(({candidate: {id}}) => id), recordMetadata};
-          throw new ValidationError(HttpStatus.CONFLICT, errorPayload);
+          throw new ValidationError(HttpStatus.CONFLICT, {message: 'Duplicates in database', ids: matchResults.map(({candidate: {id}}) => id), recordMetadata});
         }
 
         // eslint-disable-next-line functional/no-conditional-statement
@@ -353,8 +352,6 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
 
       // run update validations
       return updateValidations({updateId: mergeResult.id, updateRecord: new MarcRecord(mergeResult.record, {subfieldValues: false}), updateOperation: 'updateAfterMerge', mergeValidationResult, headers, recordMetadata});
-
-    // throw new ValidationError(HttpStatus.CONFLICT, {message: 'Duplicates in database, merge flag true, cannot merge yet', ids: matchResults.map(({candidate: {id}}) => id)});
     }
 
     function getRecord(id) {
