@@ -35,7 +35,7 @@ import HttpStatus from 'http-status';
 
 
 // Checks that the modification history is identical
-export function validateRecordState(incomingRecord, existingRecord) {
+export function validateRecordState(incomingRecord, existingRecord, recordMetadata) {
   const logger = createLogger();
 
   // get return empty array if there are no matching fields in the record
@@ -54,7 +54,7 @@ export function validateRecordState(incomingRecord, existingRecord) {
   if (deepEqual(incomingModificationHistory, existingModificationHistory) === false) { // eslint-disable-line functional/no-conditional-statement
     logger.debug(`validateRecordState: failure`);
     logger.debug(`Differences in CATs: ${inspect(detailedDiff(incomingModificationHistory, existingModificationHistory), {colors: true, depth: 4})}`);
-    throw new ValidationError(HttpStatus.CONFLICT, {message: 'Modification history mismatch (CAT)'});
+    throw new ValidationError(HttpStatus.CONFLICT, {message: 'Modification history mismatch (CAT)', recordMetadata});
   }
   logger.debug(`validateRecordState: OK`);
 }
