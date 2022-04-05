@@ -51,9 +51,9 @@ export function getIdFromRecord(record) {
   const [f001] = record.get(/^001$/u);
 
   if (f001) {
-    return `${f001.value}`;
+    // if 001 in longer than 9 chars, it's returned as is
+    return `${toAlephId(f001.value)}`;
   }
 
   return undefined;
-
 }

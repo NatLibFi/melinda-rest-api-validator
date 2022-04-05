@@ -84,7 +84,7 @@ export async function iterateMatchersUntilMatchIsFound({matchers, matchOptionsLi
         // If CONTENT -matcher or last matcher to run did not generate queries, match is not reliable
         if (matcherName === 'CONTENT' || matchers.length <= 1) {
           logger.verbose(`Matcher ${matcherCount} (${matcherName}) could not generate search queries.`);
-          throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, err.message);
+          throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: err.message});
         }
 
         return iterateMatchersUntilMatchIsFound({matchers: matchers.slice(1), matchOptionsList: matchOptionsList.slice(1), record, matcherCount, matcherNoRunCount, matcherFalseZeroCount, matcherReports});
@@ -93,16 +93,16 @@ export async function iterateMatchersUntilMatchIsFound({matchers, matchOptionsLi
       // SRU SruSearchErrors are 200-responses that include diagnostics from SRU server
       if (err.message.startsWith('SRU SruSearchError')) {
         logger.verbose(`Matcher ${matcherCount} (${matcherName}) resulted in SRU search error: ${err.message}`);
-        throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, err.message);
+        throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: err.message});
       }
 
       // SRU unexpected errors: non-200 responses from SRU server etc.
       if (err.message.startsWith('SRU error')) {
         logger.verbose(`Matcher ${matcherCount} (${matcherName}) resulted in SRU unexpected error: ${err.message}`);
-        throw err;
+        throw new Error(err);
       }
 
-      throw err;
+      throw new Error(err);
     }
   }
 
@@ -111,7 +111,7 @@ export async function iterateMatchersUntilMatchIsFound({matchers, matchOptionsLi
   // eslint-disable-next-line functional/no-conditional-statement
   if (matcherNoRunCount === matcherCount) {
     logger.debug(`None of the matchers resulted in candidates`);
-    throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, 'Generated query list contains no queries');
+    throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: 'Generated query list contains no queries'});
   }
 
   if (matcherFalseZeroCount > 0) {

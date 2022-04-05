@@ -63,7 +63,7 @@ describe('validateExistingRecord', () => {
 
           expect(err).to.be.an('error');
           expect(err.status).to.equal(404);
-          expect(err.payload).to.match(new RegExp(expectedError, 'u'));
+          expect(err.payload.message).to.match(new RegExp(expectedError, 'u'));
           return;
         }
       }

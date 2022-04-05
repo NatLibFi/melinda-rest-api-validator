@@ -303,10 +303,13 @@ export default async function ({
     logger.debug(`responseStatus: ${responseStatus}`);
 
     logger.silly(`error.message: ${error.message}, error.payload: ${error.payload}`);
-    const responsePayload = error.message || error.payload || 'Unexpected error!';
+    const responseMessage = error.message || error.payload.message || 'Unexpected error!';
+    logger.debug(`responseMessage: ${JSON.stringify(responseMessage)}`);
+
+    const responsePayload = error.payload;
     logger.debug(`responsePayload: ${JSON.stringify(responsePayload)}`);
 
-    const {recordMetadata} = error.payload ? error.payload : undefined;
+    const recordMetadata = error.payload.recordMetadata ? error.payload.recordMetadata : headers.recordMetadata;
 
     // eslint-disable-next-line functional/no-conditional-statement
     if (prio) {
@@ -372,7 +375,7 @@ export default async function ({
         // setState to VALIDATOR.PENDING_VALIDATION if we're validating the bulk job
         // setState to IMPORTER.IN_QUEUE if we're not validating the bulk job
 
-        if (noop) {
+        if (noop && !validateRecords) {
           await await mongoOperator.setState({correlationId, state: 'DONE'});
           return initCheck();
         }

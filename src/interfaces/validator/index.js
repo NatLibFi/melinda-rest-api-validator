@@ -85,7 +85,14 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       } catch (err) {
         logger.debug(`processNormal: validation errored: ${JSON.stringify(err)}`);
         if (err instanceof ValidationError) {
-          throw new ValidationError(err.status, err.payload);
+          logger.debug(`Error is a validationError.`);
+          const {status, payload} = err;
+          const newPayload = {
+            recordMetadata: headers.recordMetadata,
+            ...payload
+          };
+          logger.debug(JSON.stringify(newPayload));
+          throw new ValidationError(status, newPayload);
         }
         throw new Error(err);
       }

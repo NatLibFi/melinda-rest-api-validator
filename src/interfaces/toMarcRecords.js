@@ -80,6 +80,7 @@ export default function (amqpOperator, mongoOperator, splitterOptions) {
 
             logger.debug(`Adding record information to the headers`);
             const recordMetadata = getRecordMetadata(record, number);
+            // This should error if there's no id available for UPDATEs
             const id = headers.operation === OPERATIONS.CREATE ? number : getIdFromRecord(record);
 
             const newHeaders = {
@@ -111,8 +112,10 @@ export default function (amqpOperator, mongoOperator, splitterOptions) {
         })
         .on('end', async () => {
           await setTimeoutPromise(500); // Makes sure that even slowest promise is in the array
+          const queue = validateRecords ? `${QUEUE_ITEM_STATE.VALIDATOR.PENDING_VALIDATION}.${correlationId}` : `${headers.operation}.${correlationId}`;
+
           logger.verbose(`Read ${promises.length} records from stream (${recordNumber} recs, ${readerErrors.length} errors from ${sequenceNumber} reader events.)`);
-          logger.info(`Sending ${promises.length} records to queue! This might take some time! ${headers.operation}.${correlationId}`);
+          logger.info(`Sending ${promises.length} records to queue ${queue}! This might take some time!`);
 
           // eslint-disable-next-line functional/no-conditional-statement
           if (promises.length === 0) {

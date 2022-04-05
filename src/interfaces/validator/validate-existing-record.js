@@ -17,7 +17,7 @@ export function validateExistingRecord(existingRecord) {
   if (isDeleted) {
     logger.verbose('Existing record is deleted!');
     debug('Existing record is deleted!');
-    throw new ValidationError(httpStatus.NOT_FOUND, `Existing record is deleted`);
+    throw new ValidationError(httpStatus.NOT_FOUND, {message: `Existing record is deleted`});
   }
 
   logger.debug('Existing record is not deleted.');
