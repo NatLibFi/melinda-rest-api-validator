@@ -39,8 +39,8 @@ export function validateRecordState(incomingRecord, existingRecord, recordMetada
   const logger = createLogger();
 
   // get return empty array if there are no matching fields in the record
-  const incomingModificationHistory = incomingRecord.get(/^CAT$/u);
-  const existingModificationHistory = existingRecord.get(/^CAT$/u);
+  const incomingModificationHistory = incomingRecord.get(/^CAT$/u).map(normalizeEmptySubfields);
+  const existingModificationHistory = existingRecord.get(/^CAT$/u).map(normalizeEmptySubfields);
 
   // the next is not needed? this is not used with Merge-UI?
   // Merge makes uuid variables to all fields and this removes those
@@ -57,5 +57,22 @@ export function validateRecordState(incomingRecord, existingRecord, recordMetada
     throw new ValidationError(HttpStatus.CONFLICT, {message: 'Modification history mismatch (CAT)', recordMetadata});
   }
   logger.debug(`validateRecordState: OK`);
-}
 
+  function normalizeEmptySubfields(field) {
+    return {
+      ...field,
+      subfields: field.subfields.map(normalizeEmptySubfield)
+    };
+
+    function normalizeEmptySubfield(subfield) {
+      if (subfield.value && subfield.value !== undefined && subfield.value !== 'undefined') {
+        logger.silly('normal subfield');
+        return subfield;
+      }
+      logger.silly('normalized subfield');
+      return {code: subfield.code, value: ''};
+    }
+
+  }
+
+}
