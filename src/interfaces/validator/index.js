@@ -290,7 +290,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       logger.debug(`firstResult: ${inspect(firstResult, {colors: true, maxArrayLength: 3, depth: 2})}}`);
 
       if (firstResult.matchValidationResult.action === false) {
-        throw new ValidationError(HttpStatus.CONFLICT, {message: `MatchValidation failed. ${firstResult.message}`, recordMetadata});
+        throw new ValidationError(HttpStatus.CONFLICT, {message: `MatchValidation with ${firstResult.candidate.id} failed. ${firstResult.matchValidationResult.message}`, ids: [firstResult.candidate.id], recordMetadata});
       }
       logger.debug(firstResult.matchValidationResult.action);
       logger.debug(`Action from matchValidation: ${firstResult.matchValidationResult.action}`);
