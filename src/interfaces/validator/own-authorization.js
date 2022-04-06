@@ -1,7 +1,7 @@
 import httpStatus from 'http-status';
 import {Error as ValidationError} from '@natlibfi/melinda-commons';
 
-export default (ownTags, incomingRecord, existingRecord, recordMetadata) => {
+export default ({ownTags, incomingRecord, existingRecord, recordMetadata}) => {
   const lowTags = getLowTags();
 
   if (lowTags && ownTags && lowTags.some(t => !ownTags.includes(t))) { // eslint-disable-line functional/no-conditional-statement

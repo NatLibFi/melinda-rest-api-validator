@@ -18,9 +18,15 @@ export function updateField001ToParamId(id, record) {
   return record;
 }
 
-//
+export function getRecordMetadata(record, number, recordMetadata) {
+  if (recordMetadata) {
+    const sourceId = recordMetadata.sourceId || record ? getIncomingIdFromRecord(record) : undefined;
+    const title = recordMetadata.title || record ? getRecordTitle(record) : undefined;
+    const standardIdentifiers = recordMetadata.standardIdentifiers || record ? getRecordStandardIdentifiers(record) : undefined;
+    const blobSequence = recordMetadata.blobSequence || number || '1';
+    return {sourceId, blobSequence, title, standardIdentifiers};
+  }
 
-export function getRecordMetadata(record, number) {
   const sourceId = record ? getIncomingIdFromRecord(record) : undefined;
   const title = record ? getRecordTitle(record) : undefined;
   const standardIdentifiers = record ? getRecordStandardIdentifiers(record) : undefined;
@@ -32,6 +38,7 @@ export function getRecordMetadata(record, number) {
 // This should find also SIDs & standard identifiers
 
 export function getIncomingIdFromRecord(record) {
+
   const [f003] = record.get(/^003$/u);
   const [f001] = record.get(/^001$/u);
 

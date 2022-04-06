@@ -116,6 +116,8 @@ export default function (amqpOperator, mongoOperator, splitterOptions) {
 
           logger.verbose(`Read ${promises.length} records from stream (${recordNumber} recs, ${readerErrors.length} errors from ${sequenceNumber} reader events.)`);
           logger.info(`Sending ${promises.length} records to queue ${queue}! This might take some time!`);
+          // Add blobSize, just for completeness sake
+          mongoOperator.setBlobSize({correlationId, blobSize: sequenceNumber});
 
           // eslint-disable-next-line functional/no-conditional-statement
           if (promises.length === 0) {

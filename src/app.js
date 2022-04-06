@@ -179,9 +179,9 @@ export default async function ({
     logger.silly(`app/checkAmqp: content ${content}`);
     //
     //logger.silly(`app/checkAmqp: content ${inspect(content, {colors: true, maxArrayLength: 3, depth: 1})}}`);
+
     // validator.process returns:
-    //     no-noop: {headers: {operation, cataloger: cataloger.id, sourceId, blobF001}, data: result.record.toObject()};
-    //     noop:    {status, record, failed, messages} - no headers!
+    // ????
 
     logger.silly(`app/checkAmqp: Actually validating`);
     const processResult = await validator.process(headers, content.data);
@@ -296,8 +296,9 @@ export default async function ({
 
   async function setError({error, correlationId, mongoOperator, prio, headers = undefined}) {
 
-    logger.debug(`Headers: ${JSON.stringify(headers)}`);
+    logger.debug(`Headers from original message: ${JSON.stringify(headers)}`);
 
+    // eslint-disable-next-line functional/no-conditional-statement
     logger.silly(`error.status: ${error.status}`);
     const responseStatus = error.status || httpStatus.INTERNAL_SERVER_ERROR;
     logger.debug(`responseStatus: ${responseStatus}`);
@@ -306,10 +307,13 @@ export default async function ({
     const responseMessage = error.message || error.payload.message || 'Unexpected error!';
     logger.debug(`responseMessage: ${JSON.stringify(responseMessage)}`);
 
-    const responsePayload = error.payload;
+    const responsePayload = error.payload || {message: responseMessage} || undefined;
     logger.debug(`responsePayload: ${JSON.stringify(responsePayload)}`);
 
-    const recordMetadata = error.payload.recordMetadata ? error.payload.recordMetadata : headers.recordMetadata;
+    const recordMetadataFromMessageHeaders = headers.recordMetadata || undefined;
+    const recordMetadataFromError = responsePayload ? responsePayload.recordMetadata : undefined;
+
+    const responseRecordMetadata = recordMetadataFromError || recordMetadataFromMessageHeaders;
 
     // eslint-disable-next-line functional/no-conditional-statement
     if (prio) {
@@ -317,7 +321,7 @@ export default async function ({
     }
 
     // Add recordResponse to queueItem
-    const recordResponseItem = createRecordResponseItem({responseStatus, responsePayload, recordMetadata, id: headers.operation === OPERATIONS.CREATE ? '000000000' : headers.id});
+    const recordResponseItem = createRecordResponseItem({responseStatus, responsePayload, recordMetadata: responseRecordMetadata, id: headers.operation === OPERATIONS.CREATE ? '000000000' : headers.id});
     await addRecordResponseItem({recordResponseItem, correlationId, mongoOperator});
 
     // If we had a message we can move to next message

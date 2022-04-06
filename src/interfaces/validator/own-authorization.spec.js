@@ -27,7 +27,7 @@ describe('own-authorization', () => {
       const record = new MarcRecord(JSON.parse(record1));
 
       expect(() => {
-        validateOwnChanges(tags, record);
+        validateOwnChanges({ownTags: tags, incomingRecord: record});
       }).to.not.throw();
     });
 
@@ -37,7 +37,7 @@ describe('own-authorization', () => {
       const recordB = new MarcRecord(JSON.parse(record2b));
 
       expect(() => {
-        validateOwnChanges(tags, recordA, recordB);
+        validateOwnChanges({ownTags: tags, incomingRecord: recordA, existingRecord: recordB});
       }).to.not.throw();
     });
 
@@ -46,7 +46,7 @@ describe('own-authorization', () => {
       const record = new MarcRecord(JSON.parse(record3));
 
       expect(() => {
-        validateOwnChanges(tags, record);
+        validateOwnChanges({ownTags: tags, incomingRecord: record});
       }).to.throw(ValidationError);
     });
 
@@ -56,7 +56,7 @@ describe('own-authorization', () => {
       const recordB = new MarcRecord(JSON.parse(record4b));
 
       expect(() => {
-        validateOwnChanges(tags, recordA, recordB);
+        validateOwnChanges({ownTags: tags, incomingRecord: recordA, existingRecord: recordB});
       }).to.throw(ValidationError);
     });
   });
