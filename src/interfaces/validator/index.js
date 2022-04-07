@@ -77,26 +77,36 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       // If the incoming record was merged in the validationProcess, update operation to 'UPDATE'
       const newOperation = operationAfterValidation === 'updateAfterMerge' ? 'UPDATE' : operationAfterValidation;
       const newId = idAfterValidation;
+      // add here preference information from mergeValidationResult
+      const mergeNote = `Merged to ${newId}`;
 
-      logger.debug(`validator/index/process: Validation result: ${inspect(result, {colors: true, maxArrayLength: 3, depth: 1})}`);
+      const updatedHeaders = mergeValidationResult && mergeValidationResult.merged
+        ? {
+          operation: newOperation,
+          id: newId,
+          notes: headers.notes ? headers.notes.concat(mergeNote) : [mergeNote]
+        }
+        : {
+          operation: newOperation,
+          id: newId
+        };
+
+      logger.debug(`validator/index/process: Validation result: ${inspect(result, {colors: true, maxArrayLength: 3, depth: 4})}`);
       logger.debug(`validator/index/process: operationAfterValidation: ${operationAfterValidation}, newOperation: ${newOperation}, original operation: ${headers.operation}`);
-      logger.debug(`validator/index/process: mergeValidationResult: ${mergeValidationResult}`);
+      logger.debug(`validator/index/process: mergeValidationResult - this is not handled: ${mergeValidationResult}`);
 
       // throw ValidationError for failed validationService
       if (result.failed) { // eslint-disable-line functional/no-conditional-statement
         logger.debug('Validation failed');
-        // this needs recordMetadata
         throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: result.messages, recordMetadata});
       }
 
-      // should we have operationSettings header here?
-      // id update?
+      // Update operation and id to headers
       const newHeaders = {
-        operation: newOperation,
-        id: newId,
-        ...headers
+        ...headers,
+        ...updatedHeaders
       };
-      return {headers: newHeaders, data: result.record.toObject(), mergeValidationResult};
+      return {headers: newHeaders, data: result.record.toObject()};
 
     } catch (err) {
       logger.debug(`processNormal: validation errored: ${JSON.stringify(err)}`);
@@ -154,6 +164,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
     const {recordMetadata, operationSettings, cataloger} = headers;
 
     if (updateId) {
+      // Do we want to update the id already here?
       const updatedRecord = updateField001ToParamId(`${updateId}`, updateRecord);
       logger.silly(`Updated record:\n${JSON.stringify(updatedRecord)}`);
 
@@ -165,9 +176,6 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
         logger.debug(`Record ${updateId} was not found from SRU.`);
         throw new ValidationError(HttpStatus.NOT_FOUND, {message: `Cannot find record ${updateId} to update`, recordMetadata});
       }
-
-      const formattedExistingRecord = formatRecord(existingRecord, formatOptions);
-      logger.silly(`Formatted record from SRU: ${JSON.stringify(formattedExistingRecord)}`);
 
       // aleph-record-load-api cannot currently update a record if the existing record is deleted
       logger.verbose('Checking whether the existing record is deleted');
@@ -209,7 +217,10 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
 
       //const mergeValidationResult = updateOperation === 'merge' ? {merged: true, mergedId: updateId} : {merged: false};
       logger.debug(`mergeValidationResult: ${JSON.stringify(mergeValidationResult)}`);
+
+      // validationResults: {record, failed: true/false, messages: []}
       const validationResults = await validationService(updatedRecordAfterMerge);
+
       return {result: validationResults, operationAfterValidation: updateOperation, idAfterValidation: updateId, mergeValidationResult: mergeValidationResultAfterMerge, recordMetadata};
     }
 
@@ -381,7 +392,6 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
   function handleMergeResult({mergeResult, headers}) {
 
     logger.debug(`Got mergeResult: ${JSON.stringify(mergeResult)}`);
-
     const mergeValidationResult = {merged: mergeResult.status, mergedId: mergeResult.id};
 
     // run update validations

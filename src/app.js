@@ -180,8 +180,7 @@ export default async function ({
     //
     //logger.silly(`app/checkAmqp: content ${inspect(content, {colors: true, maxArrayLength: 3, depth: 1})}}`);
 
-    // validator.process returns:
-    // ????
+    // validator.process returns: {headers, data}
 
     logger.silly(`app/checkAmqp: Actually validating`);
     const processResult = await validator.process(headers, content.data);
@@ -202,7 +201,7 @@ export default async function ({
     const {noop} = headers.operationSettings;
     logger.debug(`app/checkAmqp: noop ${noop}`);
 
-    // Validator could change the operation type
+    // Validator could change the operation type and id
     // eslint-disable-next-line functional/no-conditional-statement
     if (processResult.headers !== undefined && processResult.headers.operation !== headers.operation) {
       logger.debug(`Validation changed operation from ${headers.operation} to ${processResult.headers.operation}`);
@@ -216,17 +215,16 @@ export default async function ({
       if (!prio) {
         await mongoOperator.setOperations({correlationId, addOperation: processResult.headers.operation});
       }
-
     }
 
     if (noop) {
-      return setNoopResult({headers, correlationId, processResult, mongoOperator, prio});
+      return setNoopResult({correlationId, processResult, mongoOperator, prio});
     }
 
-    return setNormalResult({headers, correlationId, processResult, mongoOperator, prio});
+    return setNormalResult({correlationId, processResult, mongoOperator, prio});
   }
 
-  async function setNormalResult({headers, correlationId, processResult, mongoOperator, prio}) {
+  async function setNormalResult({correlationId, processResult, mongoOperator, prio}) {
     const newOperation = processResult.headers.operation;
     const operationQueue = `${newOperation}.${correlationId}`;
 
@@ -239,17 +237,15 @@ export default async function ({
     const toQueue = {
       correlationId,
       queue: operationQueue,
-      headers: processResult.headers || headers,
+      headers: processResult.headers,
       data: processResult.data
     };
-
 
     logger.silly(`app/checkAmqp: sending to queue ${inspect(toQueue, {colors: true, maxArrayLength: 3, depth: 1})}`);
     await amqpOperator.sendToQueue(toQueue);
 
     // eslint-disable-next-line functional/no-conditional-statement
     if (prio) {
-      logger.debug(`FOO`);
       await mongoOperator.checkAndSetImportJobState({correlationId, operation: newOperation, importJobState: IMPORT_JOB_STATE.IN_QUEUE});
       await mongoOperator.checkAndSetState({correlationId, state: QUEUE_ITEM_STATE.IMPORTER.IN_QUEUE});
     }
@@ -262,38 +258,34 @@ export default async function ({
     return initCheck();
   }
 
-  async function setNoopResult({correlationId, processResult, mongoOperator, prio, headers = undefined}) {
+  async function setNoopResult({correlationId, processResult, mongoOperator, prio}) {
 
+    logger.debug(`Setting noop result`);
     const status = processResult.headers.operation === 'CREATE' ? 'CREATED' : 'UPDATED';
     const id = processResult.headers.operation === 'CREATE' ? '000000000' : processResult.headers.id;
 
-    logger.debug();
+    logger.debug(inspect(processResult));
 
-    const failed = processResult.failed || undefined;
-    const processMessages = processResult.messages || [];
-    const mergeMessages = processResult.mergeValidationResult || [];
-    const messages = processMessages.concat(mergeMessages);
+    const {notes} = processResult.headers;
+    const notesString = notes && Array.isArray(notes) && notes.length > 0 ? `${notes.join(' - ')} - ` : '';
 
-    const validationMessage = failed ? {failed, messages} : undefined;
+    const messageStart = status === 'CREATE' ? `Would create a new record.` : `Would update record ${id}.`;
+    const messageEnd = ` - Noop.`;
 
-    // mergeValidationResult = {merged: true/false, mergedId: id};
+    const responsePayload = {message: `${notesString}${messageStart}${messageEnd}`};
 
-    //const validationMessage = {failed: processResult.failed || undefined, messages: processResult.messages ? processResult.messages.concat(processResult.mergeValidationResult) : [processResult.mergeValidationResult]};
-    logger.debug(`${JSON.stringify(validationMessage)}`);
+    const recordResponseItem = createRecordResponseItem({responseStatus: status, responsePayload, recordMetadata: processResult.headers.recordMetadata, id});
+    await addRecordResponseItem({recordResponseItem, correlationId, mongoOperator});
 
-    //await mongoOperator.pushMessages({correlationId, messageField: 'noopValidationMessages', messages: [validationMessage]});
-    // eslint-disable-next-line functional/no-conditional-statement
     if (prio) {
       await mongoOperator.checkAndSetState({correlationId, state: QUEUE_ITEM_STATE.DONE});
+      return initCheck();
     }
-
-    // Add recordResponse to records in queueItem
-    const recordResponseItem = createRecordResponseItem({responseStatus: status, responsePayload: validationMessage, recordMetadata: headers.recordMetadata, id});
-    await addRecordResponseItem({recordResponseItem, correlationId, mongoOperator});
 
     return initCheck();
   }
 
+  // eslint-disable-next-line max-statements
   async function setError({error, correlationId, mongoOperator, prio, headers = undefined}) {
 
     logger.debug(`Headers from original message: ${JSON.stringify(headers)}`);
@@ -315,16 +307,15 @@ export default async function ({
 
     const responseRecordMetadata = recordMetadataFromError || recordMetadataFromMessageHeaders;
 
-    // eslint-disable-next-line functional/no-conditional-statement
-    if (prio) {
-      await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.ERROR, errorStatus: responseStatus, errorMessage: responsePayload});
-    }
-
     // Add recordResponse to queueItem
     const recordResponseItem = createRecordResponseItem({responseStatus, responsePayload, recordMetadata: responseRecordMetadata, id: headers.operation === OPERATIONS.CREATE ? '000000000' : headers.id});
     await addRecordResponseItem({recordResponseItem, correlationId, mongoOperator});
 
     // If we had a message we can move to next message
+    if (prio) {
+      await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.ERROR, errorStatus: responseStatus, errorMessage: responsePayload});
+      return initCheck(true);
+    }
     return initCheck(true);
   }
 
