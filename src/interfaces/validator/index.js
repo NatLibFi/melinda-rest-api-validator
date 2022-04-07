@@ -164,7 +164,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
     const {recordMetadata, operationSettings, cataloger} = headers;
 
     if (updateId) {
-      // Do we want to update the id already here?
+      // This takes care of the cases, where a CREATE record was merged -> record gets its 001 so it can be updated in Melinda
       const updatedRecord = updateField001ToParamId(`${updateId}`, updateRecord);
       logger.silly(`Updated record:\n${JSON.stringify(updatedRecord)}`);
 
@@ -217,6 +217,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
 
       //const mergeValidationResult = updateOperation === 'merge' ? {merged: true, mergedId: updateId} : {merged: false};
       logger.debug(`mergeValidationResult: ${JSON.stringify(mergeValidationResult)}`);
+
 
       // validationResults: {record, failed: true/false, messages: []}
       const validationResults = await validationService(updatedRecordAfterMerge);
