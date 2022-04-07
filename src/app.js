@@ -269,7 +269,7 @@ export default async function ({
     const {notes} = processResult.headers;
     const notesString = notes && Array.isArray(notes) && notes.length > 0 ? `${notes.join(' - ')} - ` : '';
 
-    const messageStart = status === 'CREATE' ? `Would create a new record.` : `Would update record ${id}.`;
+    const messageStart = status === 'CREATED' ? `Would create a new record.` : `Would update record ${id}.`;
     const messageEnd = ` - Noop.`;
 
     const responsePayload = {message: `${notesString}${messageStart}${messageEnd}`};
