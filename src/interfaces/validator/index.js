@@ -49,10 +49,10 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
     logger.verbose(`Combined recordMetadata: ${JSON.stringify(combinedRecordMetadata)}`);
 
     // Create here also headers.id for batchBulk -records
-    // For CREATE: blobSequence
-    // For UPDATE: id from record (001)
-
+    // For CREATE: blobSequence, for UPDATE: id from record (001)
     logger.debug(`id check`);
+
+    // This should error if we do not have id from headers or record for UPDATEs
     const idFromOperation = operation === OPERATIONS.CREATE ? await toAlephId(combinedRecordMetadata.blobSequence.toString()) : await getIdFromRecord(record);
     logger.debug(`Original id: ${id}, newly created id: ${idFromOperation}`);
 

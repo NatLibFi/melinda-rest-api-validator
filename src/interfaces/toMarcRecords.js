@@ -84,9 +84,9 @@ export default function (amqpOperator, mongoOperator, splitterOptions) {
             const id = headers.operation === OPERATIONS.CREATE ? number : getIdFromRecord(record);
 
             const newHeaders = {
+              ...headers,
               recordMetadata,
-              id,
-              ...headers
+              id
             };
 
             // Operation CREATE -> f001 new value -> 000000001, 000000002, 000000003....

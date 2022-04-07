@@ -3,6 +3,7 @@ import {createLogger} from '@natlibfi/melinda-backend-commons';
 
 const logger = createLogger();
 
+// Should we update 003 here too?
 export function updateField001ToParamId(id, record) {
   logger.silly(`Updating F001 value to ${id}`);
   const fields = record.get(/^001$/u);
@@ -54,6 +55,7 @@ export function getIncomingIdFromRecord(record) {
 
 }
 
+// Should we require that 003 (if existing) is the local 003?
 export function getIdFromRecord(record) {
   const [f001] = record.get(/^001$/u);
 
