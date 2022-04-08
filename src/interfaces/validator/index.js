@@ -44,8 +44,9 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
     const record = operationSettings.prio || format || operationSettings.noStream ? await unserializeAndFormatRecord(data, format, formatOptions) : new MarcRecord(formatRecord(data, formatOptions));
 
     // Add to recordMetadata
+    const getAllSourceIds = operation === OPERATIONS.CREATE;
     logger.debug(`Original recordMetadata: ${JSON.stringify(recordMetadata)}`);
-    const combinedRecordMetadata = getRecordMetadata(record, undefined, recordMetadata);
+    const combinedRecordMetadata = getRecordMetadata({record, recordMetadata, getAllSourceIds});
     logger.verbose(`Combined recordMetadata: ${JSON.stringify(combinedRecordMetadata)}`);
 
     // Create here also headers.id for batchBulk -records
@@ -55,6 +56,10 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
     // This should error if we do not have id from headers or record for UPDATEs
     const idFromOperation = operation === OPERATIONS.CREATE ? await toAlephId(combinedRecordMetadata.blobSequence.toString()) : await getIdFromRecord(record);
     logger.debug(`Original id: ${id}, newly created id: ${idFromOperation}`);
+
+    if (operation === OPERATIONS.UPDATE && !id && !idFromOperation) {
+      throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: `There is no id for updating the record`, recordMetadata: combinedRecordMetadata});
+    }
 
     const newHeaders = {
       ...headers,

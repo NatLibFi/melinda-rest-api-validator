@@ -28,6 +28,7 @@ export default function (amqpOperator, mongoOperator, splitterOptions) {
     // promises contains record promises from the reader
     const promises = [];
     let readerErrored = false; // eslint-disable-line functional/no-let
+    let transformerErrored = false; // eslint-disable-line functional/no-let
     const readerErrors = [];
 
 
@@ -52,7 +53,7 @@ export default function (amqpOperator, mongoOperator, splitterOptions) {
             logger.debug(`Error is MarcRecordError`);
           }
 
-          const recordResponseItem = createRecordResponseItem({responseStatus: httpStatus.UNPROCESSABLE_ENTITY, responsePayload: cleanErrorMessage, recordMetadata: getRecordMetadata(undefined, sequenceNumber), id: undefined});
+          const recordResponseItem = createRecordResponseItem({responseStatus: httpStatus.UNPROCESSABLE_ENTITY, responsePayload: cleanErrorMessage, recordMetadata: getRecordMetadata({record: undefined, number: sequenceNumber}), id: undefined});
           addRecordResponseItem({recordResponseItem, correlationId, mongoOperator});
 
           // eslint-disable-next-line functional/no-conditional-statement
@@ -64,7 +65,7 @@ export default function (amqpOperator, mongoOperator, splitterOptions) {
           sequenceNumber += 1;
           logger.silly(`Reader sequence: ${sequenceNumber} data`);
 
-          if (readerErrored && failOnError) {
+          if ((readerErrored || transformerErrored) && failOnError) {
             logger.silly(`Reader already errored, no need to handle data.`);
             return;
           }
@@ -76,12 +77,33 @@ export default function (amqpOperator, mongoOperator, splitterOptions) {
 
           log100thQueue(recordNumber, 'read');
 
+          // eslint-disable-next-line max-statements
           async function transform(record, number) {
 
             logger.debug(`Adding record information to the headers`);
-            const recordMetadata = getRecordMetadata(record, number);
-            // This should error if there's no id available for UPDATEs
-            const id = headers.operation === OPERATIONS.CREATE ? number : getIdFromRecord(record);
+            const getAllSourceIds = headers.operation === OPERATIONS.CREATE;
+
+            logger.debug(`Getting recordMetadata`);
+            const recordMetadata = getRecordMetadata({record, number, getAllSourceIds});
+
+            logger.debug(`Getting id - use ${number} for CREATE, get from record for UPDATE`);
+            const id = headers.operation === OPERATIONS.CREATE ? number.toString() : getIdFromRecord(record);
+
+            logger.debug(`ID: ${id}`);
+            if (!id) {
+              logger.debug(`Record ${number} has no id for UPDATE.`);
+              const responsePayload = {message: `Invalid payload! Record ${number} has no id for UPDATE.`};
+              const recordResponseItem = createRecordResponseItem({responseStatus: httpStatus.UNPROCESSABLE_ENTITY, responsePayload, recordMetadata, id: undefined});
+              addRecordResponseItem({recordResponseItem, correlationId, mongoOperator});
+
+              readerErrors.push({sequenceNumber, error: responsePayload}); // eslint-disable-line functional/immutable-data
+              transformerErrored = true;
+              // eslint-disable-next-line functional/no-conditional-statement
+              if (failOnError) {
+                reject(new ApiError(httpStatus.UNPROCESSABLE_ENTITY, responsePayload));
+              }
+              return;
+            }
 
             const newHeaders = {
               ...headers,
@@ -90,11 +112,14 @@ export default function (amqpOperator, mongoOperator, splitterOptions) {
             };
 
             // Operation CREATE -> f001 new value -> 000000001, 000000002, 000000003....
+            logger.debug(`set ${number} as id to CREATE`);
             const recordToQueue = headers.operation === OPERATIONS.CREATE ? updateField001ToParamId(`${number}`, record) : record;
+            //const recordToQueue = record;
             const queue = validateRecords ? `${QUEUE_ITEM_STATE.VALIDATOR.PENDING_VALIDATION}.${correlationId}` : `${headers.operation}.${correlationId}`;
 
             logger.debug(`validateRecords: ${validateRecords}`);
             logger.debug(`queue: ${queue}, newHeaders ${JSON.stringify(newHeaders)}`);
+            logger.debug(`recordtoQueue: ${recordToQueue}`);
 
             // Noops with no validation do not need to go to the queue
             if (validateRecords || !noop) {
@@ -130,8 +155,8 @@ export default function (amqpOperator, mongoOperator, splitterOptions) {
 
           createSplitterReport();
 
-          if (readerErrored && failOnError) {
-            logger.debug(`Reader errored, failOnError active, removing the queue.`);
+          if ((readerErrored || transformerErrored) && failOnError) {
+            logger.debug(`Reader or transformer errored, failOnError active, removing the queue.`);
             amqpOperator.removeQueue(`${headers.operation}.${correlationId}`);
             return resolve();
           }
