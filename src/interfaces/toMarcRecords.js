@@ -103,8 +103,8 @@ export default function (amqpOperator, mongoOperator, splitterOptions) {
             }
 
             const status = headers.operation === OPERATIONS.CREATE ? 'CREATED' : 'UPDATED';
-            const melindaId = headers.operation === OPERATIONS.CREATE ? '000000000' : id;
-            const recordResponseItem = createRecordResponseItem({responseStatus: status, responsePayload: 'Record read from stream. Noop.', recordMetadata, id: melindaId});
+            const databaseId = headers.operation === OPERATIONS.CREATE ? '000000000' : id;
+            const recordResponseItem = createRecordResponseItem({responseStatus: status, responsePayload: 'Record read from stream. Noop.', recordMetadata, id: databaseId});
             addRecordResponseItem({recordResponseItem, correlationId, mongoOperator});
 
             return log100thQueue(number, 'noop response created');
