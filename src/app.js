@@ -362,12 +362,14 @@ export default async function ({
         // Get stream from content
         const stream = await mongoOperator.getStream(correlationId);
 
+        logger.debug(`OperationSettings: ${JSON.stringify(operationSettings)}`);
         const validateRecords = operationSettings.validate || operationSettings.merge || operationSettings.unique || false;
-        const failOnError = operationSettings.failOnError || undefined;
+        const failOnError = operationSettings.failOnError === undefined ? undefined : operationSettings.failOnError;
         const noop = operationSettings.noop || false;
 
         // Read stream to MarcRecords and send em to queue
         // This is a promise that resolves when all the records are in queue and (currently always, this should be set by operationSettings.failOnError) rejects if any of the records in the stream fail
+        logger.debug(`validateRecord: ${validateRecords}, failOnError: ${failOnError}, noop: ${noop}`);
         await toMarcRecords.streamToRecords({correlationId, headers: {operation, cataloger, operationSettings}, contentType, stream, validateRecords, failOnError, noop});
 
         // setState to VALIDATOR.PENDING_VALIDATION if we're validating the bulk job
