@@ -195,33 +195,36 @@ export default async function ({
   }
 
   async function processValidated({headers, correlationId, processResult, mongoOperator, prio}) {
-    // Process validated data
-    // noops are DONE here
+
+    // check if validation changed operation
+    await setOperationsInQueueItem({correlationId, mongoOperator, prio, addOperation: processResult.headers.operation, removeOperation: headers.operation});
 
     const {noop} = headers.operationSettings;
     logger.debug(`app/checkAmqp: noop ${noop}`);
-
-    // Validator could change the operation type and id
-    // eslint-disable-next-line functional/no-conditional-statement
-    if (processResult.headers !== undefined && processResult.headers.operation !== headers.operation) {
-      logger.debug(`Validation changed operation from ${headers.operation} to ${processResult.headers.operation}`);
-
-      // eslint-disable-next-line functional/no-conditional-statement
-      if (prio) {
-        await mongoOperator.setOperation({correlationId, operation: processResult.headers.operation});
-        await mongoOperator.setOperations({correlationId, addOperation: processResult.headers.operation, removeOperation: headers.operation});
-      }
-      // eslint-disable-next-line functional/no-conditional-statement
-      if (!prio) {
-        await mongoOperator.setOperations({correlationId, addOperation: processResult.headers.operation});
-      }
-    }
 
     if (noop) {
       return setNoopResult({correlationId, processResult, mongoOperator, prio});
     }
 
     return setNormalResult({correlationId, processResult, mongoOperator, prio});
+  }
+
+  async function setOperationsInQueueItem({correlationId, mongoOperator, prio, addOperation, removeOperation}) {
+
+    if (addOperation === removeOperation) {
+      return;
+    }
+
+    logger.debug(`Validation changed operation from ${removeOperation} to ${addOperation}`);
+    if (prio) {
+      await mongoOperator.setOperation({correlationId, operation: addOperation});
+      await mongoOperator.setOperations({correlationId, addOperation, removeOperation});
+      return;
+    }
+    if (!prio) {
+      await mongoOperator.setOperations({correlationId, addOperation});
+      return;
+    }
   }
 
   async function setNormalResult({correlationId, processResult, mongoOperator, prio}) {

@@ -218,7 +218,6 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       //const mergeValidationResult = updateOperation === 'merge' ? {merged: true, mergedId: updateId} : {merged: false};
       logger.debug(`mergeValidationResult: ${JSON.stringify(mergeValidationResult)}`);
 
-
       // validationResults: {record, failed: true/false, messages: []}
       const validationResults = await validationService(updatedRecordAfterMerge);
 
