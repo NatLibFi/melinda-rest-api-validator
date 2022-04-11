@@ -9,7 +9,7 @@ import {updateField001ToParamId, getRecordMetadata, getIdFromRecord} from '../..
 import {validateExistingRecord} from './validate-existing-record';
 import {inspect} from 'util';
 import {MarcRecord} from '@natlibfi/marc-record';
-import {matchValidationForMatchResults} from './match-validation-mock';
+import {matchValidationForMatchResults} from './match-validation';
 import merger from './merge-mock';
 import * as matcherService from './match';
 import createMatchInterface from '@natlibfi/melinda-record-matching';
