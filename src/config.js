@@ -44,6 +44,7 @@ function generateMatchOptions(validatorMatchPackage) {
     matchPackageName: validatorMatchPackage,
     maxMatches: generateMaxMatches(validatorMatchPackage),
     maxCandidates: generateMaxCandidates(validatorMatchPackage),
+    returnFailures: true,
     search: {
       url: readEnvironmentVariable('SRU_URL'),
       searchSpec: generateSearchSpec(validatorMatchPackage)

@@ -255,17 +255,18 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       logger.debug(`There are ${matchers.length} matchers with matchOptions: ${JSON.stringify(matchOptionsList)}`);
       // This should use different matchOptions for merge and non-merge cases
       // Note: incoming record is formatted ($w(FIN01)), existing records from SRU are not ($w(FI-MELINDA))
-      const matchResults = await matcherService.iterateMatchersUntilMatchIsFound({matchers, matchOptionsList, record});
-      logger.debug(JSON.stringify(matchResults.map(({candidate: {id}, probability}) => ({id, probability}))));
+      // stopWhenFound stops iterating matchers when a match is found
+      const {matches} = await matcherService.iterateMatchers({matchers, matchOptionsList, record, stopWhenFound: true});
+      logger.debug(JSON.stringify(matches.map(({candidate: {id}, probability}) => ({id, probability}))));
       // eslint-disable-next-line functional/no-conditional-statement
-      if (matchResults.length > 0 && !operationSettings.merge) {
-        throw new ValidationError(HttpStatus.CONFLICT, {message: 'Duplicates in database', ids: matchResults.map(({candidate: {id}}) => id), recordMetadata});
+      if (matches.length > 0 && !operationSettings.merge) {
+        throw new ValidationError(HttpStatus.CONFLICT, {message: 'Duplicates in database', ids: matches.map(({candidate: {id}}) => id), recordMetadata});
       }
 
       // eslint-disable-next-line functional/no-conditional-statement
-      if (matchResults.length > 0 && operationSettings.merge) {
-        logger.debug(`Found matches (${matchResults.length}) for merging.`);
-        return validateAndMergeMatchResults({record, matchResults, formatOptions, headers});
+      if (matches.length > 0 && operationSettings.merge) {
+        logger.debug(`Found matches (${matches.length}) for merging.`);
+        return validateAndMergeMatchResults({record, matchResults: matches, formatOptions, headers});
       }
 
       logger.verbose('No matching records');
