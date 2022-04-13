@@ -78,7 +78,9 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
         logger.debug(`${matcherCount} matchers handled, ${matchers.length - 1} matchers left. ${matcherNoRunCount} did not run.`);
         logger.debug(`We had ${allConversionFailures.length} conversion failures from matcher`);
 
-        return {matches};
+        const uniqMatches = uniqueMatches(matches);
+
+        return {matches: uniqMatches};
       }
 
       if (matchAmount === 0) {
@@ -171,9 +173,16 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
   }
 
   // Unique matches
-  const uniqMatches = [...new Set(allMatches)];
-  logger.debug(`Unique matches: ${JSON.stringify(uniqMatches.map(match => match.candidate.id))}`);
+  const uniqMatches = uniqueMatches(allMatches);
+  logger.debug(`All matches (${allMatches.length}): ${JSON.stringify(allMatches.map(match => match.candidate.id))}`);
+  logger.debug(`Unique matches (${uniqMatches.length}): ${JSON.stringify(uniqMatches.map(match => match.candidate.id))}`);
 
-  return {matches: allMatches};
+  return {matches: uniqMatches};
 }
+
+function uniqueMatches(matches) {
+  const uniqueMatches = [...new Map(matches.map((match) => [match.candidate.id, match])).values()];
+  return uniqueMatches;
+}
+
 

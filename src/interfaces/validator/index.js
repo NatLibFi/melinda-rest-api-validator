@@ -256,7 +256,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       // This should use different matchOptions for merge and non-merge cases
       // Note: incoming record is formatted ($w(FIN01)), existing records from SRU are not ($w(FI-MELINDA))
       // stopWhenFound stops iterating matchers when a match is found
-      const {matches} = await matcherService.iterateMatchers({matchers, matchOptionsList, record, stopWhenFound: true});
+      const {matches} = await matcherService.iterateMatchers({matchers, matchOptionsList, record, stopWhenFound: false});
       logger.debug(JSON.stringify(matches.map(({candidate: {id}, probability}) => ({id, probability}))));
       // eslint-disable-next-line functional/no-conditional-statement
       if (matches.length > 0 && !operationSettings.merge) {
@@ -289,7 +289,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
     const {recordMetadata} = headers;
     try {
       logger.debug(`We have matchResults (${matchResults.length}) here: ${JSON.stringify(matchResults.map(({candidate: {id}, probability}) => ({id, probability})))}`);
-      logger.silly(` ${JSON.stringify(matchResults)}`);
+      logger.silly(`matchResults: ${inspect(matchResults, {colors: true, maxArrayLength: 3, depth: 2})}`);
 
       // run matchValidation for record & matchResults
       // -> choose the best possible match
@@ -299,12 +299,12 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       // Which of the records should be preferred
 
       const matchValidationResults = await matchValidationForMatchResults(record, matchResults, formatOptions, recordMetadata);
-      logger.debug(`MatchValidationResults: ${inspect(matchValidationResults, {colors: true, maxArrayLength: 3, depth: 2})}}`);
+      logger.silly(`MatchValidationResults: ${inspect(matchValidationResults, {colors: true, maxArrayLength: 3, depth: 3})}}`);
 
       // We should check all results?
       const [firstResult] = matchValidationResults.matchResultsAndMatchValidations;
 
-      logger.debug(`firstResult: ${inspect(firstResult, {colors: true, maxArrayLength: 3, depth: 2})}}`);
+      logger.silly(`firstResult: ${inspect(firstResult, {colors: true, maxArrayLength: 3, depth: 2})}}`);
 
       if (firstResult.matchValidationResult.action === false) {
         throw new ValidationError(HttpStatus.CONFLICT, {message: `MatchValidation with ${firstResult.candidate.id} failed. ${firstResult.matchValidationResult.message}`, ids: [firstResult.candidate.id], recordMetadata});
