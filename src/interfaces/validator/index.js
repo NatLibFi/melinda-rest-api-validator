@@ -10,7 +10,7 @@ import {validateExistingRecord} from './validate-existing-record';
 import {inspect} from 'util';
 import {MarcRecord} from '@natlibfi/marc-record';
 import {matchValidationForMatchResults} from './match-validation';
-import merger from './merge-mock';
+import merger from './merge';
 import * as matcherService from './match';
 import createMatchInterface from '@natlibfi/melinda-record-matching';
 import {validateRecordState} from './validate-record-state';
@@ -43,7 +43,8 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
     logger.debug(`Data is in format: ${format}, prio: ${operationSettings.prio}, noStream: ${operationSettings.noStream}`);
     const record = operationSettings.prio || format || operationSettings.noStream ? await unserializeAndFormatRecord(data, format, formatOptions) : new MarcRecord(formatRecord(data, formatOptions));
 
-    // Add to recordMetadata
+    // Add to recordMetadata data from the record
+    // For CREATEs get all possible sourceIds, for UPDATEs get just the 'best' set from 003+001/001, f035az:s, SID:s
     const getAllSourceIds = operation === OPERATIONS.CREATE;
     logger.debug(`Original recordMetadata: ${JSON.stringify(recordMetadata)}`);
     const combinedRecordMetadata = getRecordMetadata({record, recordMetadata, getAllSourceIds});
@@ -82,8 +83,10 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       // If the incoming record was merged in the validationProcess, update operation to 'UPDATE'
       const newOperation = operationAfterValidation === 'updateAfterMerge' ? 'UPDATE' : operationAfterValidation;
       const newId = idAfterValidation;
-      // add here preference information from mergeValidationResult
-      const mergeNote = `Merged to ${newId}`;
+
+      const mergeNote = mergeValidationResult && mergeValidationResult.merged
+        ? `Merged to ${newId} preferring ${mergeValidationResult.preference === 'A' ? 'incoming record.' : 'database record.'}`
+        : undefined;
 
       const updatedHeaders = mergeValidationResult && mergeValidationResult.merged
         ? {
@@ -96,9 +99,10 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
           id: newId
         };
 
+      const newHeaders = {...headers, ...updatedHeaders};
+
       logger.debug(`validator/index/process: Validation result: ${inspect(result, {colors: true, maxArrayLength: 3, depth: 4})}`);
       logger.debug(`validator/index/process: operationAfterValidation: ${operationAfterValidation}, newOperation: ${newOperation}, original operation: ${headers.operation}`);
-      logger.debug(`validator/index/process: mergeValidationResult - this is not handled: ${mergeValidationResult}`);
 
       // throw ValidationError for failed validationService
       if (result.failed) { // eslint-disable-line functional/no-conditional-statement
@@ -106,11 +110,6 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
         throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: result.messages, recordMetadata});
       }
 
-      // Update operation and id to headers
-      const newHeaders = {
-        ...headers,
-        ...updatedHeaders
-      };
       return {headers: newHeaders, data: result.record.toObject()};
 
     } catch (err) {
@@ -258,6 +257,9 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       // stopWhenFound stops iterating matchers when a match is found
       const {matches} = await matcherService.iterateMatchers({matchers, matchOptionsList, record, stopWhenFound: false});
       logger.debug(JSON.stringify(matches.map(({candidate: {id}, probability}) => ({id, probability}))));
+
+      // this could update headers.notes with a matchResult
+
       // eslint-disable-next-line functional/no-conditional-statement
       if (matches.length > 0 && !operationSettings.merge) {
         throw new ValidationError(HttpStatus.CONFLICT, {message: 'Duplicates in database', ids: matches.map(({candidate: {id}}) => id), recordMetadata});
@@ -292,28 +294,31 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       logger.silly(`matchResults: ${inspect(matchResults, {colors: true, maxArrayLength: 3, depth: 2})}`);
 
       // run matchValidation for record & matchResults
-      // -> choose the best possible match
-      // -> if none of the matches are valid, what to do?
+      // -> choose the best possible match, and choose which record should be preferred in merge
+      // -> error if none of the matches are valid
 
-      // Is the match mergeable?
-      // Which of the records should be preferred
+      // does matchValidationResult need to include record?
+      // matchValidationResult: {record, result: {candidate: {id, record}, probability, matchSequence, action, preference: {value, name}}} - possible note, matchValidationReport later
 
-      const matchValidationResults = await matchValidationForMatchResults(record, matchResults, formatOptions, recordMetadata);
-      logger.silly(`MatchValidationResults: ${inspect(matchValidationResults, {colors: true, maxArrayLength: 3, depth: 3})}}`);
+      const matchValidationResult = await matchValidationForMatchResults(record, matchResults, formatOptions, recordMetadata);
+      logger.silly(`MatchValidationResult: ${inspect(matchValidationResult, {colors: true, maxArrayLength: 3, depth: 3})}}`);
+      const firstResult = matchValidationResult.result;
+      logger.silly(`Result: ${inspect(firstResult, {colors: true, maxArrayLength: 3, depth: 2})}}`);
 
-      // We should check all results?
-      const [firstResult] = matchValidationResults.matchResultsAndMatchValidations;
-
-      logger.silly(`firstResult: ${inspect(firstResult, {colors: true, maxArrayLength: 3, depth: 2})}}`);
-
-      if (firstResult.matchValidationResult.action === false) {
-        throw new ValidationError(HttpStatus.CONFLICT, {message: `MatchValidation with ${firstResult.candidate.id} failed. ${firstResult.matchValidationResult.message}`, ids: [firstResult.candidate.id], recordMetadata});
+      // Check error cases
+      if (!matchValidationResult.result) {
+        throw new ValidationError(HttpStatus.CONFLICT, {message: `MatchValidation for all matches failed.`, recordMetadata});
       }
-      logger.debug(firstResult.matchValidationResult.action);
-      logger.debug(`Action from matchValidation: ${firstResult.matchValidationResult.action}`);
+      if (firstResult.action === false) {
+        throw new ValidationError(HttpStatus.CONFLICT, {message: `MatchValidation with ${firstResult.candidate.id} failed. ${firstResult.message}`, ids: [firstResult.candidate.id], recordMetadata});
+      }
 
-      // Note this does not do anything about matchValidationResults yet
-      return mergeValidatedMatchResults({record, matchResults, headers});
+      // this could update headers.notes with a matchValidation result
+
+      logger.debug(`Action from matchValidation: ${firstResult.action}`);
+
+      // run merge for record with the best valid match
+      return mergeValidatedMatchResults({record, result: firstResult, headers});
     } catch (err) {
       logger.debug(`MatchValidation errored`);
       logger.error(err);
@@ -321,71 +326,73 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
     }
   }
 
-  async function mergeValidatedMatchResults({record, matchResults, headers}) {
+  async function mergeValidatedMatchResults({record, result, headers}) {
 
     const {recordMetadata} = headers;
 
     try {
-      logger.debug(record);
-      logger.debug(matchResults);
+      //logger.silly(inspect(record));
+      //logger.silly(inspect(result));
 
-      // run merge based on matchValidation results
+      //result: {candidate: {id, record}, probability, matchSequence, action, preference: {value, name}}}
+      const {preference, candidate} = result;
 
-      // base = preferred record, in this case the matching datastore record
-      // source = non-preferred record, in this case the incoming record
+      // A: incoming record, B: database record
+      // base: preferred record, souce: non-preferred record
+      logger.verbose(`Preference for merge: Using '${preference.value}' as preferred/base record - '${preference.name}'. (A: incoming record, B: database record)`);
 
-      const mergeRequest = {
+      // Prefer database record (B) unless we got an explicit preference for incoming record (A) from matchValidation.result
+      const mergeRequest = preference.value && preference.value === 'A' ? {
+        source: candidate.record,
+        base: record
+      } : {
         source: record,
-        sourceId: undefined,
-        base: matchResults[0].candidate.record,
-        baseId: matchResults[0].candidate.id
+        base: candidate.record
       };
 
-      logger.debug(inspect(mergeRequest));
+      //logger.debug(inspect(mergeRequest));
 
-      // mergeResult.id: recordId in the database to be updated with the merged record
       // mergeResult.record: merged record that can be used to update the database record
       // mergeResult.report: report from merge -> to be saved to mongo etc
       // mergeResult.status: true
-      // mergeResult.error: possible errors
 
       const mergeResult = await merger(mergeRequest);
-      return handleMergeResult({mergeResult, headers});
+      logger.debug(`Got mergeResult: ${JSON.stringify(mergeResult)}`);
+      const mergeValidationResult = {merged: mergeResult.status, mergedId: candidate.id, preference: preference.value};
+      // run update validations
 
+      return updateValidations({updateId: candidate.id, updateRecord: new MarcRecord(mergeResult.record, {subfieldValues: false}), updateOperation: 'updateAfterMerge', mergeValidationResult, headers});
     } catch (err) {
       logger.debug(`mergeMatchResults errored: ${err}`);
 
-      // if error was about merging try the next best valid match
+      // if error was about merging try the next best valid match - we got just one match from matchValidation - in which cases merge would fail these?
       // -> if all matches error merging semantically?
 
       logError(err);
-      const errorMessage = err;
+      const errorMessage = err.message;
       throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: `Merge errored: ${errorMessage}`, recordMetadata});
     }
   }
 
   async function mergeRecordForUpdates({record, existingRecord, id, headers}) {
-    logger.debug(`Merging updated record ${id} to existing record ${id}`);
+    logger.debug(`Merging record ${id} to existing record ${id}`);
     const {recordMetadata} = headers;
+
+    // Should we matchValidate this to get preference?
 
     try {
       const mergeRequest = {
         source: record,
-        sourceId: id,
-        base: existingRecord,
-        baseId: id
+        base: existingRecord
       };
 
-      // mergeResult.id: recordId in the database to be updated with the merged record
       // mergeResult.record: merged record that can be used to update the database record
-      // mergeResult.report: report from merge -> to be saved to mongo etc
       // mergeResult.status: true
-      // mergeResult.error: possible errors
 
       const mergeResult = await merger(mergeRequest);
       logger.debug(JSON.stringify(mergeResult));
 
-      const mergeValidationResult = {merged: true, mergedId: id};
+      const mergeValidationResult = {merged: mergeResult.status, mergedId: mergeResult.id, preference: 'B'};
       return {mergedRecord: new MarcRecord(mergeResult.record, {subfieldValues: false}), mergeValidationResult};
     } catch (err) {
       logger.error(`mergeRecordForUpdates errored: ${err}`);
@@ -393,15 +400,6 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       const errorMessage = err;
       throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: `Merge errored: ${errorMessage}`, recordMetadata});
     }
-  }
-
-  function handleMergeResult({mergeResult, headers}) {
-
-    logger.debug(`Got mergeResult: ${JSON.stringify(mergeResult)}`);
-    const mergeValidationResult = {merged: mergeResult.status, mergedId: mergeResult.id};
-
-    // run update validations
-    return updateValidations({updateId: mergeResult.id, updateRecord: new MarcRecord(mergeResult.record, {subfieldValues: false}), updateOperation: 'updateAfterMerge', mergeValidationResult, headers});
   }
 
   function getRecord(id) {

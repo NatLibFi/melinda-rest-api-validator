@@ -3,11 +3,13 @@ import matchValidator from '@natlibfi/melinda-record-match-validator';
 import {MarcRecord} from '@natlibfi/marc-record';
 import {format} from '@natlibfi/melinda-rest-api-commons';
 import {inspect} from 'util';
+import {Error as ValidationError} from '@natlibfi/melinda-commons';
+import HttpStatus from 'http-status';
 
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator:match-validation');
 const debugData = debug.extend('data');
 
-export async function matchValidationForMatchResults(record, matchResults, formatOptions) {
+export async function matchValidationForMatchResults(record, matchResults, formatOptions, recordMetadata) {
   // Format is used to format the candidaterecords (that are in the external format after being fetched from SRU to the internal format)
   const {formatRecord} = format;
 
@@ -18,7 +20,6 @@ export async function matchValidationForMatchResults(record, matchResults, forma
   // - strategy (if returnStrategy option is true)
   // - treshold (if returnStrategy option is true)
   // - matchQuery (if returnQuery option is true)
-
 
   debugData(`Original: ${JSON.stringify(matchResults.map(({candidate: {id}, probability}) => ({id, probability})))}))}`);
   debug(`Add matchSequence`);
@@ -32,7 +33,7 @@ export async function matchValidationForMatchResults(record, matchResults, forma
     debug(`Validating match to candidate ${match.candidate.id}`);
     const matchValidationResult = matchValidation(record, new MarcRecord(formatRecord(match.candidate.record, formatOptions)));
     return {
-      matchValidationResult,
+      ...matchValidationResult,
       ...match
     };
   });
@@ -45,7 +46,25 @@ export async function matchValidationForMatchResults(record, matchResults, forma
   const sortedValidatedMatchResults = matchResultsAndMatchValidationsClone.sort(sortMatch);
   debugData(inspect(sortedValidatedMatchResults));
 
-  return {record, matchResultsAndMatchValidations: sortedValidatedMatchResults};
+  // We could return just the best result for validator?
+  // If there are no valid results error
+
+  const validMatchResults = sortedValidatedMatchResults.filter(match => match.action === 'merge');
+  debug(`${validMatchResults.length} valid matches`);
+
+  if (validMatchResults.length < 1) {
+    throw new ValidationError(HttpStatus.CONFLICT, {message: `MatchValidation for all ${sortedValidatedMatchResults.length} matches failed.`, ids: sortedValidatedMatchResults.map(match => match.candidate.id), recordMetadata});
+  }
+
+  const matchValidationResult = {
+    record,
+    result: validMatchResults[0]
+  };
+
+  debug(`Returning first valid result: ${matchValidationResult}}`);
+  debugData(`MatchValidationResutlt: ${inspect(matchValidationResult)}`);
+
+  return matchValidationResult;
 }
 
 // melinda-record-match-validation is *NOT* async
@@ -61,13 +80,13 @@ function sortMatch(a, b) {
   // < 0 sort a before b
   // === 0 keep original order of a and b
 
-  //debug(a.matchValidationResult.action);
+  debug(a.action);
 
-  if (a.matchValidationResult === 'merge' && b.matchValidationForMatchResults !== 'merge') {
+  if (a.action === 'merge' && b.action !== 'merge') {
     return -1;
   }
 
-  if (b.matchValidationResult !== 'merge' && b.matchValidationForMatchResults === 'merge') {
+  if (b.action !== 'merge' && a.action === 'merge') {
     return 1;
   }
 
