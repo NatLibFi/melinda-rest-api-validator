@@ -44,7 +44,8 @@ describe('validateRecordState', () => {
     fixura: {
       reader: READERS.JSON
     },
-    callback: ({getFixture, expectedToThrow, expectedStatus, expectedError, enabled = true}) => {
+    // eslint-disable-next-line max-statements
+    callback: ({getFixture, expectedToThrow, expectedStatus, expectedError, skipValidation, enabled = true}) => {
 
       if (!enabled) {
         return;
@@ -53,11 +54,19 @@ describe('validateRecordState', () => {
       const record1 = new MarcRecord(getFixture('record1.json'));
       const record2 = new MarcRecord(getFixture('record2.json'));
 
-      debugData(`Expecting error: ${expectedToThrow}, ${expectedStatus}, ${expectedError}`);
+      if (skipValidation) {
+        debug(`Running validation with (4th param) validate: false`);
+        const result = validateRecordState(record1, record2, 'recordMetadata', false);
+        debug(`Result: ${result}`);
+        expect(result).to.equal('skipped');
+        return;
+      }
+
 
       if (expectedToThrow) { // eslint-disable-line functional/no-conditional-statement
+        debugData(`Expecting error: ${expectedToThrow}, ${expectedStatus}, ${expectedError}`);
         try {
-          validateRecordState(record1, record2);
+          validateRecordState(record1, record2, 'recordMetadata', true);
           throw new Error('Expected an error');
         } catch (err) {
 
@@ -71,7 +80,7 @@ describe('validateRecordState', () => {
       }
 
       try {
-        validateRecordState(record1, record2);
+        validateRecordState(record1, record2, 'recordMetadata', true);
         debug('Did not get an error.');
       } catch (err) {
         debugData(err);

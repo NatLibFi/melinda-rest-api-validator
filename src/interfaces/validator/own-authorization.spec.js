@@ -59,5 +59,16 @@ describe('own-authorization', () => {
         validateOwnChanges({ownTags: tags, incomingRecord: recordA, existingRecord: recordB});
       }).to.throw(ValidationError);
     });
+
+    it('Should skip validation if validate param is false', () => {
+      const tags = JSON.parse(tags4);
+      const recordA = new MarcRecord(JSON.parse(record4a));
+      const recordB = new MarcRecord(JSON.parse(record4b));
+
+      const result = validateOwnChanges({ownTags: tags, incomingRecord: recordA, existingRecord: recordB, validate: false});
+      expect(result).to.eql('skipped');
+    });
+
+
   });
 });

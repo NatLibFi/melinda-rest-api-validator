@@ -70,7 +70,16 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
 
     logger.debug(`New headers: ${JSON.stringify(newHeaders)}`);
 
-    return processNormal({record, headers: newHeaders});
+    // Currently do not allow total skipping of validations for batchBulk and prio (streamBulk-records skip validation as default)
+    const validateRecords = operationSettings.merge || operationSettings.unique || operationSettings.validate || operationSettings.noStream || operationSettings.prio;
+    logger.debug(`We need to validate records: ${validateRecords}`);
+    logger.debug(`-- merge: ${operationSettings.merge} || unique: ${operationSettings.unique} || validate: ${operationSettings.validate} || noStream: ${operationSettings.noStream} || prio: ${operationSettings.prio}`);
+
+    if (validateRecords) {
+      return processNormal({record, headers: newHeaders});
+    }
+    logger.verbose(`Skipped record validate/unique/merge due to operationSettings`);
+    return {headers, data: record.toObject()};
   }
 
   // eslint-disable-next-line max-statements
@@ -167,6 +176,9 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
 
     const {recordMetadata, operationSettings, cataloger} = headers;
 
+    // Currently force all validations for prio and batchBulk
+    const runValidations = operationSettings.validate || true;
+
     if (updateId) {
       // This takes care of the cases, where a CREATE record was merged -> record gets its 001 so it can be updated in Melinda
       const updatedRecord = updateField001ToParamId(`${updateId}`, updateRecord);
@@ -183,7 +195,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
 
       // aleph-record-load-api cannot currently update a record if the existing record is deleted
       logger.verbose('Checking whether the existing record is deleted');
-      validateExistingRecord(existingRecord, recordMetadata);
+      validateExistingRecord(existingRecord, recordMetadata, runValidations);
 
       // Merge for updates (do not run if record is already merged CREATE)
       logger.debug(`Check whether merge is needed for update`);
@@ -205,14 +217,14 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       // eslint-disable-next-line functional/no-conditional-statement
       if (cataloger.authorization) {
         logger.verbose('Checking LOW-tag authorization');
-        validateOwnChanges({ownTags: cataloger.authorization, incomingRecord: updatedRecordAfterMerge, existingRecord, recordMetadata});
+        validateOwnChanges({ownTags: cataloger.authorization, incomingRecord: updatedRecordAfterMerge, existingRecord, recordMetadata, validate: runValidations});
         // eslint-disable-next-line functional/no-conditional-statement
       } else {
         logger.verbose(`No cataloger.authorization available for checking LOW-tags`);
       }
 
       logger.verbose('Checking CAT field history');
-      validateRecordState(updatedRecordAfterMerge, existingRecord, recordMetadata);
+      validateRecordState(updatedRecordAfterMerge, existingRecord, recordMetadata, runValidations);
 
       // Note validationService = validation.js from melinda-rest-api-commons
       // which uses marc-record-validate
@@ -223,7 +235,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       logger.debug(`mergeValidationResult: ${JSON.stringify(mergeValidationResult)}`);
 
       // validationResults: {record, failed: true/false, messages: []}
-      const validationResults = await validationService(updatedRecordAfterMerge);
+      const validationResults = runValidations ? await validationService(updatedRecordAfterMerge) : {record: updatedRecordAfterMerge, failed: false};
 
       return {result: validationResults, operationAfterValidation: updateOperation, idAfterValidation: updateId, mergeValidationResult: mergeValidationResultAfterMerge, recordMetadata};
     }
@@ -235,6 +247,8 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
   // eslint-disable-next-line max-statements
   async function createValidations({record, headers}) {
     const {recordMetadata, cataloger, operationSettings, operation, id} = headers;
+    // Currently force all validations for prio and batchBulk
+    const runValidations = operationSettings.validate || true;
 
     logger.verbose(`Validations for CREATE operation. Unique: ${operationSettings.unique}, merge: ${operationSettings.merge}`);
 
@@ -242,7 +256,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
     // eslint-disable-next-line functional/no-conditional-statement
     if (cataloger.authorization) {
       logger.verbose('Checking LOW-tag authorization');
-      validateOwnChanges({ownTags: cataloger.authorization, incomingRecord: record, recordMetadata});
+      validateOwnChanges({ownTags: cataloger.authorization, incomingRecord: record, recordMetadata, validate: runValidations});
       // eslint-disable-next-line functional/no-conditional-statement
     } else {
       logger.verbose(`No cataloger.authorization available for checking LOW-tags`);

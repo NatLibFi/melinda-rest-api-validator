@@ -35,8 +35,13 @@ import HttpStatus from 'http-status';
 
 
 // Checks that the modification history is identical
-export function validateRecordState(incomingRecord, existingRecord, recordMetadata) {
+export function validateRecordState(incomingRecord, existingRecord, recordMetadata, validate) {
   const logger = createLogger();
+
+  if (validate === false) {
+    logger.debug(`Skipping validateRecordState. Validate: ${validate}`);
+    return 'skipped';
+  }
 
   // get return empty array if there are no matching fields in the record
   const incomingModificationHistory = incomingRecord.get(/^CAT$/u).map(normalizeEmptySubfields);
@@ -57,6 +62,7 @@ export function validateRecordState(incomingRecord, existingRecord, recordMetada
     throw new ValidationError(HttpStatus.CONFLICT, {message: 'Modification history mismatch (CAT)', recordMetadata});
   }
   logger.debug(`validateRecordState: OK`);
+  return true;
 
   function normalizeEmptySubfields(field) {
     return {
@@ -66,10 +72,10 @@ export function validateRecordState(incomingRecord, existingRecord, recordMetada
 
     function normalizeEmptySubfield(subfield) {
       if (subfield.value && subfield.value !== undefined && subfield.value !== 'undefined') {
-        logger.silly('normal subfield');
+        //logger.silly('normal subfield');
         return subfield;
       }
-      logger.silly('normalized subfield');
+      //logger.silly('normalized subfield');
       return {code: subfield.code, value: ''};
     }
 
