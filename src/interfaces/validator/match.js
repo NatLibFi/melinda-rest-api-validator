@@ -43,7 +43,7 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
       // we could have here also returnRecords/returnMatchRecords/returnNonMatchRecord options that could be turned false for not to return actual record data
 
       // matchStatus.status: boolean, true if matcher retrieved and handled all found candidate records, false if it did not
-      // matchStatus.stopReason: string ('maxMatches','maxCandidates','maxedQueries', 'conversionFailures', empty string/undefined), reason for stopping retrieving or handling the candidate records
+      // matchStatus.stopReason: string ('maxMatches','maxCandidates','maxedQueries', 'conversionFailures', 'matchErrors' empty string/undefined), reason for stopping retrieving or handling the candidate records
       // - only one stopReason is returned (if there would be several possible stopReasons, stopReason is picked in the above order)
       // - currently stopReason can be non-empty also in cases where status is true, if matcher hit the stop reason when handling the last available candidate record
 
