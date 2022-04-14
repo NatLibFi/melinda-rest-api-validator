@@ -187,8 +187,8 @@ export default async function ({
     // If not-noop and validator.process fails, it errors
     // for noop failing marc-record-validate return result.failed: true
     logger.debug(`app/checkAmqp: Validation successfully done`);
-    logger.debug(`app/checkAmqp: Validation process results: ${inspect(processResult, {colors: true, maxArrayLength: 3, depth: 1})}`);
-    logger.silly(`app/checkAmqp: Validation process results: ${JSON.stringify(processResult)}`);
+    logger.silly(`app/checkAmqp: Validation process results: ${inspect(processResult, {colors: true, maxArrayLength: 3, depth: 1})}`);
+    logger.debug(`app/checkAmqp: Validation process results: ${JSON.stringify(processResult)}`);
 
     await amqpOperator.ackMessages([message]);
     return processValidated({headers, correlationId, processResult, mongoOperator, prio});
@@ -200,7 +200,7 @@ export default async function ({
     await setOperationsInQueueItem({correlationId, mongoOperator, prio, addOperation: processResult.headers.operation, removeOperation: headers.operation});
 
     const {noop} = headers.operationSettings;
-    logger.debug(`app/checkAmqp: noop ${noop}`);
+    logger.silly(`app/checkAmqp: noop ${noop}`);
 
     if (noop) {
       return setNoopResult({correlationId, processResult, mongoOperator, prio});
@@ -389,7 +389,7 @@ export default async function ({
 
       } catch (error) {
         if (error instanceof ApiError) {
-          logger.verbose(`validator/app/checkMongo errored ${JSON.stringify(error)} in ${correlationId}`);
+          logger.debug(`validator/app/checkMongo errored ${JSON.stringify(error)} in ${correlationId}`);
           await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.ERROR, errorMessage: error.payload, errorStatus: error.status});
 
           return initCheck();

@@ -53,7 +53,7 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
 
       const {matches, matchStatus, conversionFailures} = matchResults;
 
-      logger.verbose(`MatchStatus: ${JSON.stringify(matchStatus)})`);
+      logger.debug(`MatchStatus: ${JSON.stringify(matchStatus)})`);
       logger.silly(`MatchResult: ${inspect(matchResults, {colors: true, maxArrayLength: 10, depth: 3})}`);
 
       logger.debug(`Conversion failures: ${conversionFailures.length}`);

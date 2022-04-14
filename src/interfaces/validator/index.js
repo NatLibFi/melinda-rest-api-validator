@@ -48,7 +48,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
     const getAllSourceIds = operation === OPERATIONS.CREATE;
     logger.debug(`Original recordMetadata: ${JSON.stringify(recordMetadata)}`);
     const combinedRecordMetadata = getRecordMetadata({record, recordMetadata, getAllSourceIds});
-    logger.verbose(`Combined recordMetadata: ${JSON.stringify(combinedRecordMetadata)}`);
+    logger.debug(`Combined recordMetadata: ${JSON.stringify(combinedRecordMetadata)}`);
 
     // Create here also headers.id for batchBulk -records
     // For CREATE: blobSequence, for UPDATE: id from record (001)
@@ -68,7 +68,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       recordMetadata: combinedRecordMetadata
     };
 
-    logger.verbose(`New headers: ${JSON.stringify(newHeaders)}`);
+    logger.debug(`New headers: ${JSON.stringify(newHeaders)}`);
 
     return processNormal({record, headers: newHeaders});
   }
@@ -149,7 +149,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
   }
 
   function executeValidations({record, headers}) {
-    logger.verbose('Validating the record');
+    logger.debug('Validating the record');
 
     if (headers.operation === OPERATIONS.UPDATE) {
       return updateValidations({updateId: headers.id, updateRecord: record, updateOperation: headers.operation, headers});
@@ -160,9 +160,9 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
 
   // eslint-disable-next-line max-statements
   async function updateValidations({updateId, updateRecord, updateOperation, mergeValidationResult = undefined, headers}) {
-    logger.verbose(`Validations for UPDATE operation (${updateOperation})`);
+    logger.verbose(`Validations for UPDATE operation (${updateOperation}) (${updateId}) for ${headers.correlationId}`);
     logger.debug(`updateValidation, headers (${JSON.stringify(headers)})`);
-    logger.verbose(`MergeValidationResult: ${mergeValidationResult}`);
+    logger.debug(`MergeValidationResult: ${mergeValidationResult}`);
     logger.debug(`UpdateId: ${JSON.stringify(updateId)}`);
 
     const {recordMetadata, operationSettings, cataloger} = headers;
@@ -172,7 +172,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       const updatedRecord = updateField001ToParamId(`${updateId}`, updateRecord);
       logger.silly(`Updated record:\n${JSON.stringify(updatedRecord)}`);
 
-      logger.verbose(`Reading record ${updateId} from SRU`);
+      logger.verbose(`Reading record ${updateId} from SRU for ${headers.correlationId}`);
       const existingRecord = await getRecord(updateId);
       logger.silly(`Record from SRU: ${JSON.stringify(existingRecord)}`);
 
