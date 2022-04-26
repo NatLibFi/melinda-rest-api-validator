@@ -56,7 +56,7 @@ describe('validateRecordState', () => {
 
       if (skipValidation) {
         debug(`Running validation with (4th param) validate: false`);
-        const result = validateRecordState(record1, record2, 'recordMetadata', false);
+        const result = validateRecordState({incomingRecord: record1, existingRecord: record2, existingId: '000123456', recordMetadata: 'recordMetadata', validate: false});
         debug(`Result: ${result}`);
         expect(result).to.equal('skipped');
         return;
@@ -66,7 +66,7 @@ describe('validateRecordState', () => {
       if (expectedToThrow) { // eslint-disable-line functional/no-conditional-statement
         debugData(`Expecting error: ${expectedToThrow}, ${expectedStatus}, ${expectedError}`);
         try {
-          validateRecordState(record1, record2, 'recordMetadata', true);
+          validateRecordState({incomingRecord: record1, existingRecord: record2, existingId: '000123456', recordMetadata: 'recordMetadata', validate: true});
           throw new Error('Expected an error');
         } catch (err) {
 
@@ -80,7 +80,7 @@ describe('validateRecordState', () => {
       }
 
       try {
-        validateRecordState(record1, record2, 'recordMetadata', true);
+        validateRecordState({incomingRecord: record1, existingRecord: record2, existingId: '000123456', recordMetadata: 'recordMetadata', validate: true});
         debug('Did not get an error.');
       } catch (err) {
         debugData(err);

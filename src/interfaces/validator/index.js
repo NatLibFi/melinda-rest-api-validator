@@ -224,7 +224,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       }
 
       logger.verbose('Checking CAT field history');
-      validateRecordState(updatedRecordAfterMerge, existingRecord, recordMetadata, runValidations);
+      validateRecordState({incomingRecord: updatedRecordAfterMerge, existingRecord, existingId: updateId, recordMetadata, runValidations});
 
       // Note validationService = validation.js from melinda-rest-api-commons
       // which uses marc-record-validate

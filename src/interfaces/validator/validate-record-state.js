@@ -35,7 +35,7 @@ import HttpStatus from 'http-status';
 
 
 // Checks that the modification history is identical
-export function validateRecordState(incomingRecord, existingRecord, recordMetadata, validate) {
+export function validateRecordState({incomingRecord, existingRecord, existingId, recordMetadata, validate}) {
   const logger = createLogger();
 
   if (validate === false) {
@@ -54,12 +54,12 @@ export function validateRecordState(incomingRecord, existingRecord, recordMetada
 
   logger.debug(`Incoming CATs (${incomingModificationHistory.length}), existing CATs (${existingModificationHistory.length})`);
   logger.silly(`Incoming CATs (${incomingModificationHistory.length}):\n${JSON.stringify(incomingModificationHistory)}`);
-  logger.silly(`Existing CATs (${existingModificationHistory.length}):\n${JSON.stringify(existingModificationHistory)}`);
+  logger.silly(`Existing CATs (${existingId}) (${existingModificationHistory.length}):\n${JSON.stringify(existingModificationHistory)}`);
 
   if (deepEqual(incomingModificationHistory, existingModificationHistory) === false) { // eslint-disable-line functional/no-conditional-statement
     logger.debug(`validateRecordState: failure`);
     logger.debug(`Differences in CATs: ${inspect(detailedDiff(incomingModificationHistory, existingModificationHistory), {colors: true, depth: 4})}`);
-    throw new ValidationError(HttpStatus.CONFLICT, {message: 'Modification history mismatch (CAT)', recordMetadata});
+    throw new ValidationError(HttpStatus.CONFLICT, {message: `Modification history mismatch (CAT) with existing record ${existingId}`, recordMetadata, ids: [existingId]});
   }
   logger.debug(`validateRecordState: OK`);
   return true;
