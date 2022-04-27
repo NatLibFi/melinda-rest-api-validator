@@ -29,17 +29,19 @@
 import deepEqual from 'deep-eql';
 import {detailedDiff} from 'deep-object-diff';
 import {Error as ValidationError} from '@natlibfi/melinda-commons';
-import {createLogger} from '@natlibfi/melinda-backend-commons';
+//import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {inspect} from 'util';
 import HttpStatus from 'http-status';
-
+import createDebugLogger from 'debug';
 
 // Checks that the modification history is identical
 export function validateRecordState({incomingRecord, existingRecord, existingId, recordMetadata, validate}) {
-  const logger = createLogger();
+  //const logger = createLogger();
+  const debug = createDebugLogger('@natlibfi/melinda-record-api-validator:validate-record-state');
+  const debugData = debug.extend('data');
 
   if (validate === false) {
-    logger.debug(`Skipping validateRecordState. Validate: ${validate}`);
+    debug(`Skipping validateRecordState. Validate: ${validate}`);
     return 'skipped';
   }
 
@@ -52,16 +54,18 @@ export function validateRecordState({incomingRecord, existingRecord, existingId,
   //const incomingModificationHistoryNoUuids = incomingModificationHistory.map(field => ({tag: field.tag, ind1: field.ind1, ind2: field.ind2, subfields: field.subfields}));
   //const existingModificationHistoryNoUuids = existingModificationHistory.map(field => ({tag: field.tag, ind1: field.ind1, ind2: field.ind2, subfields: field.subfields}));
 
-  logger.debug(`Incoming CATs (${incomingModificationHistory.length}), existing CATs (${existingModificationHistory.length})`);
-  logger.silly(`Incoming CATs (${incomingModificationHistory.length}):\n${JSON.stringify(incomingModificationHistory)}`);
-  logger.silly(`Existing CATs (${existingId}) (${existingModificationHistory.length}):\n${JSON.stringify(existingModificationHistory)}`);
+  debug(`Incoming CATs (${incomingModificationHistory.length}), existing CATs (${existingModificationHistory.length})`);
+  debugData(`Incoming CATs (${incomingModificationHistory.length}): ${JSON.stringify(incomingModificationHistory)}`);
+  debugData(`Existing CATs (${existingId}) (${existingModificationHistory.length}): ${JSON.stringify(existingModificationHistory)}`);
 
   if (deepEqual(incomingModificationHistory, existingModificationHistory) === false) { // eslint-disable-line functional/no-conditional-statement
-    logger.debug(`validateRecordState: failure`);
-    logger.debug(`Differences in CATs: ${inspect(detailedDiff(incomingModificationHistory, existingModificationHistory), {colors: true, depth: 4})}`);
+    debug(`validateRecordState: failure`);
+    debugData(`Differences in CATs: ${inspect(detailedDiff(incomingModificationHistory, existingModificationHistory), {colors: true, depth: 4})}`);
+    debugData(`Incoming record: ${incomingRecord}`);
+    debugData(`Existing record: ${existingRecord}`);
     throw new ValidationError(HttpStatus.CONFLICT, {message: `Modification history mismatch (CAT) with existing record ${existingId}`, recordMetadata, ids: [existingId]});
   }
-  logger.debug(`validateRecordState: OK`);
+  debug(`validateRecordState: OK`);
   return true;
 
   function normalizeEmptySubfields(field) {
