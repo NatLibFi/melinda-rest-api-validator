@@ -30,7 +30,7 @@ import deepEqual from 'deep-eql';
 import {detailedDiff} from 'deep-object-diff';
 import {Error as ValidationError} from '@natlibfi/melinda-commons';
 //import {createLogger} from '@natlibfi/melinda-backend-commons';
-import {inspect} from 'util';
+//import {inspect} from 'util';
 import HttpStatus from 'http-status';
 import createDebugLogger from 'debug';
 
