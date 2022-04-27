@@ -60,9 +60,9 @@ export function validateRecordState({incomingRecord, existingRecord, existingId,
 
   if (deepEqual(incomingModificationHistory, existingModificationHistory) === false) { // eslint-disable-line functional/no-conditional-statement
     debug(`validateRecordState: failure`);
-    debugData(`Differences in CATs: ${inspect(detailedDiff(incomingModificationHistory, existingModificationHistory), {colors: true, depth: 4})}`);
-    debugData(`Incoming record: ${incomingRecord}`);
-    debugData(`Existing record: ${existingRecord}`);
+    debugData(`Differences in CATs: ${JSON.stringify(detailedDiff(incomingModificationHistory, existingModificationHistory), {colors: true, depth: 4})}`);
+    debugData(`Incoming record: ${JSON.stringify(incomingRecord)}`);
+    debugData(`Existing record: ${JSON.stringify(existingRecord)}`);
     throw new ValidationError(HttpStatus.CONFLICT, {message: `Modification history mismatch (CAT) with existing record ${existingId}`, recordMetadata, ids: [existingId]});
   }
   debug(`validateRecordState: OK`);
