@@ -33,8 +33,8 @@ export default function ({base, source, baseValidators = {}, sourceValidators = 
     status: true
   };
 
-  if (!mergeResult) {
-    throw new MergeError(HttpStatus.UNPROCESSABLE_ENTITY, `Testing merge Errors`);
+  if (!resultRecord) {
+    throw new MergeError(HttpStatus.UNPROCESSABLE_ENTITY, `Merge resulted in no record`);
   }
 
   return mergeResult;

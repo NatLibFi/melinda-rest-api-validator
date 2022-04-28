@@ -367,7 +367,6 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       //logger.debug(inspect(mergeRequest));
 
       // mergeResult.record: merged record that can be used to update the database record
-      // mergeResult.report: report from merge -> to be saved to mongo etc
       // mergeResult.status: true
 
       const mergeResult = await merger(mergeRequest);
