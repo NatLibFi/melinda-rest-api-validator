@@ -32,9 +32,64 @@ import {expect} from 'chai';
 import {MarcRecord} from '@natlibfi/marc-record';
 import {validateRecordState} from './validate-record-state';
 import createDebugLogger from 'debug';
+import {toTwoDigits} from '../../utils';
 
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator:validate-record-state:test');
 const debugData = debug.extend('data');
+
+function updateCatsInRecord(record, updateCats) {
+
+  if (!updateCats) {
+    return record;
+  }
+
+  const date = new Date(Date.now());
+  // We seem to get the current timeStamp in the local timezone - this might cause problems some time?
+  const currentTimeStampForC = `${date.getFullYear()}${toTwoDigits(date.getMonth() + 1)}${toTwoDigits(date.getDate())}`;
+  const currentTimeStampForH = `${toTwoDigits(date.getHours())}${toTwoDigits(date.getMinutes())}`;
+  debug(`Created current timestamp ${currentTimeStampForC}, ${currentTimeStampForH}`);
+
+  /*
+  const {leader} = record;
+  debugData(leader);
+  const fields = updateCatFields(record.fields, currentTimeStampForC, currentTimeStampForH);
+  debugData(fields);
+*/
+
+  return new MarcRecord({
+    leader: record.leader,
+    fields: updateCatFields(record.fields, currentTimeStampForC, currentTimeStampForH)
+  });
+
+  function updateCatFields(fields, timeC, timeH) {
+    return fields.map(updateCat);
+
+    function updateCat(field) {
+      if (field.tag !== 'CAT') {
+        return field;
+      }
+
+      return {
+        tag: field.tag,
+        ind1: field.ind1,
+        ind2: field.ind2,
+        subfields: field.subfields.map(updateSubfield)
+      };
+    }
+
+    function updateSubfield(subfield) {
+      if (subfield.code === 'c') {
+        return {code: subfield.code, value: subfield.value.replace(/\[replaceBy:currentDateYYYYMMDD\]/u, timeC)};
+      }
+
+      if (subfield.code === 'h') {
+        return {code: subfield.code, value: subfield.value.replace(/\[replaceBy:currentDateHHMM\]/u, timeH)};
+      }
+      return subfield;
+
+    }
+  }
+}
 
 describe('validateRecordState', () => {
   generateTests({
@@ -45,14 +100,14 @@ describe('validateRecordState', () => {
       reader: READERS.JSON
     },
     // eslint-disable-next-line max-statements
-    callback: ({getFixture, expectedToThrow, expectedStatus, expectedError, skipValidation, enabled = true}) => {
+    callback: ({getFixture, expectedToThrow, expectedStatus, expectedError, skipValidation, updateCats, enabled = true}) => {
 
       if (!enabled) {
         return;
       }
 
-      const record1 = new MarcRecord(getFixture('record1.json'));
-      const record2 = new MarcRecord(getFixture('record2.json'));
+      const record1 = updateCatsInRecord(new MarcRecord(getFixture('record1.json')), updateCats);
+      const record2 = updateCatsInRecord(new MarcRecord(getFixture('record2.json')), updateCats);
 
       if (skipValidation) {
         debug(`Running validation with (4th param) validate: false`);
@@ -61,7 +116,6 @@ describe('validateRecordState', () => {
         expect(result).to.equal('skipped');
         return;
       }
-
 
       if (expectedToThrow) { // eslint-disable-line functional/no-conditional-statement
         debugData(`Expecting error: ${expectedToThrow}, ${expectedStatus}, ${expectedError}`);
@@ -87,5 +141,7 @@ describe('validateRecordState', () => {
         throw new Error('Did not expect an error');
       }
     }
+
   });
 });
+

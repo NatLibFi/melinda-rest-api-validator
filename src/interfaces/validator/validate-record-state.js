@@ -33,11 +33,12 @@ import {Error as ValidationError} from '@natlibfi/melinda-commons';
 //import {inspect} from 'util';
 import HttpStatus from 'http-status';
 import createDebugLogger from 'debug';
+import {toTwoDigits} from '../../utils';
 
 // Checks that the modification history is identical
 export function validateRecordState({incomingRecord, existingRecord, existingId, recordMetadata, validate}) {
   //const logger = createLogger();
-  const debug = createDebugLogger('@natlibfi/melinda-record-api-validator:validate-record-state');
+  const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator:validate-record-state');
   const debugData = debug.extend('data');
 
   if (validate === false) {
@@ -45,18 +46,14 @@ export function validateRecordState({incomingRecord, existingRecord, existingId,
     return 'skipped';
   }
 
-  // get return empty array if there are no matching fields in the record
-  const incomingModificationHistory = incomingRecord.get(/^CAT$/u).map(normalizeEmptySubfields);
-  const existingModificationHistory = existingRecord.get(/^CAT$/u).map(normalizeEmptySubfields);
-
-  // the next is not needed? this is not used with Merge-UI?
-  // Merge makes uuid variables to all fields and this removes those
-  //const incomingModificationHistoryNoUuids = incomingModificationHistory.map(field => ({tag: field.tag, ind1: field.ind1, ind2: field.ind2, subfields: field.subfields}));
-  //const existingModificationHistoryNoUuids = existingModificationHistory.map(field => ({tag: field.tag, ind1: field.ind1, ind2: field.ind2, subfields: field.subfields}));
+  // MarcRecord.get returns empty array if there are no matching fields in the record
+  // unique CATs, because in case of a merged incoming record merge uniques CATs in the incoming record, so that duplicate CATs in existing record cause unnecessary CONFLICTs
+  const incomingModificationHistory = uniqueModificationHistory(incomingRecord.get(/^CAT$/u).map(normalizeEmptySubfields));
+  const existingModificationHistory = uniqueModificationHistory(existingRecord.get(/^CAT$/u).map(normalizeEmptySubfields));
 
   debug(`Incoming CATs (${incomingModificationHistory.length}), existing CATs (${existingModificationHistory.length})`);
-  debugData(`Incoming CATs (${incomingModificationHistory.length}): ${JSON.stringify(incomingModificationHistory)}`);
-  debugData(`Existing CATs (${existingId}) (${existingModificationHistory.length}): ${JSON.stringify(existingModificationHistory)}`);
+  debugData(`Incoming unique CATs (${incomingModificationHistory.length}): ${JSON.stringify(incomingModificationHistory)}`);
+  debugData(`Existing unique CATs (${existingId}) (${existingModificationHistory.length}): ${JSON.stringify(existingModificationHistory)}`);
 
   if (deepEqual(incomingModificationHistory, existingModificationHistory) === false) { // eslint-disable-line functional/no-conditional-statement
     debug(`validateRecordState: failure`);
@@ -67,6 +64,49 @@ export function validateRecordState({incomingRecord, existingRecord, existingId,
   }
   debug(`validateRecordState: OK`);
   return true;
+
+  function uniqueModificationHistory(modificationHistory) {
+    const uniqueModificationHistory = [...new Set(modificationHistory.map(JSON.stringify))].map(JSON.parse);
+
+    if (modificationHistory.length === uniqueModificationHistory.length) {
+      debug(`*** No duplicate CATs to remove ****`);
+      return modificationHistory;
+    }
+    debug(`***********`);
+
+    //debugData(`All (${modificationHistory.length}): ${inspect(modificationHistory, {depth: 5})}`);
+    //debugData(`Unique (${uniqueModificationHistory.length}): ${inspect(uniqueModificationHistory, {depth: 5})}`);
+
+    // We're diffing uniqued CATs to non-uniqued CATS so removed CATs are labeled as 'added' by diff
+    // We get the actual removed fields from diff by doing it this way
+    const removed = detailedDiff(uniqueModificationHistory, modificationHistory).added;
+    debugData(`Removed CATS: ${JSON.stringify(removed)}`);
+    //debugData(inspect(removed, {depth: 6}));
+
+    if (removed) {
+      debug(`Uniquing CAT-fields removed duplicates (${Object.keys(removed).length}).`);
+      const removedTimeStamps = Object.values(removed).map(({subfields}) => subfields.filter(subfield => ['c', 'h'].includes(subfield.code)).map(({value}) => value).join(''));
+      debugData(removedTimeStamps);
+
+      const date = new Date(Date.now());
+      // We the current timeStamp in the local timezone - this might cause problems some time?
+      const currentTimeStamp = `${date.getFullYear()}${toTwoDigits(date.getMonth() + 1)}${toTwoDigits(date.getDate())}${toTwoDigits(date.getHours())}${toTwoDigits(date.getMinutes())}`;
+
+      // We consider a CAT current, if it has timeStamp inside +- one minute of the current time
+      const currentRemoved = removedTimeStamps.filter(timeStamp => Number(currentTimeStamp) - 1 < Number(timeStamp) && Number(timeStamp) < Number(currentTimeStamp) + 1);
+
+      // throw CONFLICT for current duplicate CATs, because we cannot know whether there would have been the same duplicate CAT in the incoming merged record or if the existing record was updated again
+      if (currentRemoved.length > 0) {
+        debug(`There are non-unique CATs that are current - cannot unique CATs`);
+        debugData(`Current CATs that would have been removed: ${JSON.stringify(currentRemoved)}`);
+        throw new ValidationError(HttpStatus.CONFLICT, {message: `Possible modification history mismatch (CAT) with existing record ${existingId}`, recordMetadata, ids: [existingId]});
+      }
+      debug(`There are non-unique CATs, but they are not current - using uniqued CATs`);
+      return uniqueModificationHistory;
+    }
+    // We should never get here
+    //return uniqueModificationHistory;
+  }
 
   function normalizeEmptySubfields(field) {
     return {

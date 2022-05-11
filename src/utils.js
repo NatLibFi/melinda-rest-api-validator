@@ -166,3 +166,8 @@ export function getIdFromRecord(record) {
 
   return undefined;
 }
+
+
+export function toTwoDigits(number) {
+  return number.toString().padStart(2, '0');
+}
