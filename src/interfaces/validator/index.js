@@ -2,8 +2,7 @@ import HttpStatus from 'http-status';
 import {MARCXML} from '@natlibfi/marc-record-serializers';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ValidationError, toAlephId} from '@natlibfi/melinda-commons';
-//import {mongoFactory, validations, conversions, format, OPERATIONS, logError} from '@natlibfi/melinda-rest-api-commons';
-import {validations, conversions, format, OPERATIONS, logError} from '@natlibfi/melinda-rest-api-commons';
+import {mongoLogFactory, validations, conversions, format, OPERATIONS, logError} from '@natlibfi/melinda-rest-api-commons';
 import createSruClient from '@natlibfi/sru-client';
 import validateOwnChanges from './own-authorization';
 import {updateField001ToParamId, getRecordMetadata, getIdFromRecord} from '../../utils';
@@ -22,8 +21,7 @@ import {detailedDiff} from 'deep-object-diff';
 //const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator');
 //const debugData = debug.extend('data');
 
-//export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUri}) {
-export default async function ({formatOptions, sruUrl, matchOptionsList}) {
+export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUri}) {
   const logger = createLogger();
   // format: format record to Melinda/Aleph internal format ($w(FI-MELINDA) -> $w(FIN01) etc.)
   const {formatRecord} = format;
@@ -33,7 +31,8 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
   // should we have here matcherService? commons mongo/amqp
   const matchers = matchOptionsList.map(matchOptions => createMatchInterface(matchOptions));
   const sruClient = createSruClient({url: sruUrl, recordSchema: 'marcxml', retrieveAll: false, maximumRecordsPerRequest: 1});
-  //const mongoLogOperator = await mongoFactory(mongoUri, 'logs');
+  logger.debug(`Creating mongoLogOperation in ${mongoUri}`);
+  const mongoLogOperator = await mongoLogFactory(mongoUri);
 
   return {process};
 
@@ -392,6 +391,9 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
     };
 
     logger.debug(`${inspect(matchLogItem, {depth: 6})}`);
+    const result = mongoLogOperator.addLogItem(matchLogItem);
+    logger.debug(result);
+
     return true;
   }
 
@@ -409,6 +411,10 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
     };
 
     logger.debug(`${inspect(matchValidationLogItem)}`);
+    const result = mongoLogOperator.addLogItem(matchValidationLogItem);
+    logger.debug(result);
+
+
     return true;
   }
 
@@ -435,6 +441,8 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
     };
 
     logger.debug(inspect(mergeLogItem));
+    const result = mongoLogOperator.addLogItem(mergeLogItem);
+    logger.debug(result);
 
     return true;
   }
