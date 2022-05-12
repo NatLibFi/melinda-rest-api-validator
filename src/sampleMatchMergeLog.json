@@ -3,6 +3,7 @@
   "matchMergeLog": {
     "_id": "uuid4, automaattinen",
     "correlationId": "uuid4, correlationId",
+    "recordMetadata": "recordMetadata-object",
     "matchResults": "matchResults, ei tietueita?",
     "matchValidationResults": "matchValidationResults",
     "incomingRecordId": "correlationId-incomingId-incomingSeq",

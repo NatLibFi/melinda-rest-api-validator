@@ -2,6 +2,7 @@ import HttpStatus from 'http-status';
 import {MARCXML} from '@natlibfi/marc-record-serializers';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ValidationError, toAlephId} from '@natlibfi/melinda-commons';
+//import {mongoFactory, validations, conversions, format, OPERATIONS, logError} from '@natlibfi/melinda-rest-api-commons';
 import {validations, conversions, format, OPERATIONS, logError} from '@natlibfi/melinda-rest-api-commons';
 import createSruClient from '@natlibfi/sru-client';
 import validateOwnChanges from './own-authorization';
@@ -21,6 +22,7 @@ import {detailedDiff} from 'deep-object-diff';
 //const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator');
 //const debugData = debug.extend('data');
 
+//export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUri}) {
 export default async function ({formatOptions, sruUrl, matchOptionsList}) {
   const logger = createLogger();
   // format: format record to Melinda/Aleph internal format ($w(FI-MELINDA) -> $w(FIN01) etc.)
@@ -31,6 +33,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
   // should we have here matcherService? commons mongo/amqp
   const matchers = matchOptionsList.map(matchOptions => createMatchInterface(matchOptions));
   const sruClient = createSruClient({url: sruUrl, recordSchema: 'marcxml', retrieveAll: false, maximumRecordsPerRequest: 1});
+  //const mongoLogOperator = await mongoFactory(mongoUri, 'logs');
 
   return {process};
 
@@ -87,31 +90,11 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
     logger.silly(`validator/index/process: Running validations for (${headers.recordMetadata.sourceId})`);
     logger.debug(`validator/index/process: ${JSON.stringify(headers)}`);
     try {
-      const {result, operationAfterValidation, idAfterValidation, mergeValidationResult, recordMetadata} = await executeValidations({record, headers});
+      const {result, recordMetadata, headers: resultHeaders} = await executeValidations({record, headers});
 
-      // If the incoming record was merged in the validationProcess, update operation to 'UPDATE'
-      const newOperation = operationAfterValidation === 'updateAfterMerge' ? 'UPDATE' : operationAfterValidation;
-      const newId = idAfterValidation;
-
-      const mergeNote = mergeValidationResult && mergeValidationResult.merged
-        ? `Merged to ${newId} preferring ${mergeValidationResult.preference === 'A' ? 'incoming record.' : 'database record.'}`
-        : undefined;
-
-      const updatedHeaders = mergeValidationResult && mergeValidationResult.merged
-        ? {
-          operation: newOperation,
-          id: newId,
-          notes: headers.notes ? headers.notes.concat(mergeNote) : [mergeNote]
-        }
-        : {
-          operation: newOperation,
-          id: newId
-        };
-
-      const newHeaders = {...headers, ...updatedHeaders};
-
+      // We got headers back
+      logger.debug(`validator/index/process: Headers after validation: ${JSON.stringify(resultHeaders)}`);
       logger.debug(`validator/index/process: Validation result: ${inspect(result, {colors: true, maxArrayLength: 3, depth: 4})}`);
-      logger.debug(`validator/index/process: operationAfterValidation: ${operationAfterValidation}, newOperation: ${newOperation}, original operation: ${headers.operation}`);
 
       // throw ValidationError for failed validationService
       if (result.failed) { // eslint-disable-line functional/no-conditional-statement
@@ -119,7 +102,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
         throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: result.messages, recordMetadata});
       }
 
-      return {headers: newHeaders, data: result.record.toObject()};
+      return {headers: resultHeaders, data: result.record.toObject()};
 
     } catch (err) {
       logger.debug(`processNormal: validation errored: ${JSON.stringify(err)}`);
@@ -201,17 +184,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       logger.debug(`Check whether merge is needed for update`);
       logger.debug(`headers: ${JSON.stringify(headers)}, updateOperation: ${updateOperation}`);
       const updateMergeNeeded = operationSettings.merge && updateOperation !== 'updateAfterMerge';
-      const {mergedRecord: updatedRecordAfterMerge, mergeValidationResult: mergeValidationResultAfterMerge} = updateMergeNeeded ? await mergeRecordForUpdates({record: updatedRecord, existingRecord, id: updateId, headers}) : {mergedRecord: updatedRecord, mergeValidationResult};
-
-      // eslint-disable-next-line functional/no-conditional-statement
-      if (updateMergeNeeded) {
-        logger.debug(`We needed merge for UPDATE: ${updateMergeNeeded}`);
-        logger.debug(`Original incoming record: ${updatedRecord}`);
-        logger.debug(`Incoming record after merge: ${updatedRecordAfterMerge}`);
-        // get here diff for records
-        logger.debug(`Changes merge makes to existing record: ${inspect(detailedDiff(existingRecord, updatedRecordAfterMerge), {colors: true, depth: 5})}`);
-        //logger.debug(`Changes merge makes to incoming record: ${inspect(detailedDiff(updatedRecord, updatedRecordAfterMerge), {colors: true, depth: 5})}`);
-      }
+      const {mergedRecord: updatedRecordAfterMerge} = updateMergeNeeded ? await mergeRecordForUpdates({record: updatedRecord, existingRecord, id: updateId, headers}) : {mergedRecord: updatedRecord};
 
       // bulk does not have cataloger.authorization
       // eslint-disable-next-line functional/no-conditional-statement
@@ -237,7 +210,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       // validationResults: {record, failed: true/false, messages: []}
       const validationResults = runValidations ? await validationService(updatedRecordAfterMerge) : {record: updatedRecordAfterMerge, failed: false};
 
-      return {result: validationResults, operationAfterValidation: updateOperation, idAfterValidation: updateId, mergeValidationResult: mergeValidationResultAfterMerge, recordMetadata};
+      return {result: validationResults, recordMetadata, headers};
     }
 
     logger.debug('No id in headers / merge results');
@@ -246,7 +219,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
 
   // eslint-disable-next-line max-statements
   async function createValidations({record, headers}) {
-    const {recordMetadata, cataloger, operationSettings, operation, id} = headers;
+    const {recordMetadata, cataloger, operationSettings} = headers;
     // Currently force all validations for prio and batchBulk
     const runValidations = operationSettings.validate || true;
 
@@ -278,6 +251,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       if (matches.length > 0 && !operationSettings.merge) {
         throw new ValidationError(HttpStatus.CONFLICT, {message: 'Duplicates in database', ids: matches.map(({candidate: {id}}) => id), recordMetadata});
       }
+      //mongoLogOperator.pushMessages();
 
       // eslint-disable-next-line functional/no-conditional-statement
       if (matches.length > 0 && operationSettings.merge) {
@@ -293,12 +267,12 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       // for some reason this does not work for noop CREATEs
 
       const validationResults = await validationService(record);
-      return {result: validationResults, operationAfterValidation: operation, idAfterValidation: id, recordMetadata};
+      return {result: validationResults, recordMetadata, headers};
     }
 
     logger.debug('No unique/merge');
     const validationResults = await validationService(record);
-    return {result: validationResults, operationAfterValidation: operation, idAfterValidation: id, recordMetadata};
+    return {result: validationResults, recordMetadata, headers};
   }
 
   async function validateAndMergeMatchResults({record, matchResults, formatOptions, headers}) {
@@ -332,7 +306,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       logger.debug(`Action from matchValidation: ${firstResult.action}`);
 
       // run merge for record with the best valid match
-      return mergeValidatedMatchResults({record, result: firstResult, headers});
+      return mergeValidatedMatchResults({record, validatedMatchResult: firstResult, headers});
     } catch (err) {
       logger.debug(`MatchValidation errored`);
       logger.error(err);
@@ -340,7 +314,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
     }
   }
 
-  async function mergeValidatedMatchResults({record, result, headers}) {
+  async function mergeValidatedMatchResults({record, validatedMatchResult, headers}) {
 
     const {recordMetadata} = headers;
 
@@ -349,7 +323,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       //logger.silly(inspect(result));
 
       //result: {candidate: {id, record}, probability, matchSequence, action, preference: {value, name}}}
-      const {preference, candidate} = result;
+      const {preference, candidate} = validatedMatchResult;
 
       // A: incoming record, B: database record
       // base: preferred record, souce: non-preferred record
@@ -372,9 +346,16 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       const mergeResult = await merger(mergeRequest);
       logger.debug(`Got mergeResult: ${JSON.stringify(mergeResult)}`);
       const mergeValidationResult = {merged: mergeResult.status, mergedId: candidate.id, preference: preference.value};
-      // run update validations
 
-      return updateValidations({updateId: candidate.id, updateRecord: new MarcRecord(mergeResult.record, {subfieldValues: false}), updateOperation: 'updateAfterMerge', mergeValidationResult, headers});
+      // Should we write merge-note here?
+
+      // Log merge-action here
+      const mergeLogResult = logMergeAction({headers, record, existingRecord: validatedMatchResult.candidate.record, id: validatedMatchResult.candidate.id, preference: validatedMatchResult.preference, mergeResult});
+      logger.debug(mergeLogResult);
+
+      const newHeaders = updateHeadersAfterMerge({mergeValidationResult, headers});
+
+      return updateValidations({updateId: candidate.id, updateRecord: new MarcRecord(mergeResult.record, {subfieldValues: false}), updateOperation: 'updateAfterMerge', mergeValidationResult, headers: newHeaders});
     } catch (err) {
       logger.debug(`mergeMatchResults errored: ${err}`);
 
@@ -387,12 +368,40 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
     }
   }
 
+  function logMergeAction({headers, record, preference, existingRecord, id, mergeResult}) {
+    logger.debug(inspect(headers));
+    logger.debug(`I'm logging the mergeAction to mongo here`);
+
+    // note: there's no correlationId in headers?
+
+    const mergeLogItem = {
+      operation: headers.operation,
+      recordMetadata: headers.recordMetadata,
+      databaseId: id,
+      preference: {
+        name: preference.name,
+        value: preference.value,
+        recordName: preference.value === 'A' ? 'incomingRecord' : 'databaseRecord'
+      },
+      incomingRecord: record,
+      databaseRecord: existingRecord,
+      mergedRecord: mergeResult.record
+    };
+
+    logger.debug(inspect(mergeLogItem));
+
+    return;
+  }
+
   async function mergeRecordForUpdates({record, existingRecord, id, headers}) {
     logger.debug(`Merging record ${id} to existing record ${id}`);
     const {recordMetadata} = headers;
 
     // Should we matchValidate this to get preference?
+    // preference: 'B' : databaseRecord/exisingRecord
+    const preference = {value: 'B', name: 'B is the default winner for UPDATE-merge'};
 
+    // Currently we always prefer the databaseRecord
     try {
       const mergeRequest = {
         source: record,
@@ -405,14 +414,54 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       const mergeResult = await merger(mergeRequest);
       logger.debug(JSON.stringify(mergeResult));
 
-      const mergeValidationResult = {merged: mergeResult.status, mergedId: mergeResult.id, preference: 'B'};
-      return {mergedRecord: new MarcRecord(mergeResult.record, {subfieldValues: false}), mergeValidationResult};
+      logger.debug(`We merged UPDATE`);
+      logger.debug(`Original incoming record: ${record}`);
+      logger.debug(`Incoming record after merge: ${mergeResult.record}`);
+      // get here diff for records
+      logger.debug(`Changes merge makes to existing record: ${inspect(detailedDiff(existingRecord, mergeResult.record), {colors: true, depth: 5})}`);
+
+      const mergeValidationResult = {merged: mergeResult.status, mergedId: mergeResult.id, preference: preference.value};
+
+      // Log merge-action here
+      const mergeLogResult = logMergeAction({headers, record, existingRecord, id, preference, mergeResult});
+      logger.debug(mergeLogResult);
+
+      return {mergedRecord: new MarcRecord(mergeResult.record, {subfieldValues: false}), headers: updateHeadersAfterMerge({mergeValidationResult, headers})};
     } catch (err) {
       logger.error(`mergeRecordForUpdates errored: ${err}`);
       logError(err);
       const errorMessage = err;
       throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: `Merge errored: ${errorMessage}`, recordMetadata});
     }
+  }
+
+  function updateHeadersAfterMerge({mergeValidationResult, headers}) {
+
+    if (mergeValidationResult && mergeValidationResult.merged) {
+
+      // If the incoming record was merged in the validationProcess, update operation to 'UPDATE' and id mergedId
+
+      const newOperation = OPERATIONS.UPDATE;
+      const newId = mergeValidationResult.mergedId;
+
+      // Add mergeNote
+      const mergeNote = `Merged to ${newId} preferring ${mergeValidationResult.preference === 'A' ? 'incoming record.' : 'database record.'}`;
+      const updatedHeaders = {
+        operation: newOperation,
+        id: newId,
+        notes: headers.notes ? headers.notes.concat(mergeNote) : [mergeNote]
+      };
+
+      const newHeaders = {...headers, ...updatedHeaders};
+
+      logger.debug(`validator/index/updateHeadersAfterMerge: newOperation: ${newOperation}, original operation: ${headers.operation}`);
+      logger.debug(`validator/index/updateHeadersAfterMerge: newId: ${newId}, original id: ${headers.id}`);
+
+      return newHeaders;
+    }
+
+    // Why should we end up here?
+    return headers;
   }
 
   function getRecord(id) {

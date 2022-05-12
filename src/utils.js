@@ -8,6 +8,8 @@ const debugData = debug.extend('data');
 
 // Should we update 003 here too?
 export function updateField001ToParamId(id, record) {
+
+  // We should check that id param is okay (non-strings fail toAlephId)
   logger.silly(`Updating F001 value to ${id}`);
   const fields = record.get(/^001$/u);
 
