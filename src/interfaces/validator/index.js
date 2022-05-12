@@ -242,21 +242,25 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       // This should use different matchOptions for merge and non-merge cases
       // Note: incoming record is formatted ($w(FIN01)), existing records from SRU are not ($w(FI-MELINDA))
       // stopWhenFound stops iterating matchers when a match is found
-      const {matches} = await matcherService.iterateMatchers({matchers, matchOptionsList, record, stopWhenFound: false});
+      const matchResult = await matcherService.iterateMatchers({matchers, matchOptionsList, record, stopWhenFound: false});
+      const {matches} = matchResult;
+
       logger.debug(JSON.stringify(matches.map(({candidate: {id}, probability}) => ({id, probability}))));
 
-      // this could update headers.notes with a matchResult
+      const matchLogResult = logMatchAction({matchResult, headers, record});
+      logger.debug(`matchLogresult: ${matchLogResult}`);
+
+      const newHeaders = updateHeadersAfterMatch({matches, headers});
 
       // eslint-disable-next-line functional/no-conditional-statement
       if (matches.length > 0 && !operationSettings.merge) {
         throw new ValidationError(HttpStatus.CONFLICT, {message: 'Duplicates in database', ids: matches.map(({candidate: {id}}) => id), recordMetadata});
       }
-      //mongoLogOperator.pushMessages();
 
       // eslint-disable-next-line functional/no-conditional-statement
       if (matches.length > 0 && operationSettings.merge) {
         logger.debug(`Found matches (${matches.length}) for merging.`);
-        return validateAndMergeMatchResults({record, matchResults: matches, formatOptions, headers});
+        return validateAndMergeMatchResults({record, matchResults: matches, formatOptions, headers: newHeaders});
       }
 
       logger.verbose('No matching records');
@@ -267,7 +271,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       // for some reason this does not work for noop CREATEs
 
       const validationResults = await validationService(record);
-      return {result: validationResults, recordMetadata, headers};
+      return {result: validationResults, recordMetadata, headers: newHeaders};
     }
 
     logger.debug('No unique/merge');
@@ -288,8 +292,12 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       // does matchValidationResult need to include record?
       // matchValidationResult: {record, result: {candidate: {id, record}, probability, matchSequence, action, preference: {value, name}}} - possible note, matchValidationReport later
 
-      const matchValidationResult = await matchValidationForMatchResults(record, matchResults, formatOptions, recordMetadata);
+      const {matchValidationResult, sortedValidatedMatchResults} = await matchValidationForMatchResults(record, matchResults, formatOptions, recordMetadata);
       logger.silly(`MatchValidationResult: ${inspect(matchValidationResult, {colors: true, maxArrayLength: 3, depth: 3})}}`);
+
+      const logMatchValidationResult = logMatchValidationAction({headers, record, sortedValidatedMatchResults});
+      logger.debug(`logMatchValidationResult: ${logMatchValidationResult}`);
+
       const firstResult = matchValidationResult.result;
       logger.silly(`Result: ${inspect(firstResult, {colors: true, maxArrayLength: 3, depth: 2})}}`);
 
@@ -301,7 +309,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
         throw new ValidationError(HttpStatus.CONFLICT, {message: `MatchValidation with ${firstResult.candidate.id} failed. ${firstResult.message}`, ids: [firstResult.candidate.id], recordMetadata});
       }
 
-      // this could update headers.notes with a matchValidation result
+      // We don't have a matchValidationNote, because the preference information is available in the mergeNote
 
       logger.debug(`Action from matchValidation: ${firstResult.action}`);
 
@@ -368,13 +376,51 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
     }
   }
 
+
+  // Do we need this or is all included in the matchValidationResult?
+  function logMatchAction({headers, record, matchResult}) {
+    logger.debug(inspect(headers));
+    logger.debug(`I should be logging the matchAction to mongo here`);
+
+    // We need correlationId and timestamp? - mongoLogOperator could create that?
+
+    const matchLogItem = {
+      logItemType: 'MATCH_LOG_ITEM',
+      incomingRecord: record,
+      recordMetadata: headers.recordMetadata,
+      matchResult
+    };
+
+    logger.debug(`${inspect(matchLogItem, {depth: 6})}`);
+    return true;
+  }
+
+  function logMatchValidationAction({headers, record, sortedValidatedMatchResults}) {
+    logger.debug(`I should be logging the matchValidationAction to mongo here`);
+    logger.debug(inspect(headers));
+
+    // We need correlationId and timestamp? - mongoLogOperator could create that?
+
+    const matchValidationLogItem = {
+      logItemType: 'MATCH_VALIDATION_LOG_ITEM',
+      incomingRecord: record,
+      recordMetadata: headers.recordMetadata,
+      matchValidationResult: sortedValidatedMatchResults
+    };
+
+    logger.debug(`${inspect(matchValidationLogItem)}`);
+    return true;
+  }
+
   function logMergeAction({headers, record, preference, existingRecord, id, mergeResult}) {
     logger.debug(inspect(headers));
-    logger.debug(`I'm logging the mergeAction to mongo here`);
+    logger.debug(`I should be logging the mergeAction to mongo here`);
 
     // note: there's no correlationId in headers?
+    // we want also a timestamp here - mongoLogOperator could create that?
 
     const mergeLogItem = {
+      logItemType: 'MERGE_LOG_ITEM',
       operation: headers.operation,
       recordMetadata: headers.recordMetadata,
       databaseId: id,
@@ -390,7 +436,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
 
     logger.debug(inspect(mergeLogItem));
 
-    return;
+    return true;
   }
 
   async function mergeRecordForUpdates({record, existingRecord, id, headers}) {
@@ -412,7 +458,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       // mergeResult.status: true
 
       const mergeResult = await merger(mergeRequest);
-      logger.debug(JSON.stringify(mergeResult));
+      logger.debug(`mergeResult: ${JSON.stringify(mergeResult)}`);
 
       logger.debug(`We merged UPDATE`);
       logger.debug(`Original incoming record: ${record}`);
@@ -420,11 +466,11 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       // get here diff for records
       logger.debug(`Changes merge makes to existing record: ${inspect(detailedDiff(existingRecord, mergeResult.record), {colors: true, depth: 5})}`);
 
-      const mergeValidationResult = {merged: mergeResult.status, mergedId: mergeResult.id, preference: preference.value};
+      const mergeValidationResult = {merged: mergeResult.status, mergedId: id, preference: preference.value};
 
       // Log merge-action here
       const mergeLogResult = logMergeAction({headers, record, existingRecord, id, preference, mergeResult});
-      logger.debug(mergeLogResult);
+      logger.debug(`mergeLogResult: ${mergeLogResult}`);
 
       return {mergedRecord: new MarcRecord(mergeResult.record, {subfieldValues: false}), headers: updateHeadersAfterMerge({mergeValidationResult, headers})};
     } catch (err) {
@@ -433,6 +479,16 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
       const errorMessage = err;
       throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: `Merge errored: ${errorMessage}`, recordMetadata});
     }
+  }
+
+  function updateHeadersAfterMatch({headers, matches}) {
+
+    // Add matchNote to headers
+    const matchNote = `Found ${matches.length} matching records in the database.`;
+    const updatedHeaders = {
+      notes: headers.notes ? headers.notes.concat(matchNote) : [matchNote]
+    };
+    return {...headers, ...updatedHeaders};
   }
 
   function updateHeadersAfterMerge({mergeValidationResult, headers}) {
@@ -454,8 +510,8 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
 
       const newHeaders = {...headers, ...updatedHeaders};
 
-      logger.debug(`validator/index/updateHeadersAfterMerge: newOperation: ${newOperation}, original operation: ${headers.operation}`);
-      logger.debug(`validator/index/updateHeadersAfterMerge: newId: ${newId}, original id: ${headers.id}`);
+      logger.debug(`validator/index/updateHeadersAfterMerge: newOperation: ${newHeaders.operation}, original operation: ${headers.operation}`);
+      logger.debug(`validator/index/updateHeadersAfterMerge: newId: ${newHeaders.id}, original id: ${headers.id}`);
 
       return newHeaders;
     }

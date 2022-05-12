@@ -28,6 +28,8 @@ export async function matchValidationForMatchResults(record, matchResults, forma
 
   debug(`Run matchValidation for matches (A: incoming record, B: database record)`);
 
+  // This could be optimized so that it would be done when it finds the first valid match?
+
   const matchResultsAndMatchValidations = await matchResultClone.map(match => {
     // format candidate to MelindaInternalFormat
     debug(`Validating match to candidate ${match.candidate.id}`);
@@ -64,7 +66,7 @@ export async function matchValidationForMatchResults(record, matchResults, forma
   debug(`Returning first valid result: ${matchValidationResult}}`);
   debugData(`MatchValidationResutlt: ${inspect(matchValidationResult)}`);
 
-  return matchValidationResult;
+  return {matchValidationResult, sortedValidatedMatchResults};
 }
 
 // melinda-record-match-validation is *NOT* async
