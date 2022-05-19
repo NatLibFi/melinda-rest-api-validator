@@ -370,7 +370,7 @@ export default async function ({
         // Read stream to MarcRecords and send em to queue
         // This is a promise that resolves when all the records are in queue and (currently always, this should be set by operationSettings.failOnError) rejects if any of the records in the stream fail
         logger.debug(`validateRecord: ${validateRecords}, failOnError: ${failOnError}, noop: ${noop}`);
-        await toMarcRecords.streamToRecords({correlationId, headers: {operation, cataloger, operationSettings}, contentType, stream, validateRecords, failOnError, noop});
+        await toMarcRecords.streamToRecords({correlationId, headers: {correlationId, operation, cataloger, operationSettings}, contentType, stream, validateRecords, failOnError, noop});
 
         // setState to VALIDATOR.PENDING_VALIDATION if we're validating the bulk job
         // setState to IMPORTER.IN_QUEUE if we're not validating the bulk job

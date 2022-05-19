@@ -384,7 +384,10 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
     // We need correlationId and timestamp? - mongoLogOperator could create that?
 
     const matchLogItem = {
-      logItemType: 'MATCH_LOG_ITEM',
+      logItemType: 'MATCH_LOG',
+      correlationId: headers.correlationId,
+      blobSequenceStart: headers.recordMetadata.blobSequence,
+      blobSequenceEnd: headers.recordMetadata.blobSequence,
       incomingRecord: record,
       recordMetadata: headers.recordMetadata,
       matchResult
@@ -404,7 +407,10 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
     // We need correlationId and timestamp? - mongoLogOperator could create that?
 
     const matchValidationLogItem = {
-      logItemType: 'MATCH_VALIDATION_LOG_ITEM',
+      logItemType: 'MATCH_VALIDATION_LOG',
+      correlationId: headers.correlationId,
+      blobSequenceStart: headers.recordMetadata.blobSequence,
+      blobSequenceEnd: headers.recordMetadata.blobSequence,
       incomingRecord: record,
       recordMetadata: headers.recordMetadata,
       matchValidationResult: sortedValidatedMatchResults
@@ -426,7 +432,10 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
     // we want also a timestamp here - mongoLogOperator could create that?
 
     const mergeLogItem = {
-      logItemType: 'MERGE_LOG_ITEM',
+      logItemType: 'MERGE_LOG',
+      correlationId: headers.correlationId,
+      blobSequenceStart: headers.recordMetadata.blobSequence,
+      blobSequenceEnd: headers.recordMetadata.blobSequence,
       operation: headers.operation,
       recordMetadata: headers.recordMetadata,
       databaseId: id,
