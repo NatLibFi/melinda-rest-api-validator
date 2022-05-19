@@ -17,7 +17,7 @@ export default async function ({
   const mongoOperator = await mongoFactory(mongoUri, collection);
   const amqpOperator = await amqpFactory(amqpUrl);
   const validator = await validatorFactory({...validatorOptions, mongoUri});
-  const toMarcRecords = await toMarcRecordFactory(amqpOperator, mongoOperator, splitterOptions);
+  const toMarcRecords = await toMarcRecordFactory({amqpOperator, mongoOperator, splitterOptions, mongoUri});
 
   logger.info(`Started Melinda-rest-api-validator: ${pollRequest ? 'PRIORITY' : 'BULK'}`);
 

@@ -3,15 +3,16 @@ import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
 import {updateField001ToParamId, getIdFromRecord, getRecordMetadata} from '../utils';
 import httpStatus from 'http-status';
-import {promisify} from 'util';
+import {promisify, inspect} from 'util';
 import {MarcRecordError} from '@natlibfi/marc-record';
-import {OPERATIONS, logError, QUEUE_ITEM_STATE, createRecordResponseItem, addRecordResponseItem} from '@natlibfi/melinda-rest-api-commons';
+import {OPERATIONS, logError, QUEUE_ITEM_STATE, createRecordResponseItem, addRecordResponseItem, mongoLogFactory} from '@natlibfi/melinda-rest-api-commons';
 
 
-export default function (amqpOperator, mongoOperator, splitterOptions) {
+export default async function ({amqpOperator, mongoOperator, splitterOptions, mongoUri}) {
   const {failBulkOnError, keepSplitterReport} = splitterOptions;
   const setTimeoutPromise = promisify(setTimeout);
   const logger = createLogger();
+  const mongoLogOperator = await mongoLogFactory(mongoUri);
 
   return {streamToRecords};
 
@@ -153,7 +154,7 @@ export default function (amqpOperator, mongoOperator, splitterOptions) {
           await Promise.all(promises);
           logger.info(`Request handling done for ${correlationId}`);
 
-          createSplitterReport();
+          createSplitterReportAndLogs();
 
           if ((readerErrored || transformerErrored) && failOnError) {
             logger.debug(`Reader or transformer errored, failOnError active, removing the queue.`);
@@ -165,11 +166,23 @@ export default function (amqpOperator, mongoOperator, splitterOptions) {
         });
 
       // Note: splitterReport is created only if the reader emit an end event
-      function createSplitterReport() {
+      function createSplitterReportAndLogs() {
+
+        const splitterReport = {recordNumber, sequenceNumber, readerErrors};
+
+        const splitterLogItem = {
+          logItemType: 'SPLITTER_LOG',
+          correlationId,
+          ...splitterReport
+        };
+
+        logger.debug(`${inspect(splitterLogItem, {depth: 6})}`);
+        const result = mongoLogOperator.addLogItem(splitterLogItem);
+        logger.debug(result);
+
         logger.debug(`Creating splitterReport to queueItem if needed`);
-        if ((keepSplitterReport === 'ALL') || (keepSplitterReport === 'ERROR' && readerErrored)) { // eslint-disable-line no-extra-parens
+        if ((keepSplitterReport === 'ALL') || (keepSplitterReport === 'ERROR' && (readerErrored || transformerErrored))) { // eslint-disable-line no-extra-parens
           logger.debug(`Got ${readerErrors.length} errors. Pushing report to mongo`);
-          const splitterReport = {recordNumber, sequenceNumber, readerErrors};
           mongoOperator.pushMessages({correlationId, messages: [splitterReport], messageField: 'splitterReport'});
           return;
         }
