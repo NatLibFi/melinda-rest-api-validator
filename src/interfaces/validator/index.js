@@ -31,7 +31,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
   // should we have here matcherService? commons mongo/amqp
   const matchers = matchOptionsList.map(matchOptions => createMatchInterface(matchOptions));
   const sruClient = createSruClient({url: sruUrl, recordSchema: 'marcxml', retrieveAll: false, maximumRecordsPerRequest: 1});
-  logger.debug(`Creating mongoLogOperation in ${mongoUri}`);
+  logger.debug(`Creating mongoLogOperator in ${mongoUri}`);
   const mongoLogOperator = await mongoLogFactory(mongoUri);
 
   return {process};

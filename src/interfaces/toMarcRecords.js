@@ -17,6 +17,7 @@ export default async function ({amqpOperator, mongoOperator, splitterOptions, mo
   return {streamToRecords};
 
   // failBulkOnError env option is used as failOnError if failOnError is not given as a parameter
+  // failOnError fails bulk for a single recordTransformation error
   async function streamToRecords({correlationId, headers, contentType, stream, failOnError = failBulkOnError, validateRecords = false, noop = false}) {
     logger.verbose(`Starting to transform stream to records`);
     logger.debug(`ValidateRecords: ${validateRecords}, failOnError: ${failOnError}, noop: ${noop}`);
@@ -49,16 +50,19 @@ export default async function ({amqpOperator, mongoOperator, splitterOptions, mo
           const cleanErrorMessage = err.message.replace(/(?<lineBreaks>\r\n|\n|\r)/gmu, ' ');
 
           readerErrors.push({sequenceNumber, error: cleanErrorMessage}); // eslint-disable-line functional/immutable-data
-          // eslint-disable-next-line functional/no-conditional-statement
-          if (err instanceof MarcRecordError) {
-            logger.debug(`Error is MarcRecordError`);
-          }
+
+          // Reader returns "Record is invalid" -error, if the input is a valid array, but an element is not a valid MarcRecord
+          const recordErrorRegExp = /^Record is invalid/u;
+          const recordError = err instanceof MarcRecordError || recordErrorRegExp.test(err.message);
+
+          logger.debug(`Error is a recordError: ${recordError}`);
 
           const recordResponseItem = createRecordResponseItem({responseStatus: httpStatus.UNPROCESSABLE_ENTITY, responsePayload: cleanErrorMessage, recordMetadata: getRecordMetadata({record: undefined, number: sequenceNumber}), id: undefined});
           addRecordResponseItem({recordResponseItem, correlationId, mongoOperator});
 
           // eslint-disable-next-line functional/no-conditional-statement
-          if (failOnError) {
+          if (failOnError || !recordError) {
+            createSplitterReportAndLogs();
             reject(new ApiError(httpStatus.UNPROCESSABLE_ENTITY, `Invalid payload! (${sequenceNumber}) ${cleanErrorMessage}`));
           }
         })
@@ -137,6 +141,7 @@ export default async function ({amqpOperator, mongoOperator, splitterOptions, mo
           }
         })
         .on('end', async () => {
+          logger.debug(`We got end from the reader`);
           await setTimeoutPromise(500); // Makes sure that even slowest promise is in the array
           const queue = validateRecords ? `${QUEUE_ITEM_STATE.VALIDATOR.PENDING_VALIDATION}.${correlationId}` : `${headers.operation}.${correlationId}`;
 
@@ -148,6 +153,7 @@ export default async function ({amqpOperator, mongoOperator, splitterOptions, mo
           // eslint-disable-next-line functional/no-conditional-statement
           if (promises.length === 0) {
             logger.debug(`Got no record promises from reader stream`);
+            createSplitterReportAndLogs();
             reject(new ApiError(httpStatus.UNPROCESSABLE_ENTITY, 'Invalid payload!'));
           }
 
@@ -165,7 +171,6 @@ export default async function ({amqpOperator, mongoOperator, splitterOptions, mo
 
         });
 
-      // Note: splitterReport is created only if the reader emit an end event
       function createSplitterReportAndLogs() {
 
         const splitterReport = {recordNumber, sequenceNumber, readerErrors};
