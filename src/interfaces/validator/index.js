@@ -195,7 +195,10 @@ export default async function ({formatOptions, sruUrl, matchOptionsList}) {
 
       try {
 
-        const matchResults = await matcher(updatedRecord);
+        const matchResultsAll = await matcher(updatedRecord);
+        const matchResults = matchResultsAll.matches ? matchResultsAll.matches : matchResultsAll;
+
+        logger.silly(`matchResults (${matchResults.length}): ${inspect(matchResults)}`);
 
         if (matchResults.length > 0) { // eslint-disable-line functional/no-conditional-statement
 
