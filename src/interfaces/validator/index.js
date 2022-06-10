@@ -54,12 +54,12 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
 
     // Create here also headers.id for batchBulk -records
     // For CREATE: blobSequence, for UPDATE: id from record (001)
-    logger.debug(`id check`);
+    logger.debug(`id check for ${operation}`);
 
-    // This should error if we do not have id from headers or record for UPDATEs
     const idFromOperation = operation === OPERATIONS.CREATE ? await toAlephId(combinedRecordMetadata.blobSequence.toString()) : await getIdFromRecord(record);
     logger.debug(`Original id: ${id}, newly created id: ${idFromOperation}`);
 
+    // We do not update the CREATE record itself here, because incoming 001 might be useful for matching etc.
     if (operation === OPERATIONS.UPDATE && !id && !idFromOperation) {
       throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: `There is no id for updating the record`, recordMetadata: combinedRecordMetadata});
     }
@@ -80,8 +80,11 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
     if (validateRecords) {
       return processNormal({record, headers: newHeaders});
     }
+
     logger.verbose(`Skipped record validate/unique/merge due to operationSettings`);
-    return {headers, data: record.toObject()};
+    // We propably should update 001 in record to id here?
+    const validatedRecord = checkAndUpdateId({record, headers});
+    return {headers, data: validatedRecord.toObject()};
   }
 
   // eslint-disable-next-line max-statements
@@ -101,7 +104,9 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
         throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: result.messages, recordMetadata});
       }
 
-      return {headers: resultHeaders, data: result.record.toObject()};
+      // We should check/update 001 in record to id here
+      const validatedRecord = checkAndUpdateId({record: result.record, headers: resultHeaders});
+      return {headers: resultHeaders, data: validatedRecord.toObject()};
 
     } catch (err) {
       logger.debug(`processNormal: validation errored: ${JSON.stringify(err)}`);
@@ -118,6 +123,20 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       }
       throw new Error(err);
     }
+  }
+
+  // Should this handle f003 too? If it should, we should get valid f003 contents from a variable
+  function checkAndUpdateId({record, headers}) {
+    const recordF001 = getIdFromRecord(record);
+    const sequence = headers.recordMetadata.blobSequence;
+    const {noStream, prio} = headers.operationSettings;
+    logger.debug(`Operation: ${headers.operation}, Id from headers: <${headers.id}>, Id from record: <${recordF001}>, blobSequence: <${sequence}>, noStream: ${noStream}, prio: ${prio}`);
+    if (!recordF001 || headers.id !== recordF001) {
+      logger.verbose(`We have a id in headers ${headers.id}, but the id in record is not matching ${recordF001}`);
+      const updatedRecord = updateField001ToParamId(`${sequence}`, record);
+      return updatedRecord;
+    }
+    return record;
   }
 
   async function unserializeAndFormatRecord(data, format, formatOptions, recordMetadata) {
@@ -162,9 +181,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
     const runValidations = operationSettings.validate || true;
 
     if (updateId) {
-      // This takes care of the cases, where a CREATE record was merged -> record gets its 001 so it can be updated in Melinda
-      const updatedRecord = updateField001ToParamId(`${updateId}`, updateRecord);
-      logger.silly(`Updated record:\n${JSON.stringify(updatedRecord)}`);
+      // -> updating f001 is done later in processNormal, so it gets done to other CREATE operation too
 
       logger.verbose(`Reading record ${updateId} from SRU for ${headers.correlationId}`);
       const existingRecord = await getRecord(updateId);
@@ -183,7 +200,9 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       logger.debug(`Check whether merge is needed for update`);
       logger.debug(`headers: ${JSON.stringify(headers)}, updateOperation: ${updateOperation}`);
       const updateMergeNeeded = operationSettings.merge && updateOperation !== 'updateAfterMerge';
-      const {mergedRecord: updatedRecordAfterMerge} = updateMergeNeeded ? await mergeRecordForUpdates({record: updatedRecord, existingRecord, id: updateId, headers}) : {mergedRecord: updatedRecord};
+      const {mergedRecord: updatedRecordAfterMerge} = updateMergeNeeded ? await mergeRecordForUpdates({record: updateRecord, existingRecord, id: updateId, headers}) : {mergedRecord: updateRecord};
+
+      // We could check here whether the update/merge resulted in changes in the existing record
 
       // bulk does not have cataloger.authorization
       // eslint-disable-next-line functional/no-conditional-statement

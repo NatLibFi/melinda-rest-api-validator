@@ -91,7 +91,7 @@ export default async function ({amqpOperator, mongoOperator, splitterOptions, mo
             logger.debug(`Getting recordMetadata`);
             const recordMetadata = getRecordMetadata({record, number, getAllSourceIds});
 
-            logger.debug(`Getting id - use ${number} for CREATE, get from record for UPDATE`);
+            logger.debug(`Getting id - use ${number} for CREATE, get ID from record for UPDATE`);
             const id = headers.operation === OPERATIONS.CREATE ? number.toString() : getIdFromRecord(record);
 
             logger.debug(`ID: ${id}`);
