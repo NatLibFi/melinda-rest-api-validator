@@ -5,7 +5,7 @@ import {Error as ValidationError, toAlephId} from '@natlibfi/melinda-commons';
 import {mongoLogFactory, validations, conversions, format, OPERATIONS, logError} from '@natlibfi/melinda-rest-api-commons';
 import createSruClient from '@natlibfi/sru-client';
 import validateOwnChanges from './own-authorization';
-import {updateField001ToParamId, getRecordMetadata, getIdFromRecord} from '../../utils';
+import {updateField001ToParamId, getRecordMetadata, getIdFromRecord, isValidAlephId} from '../../utils';
 import {validateExistingRecord} from './validate-existing-record';
 import {inspect} from 'util';
 import {MarcRecord} from '@natlibfi/marc-record';
@@ -58,15 +58,16 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
 
     const idFromOperation = operation === OPERATIONS.CREATE ? await toAlephId(combinedRecordMetadata.blobSequence.toString()) : await getIdFromRecord(record);
     logger.debug(`Original id: ${id}, newly created id: ${idFromOperation}`);
+    const newId = id || idFromOperation;
 
     // We do not update the CREATE record itself here, because incoming 001 might be useful for matching etc.
-    if (operation === OPERATIONS.UPDATE && !id && !idFromOperation) {
-      throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: `There is no id for updating the record`, recordMetadata: combinedRecordMetadata});
+    if (operation === OPERATIONS.UPDATE && (!newId || !isValidAlephId(newId))) {
+      throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: `There is no valid id for updating the record. <${newId}>`, recordMetadata: combinedRecordMetadata});
     }
 
     const newHeaders = {
       ...headers,
-      id: id || idFromOperation,
+      id: newId,
       recordMetadata: combinedRecordMetadata
     };
 

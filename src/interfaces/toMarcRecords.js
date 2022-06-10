@@ -1,7 +1,7 @@
 import {Json, MARCXML, AlephSequential, ISO2709} from '@natlibfi/marc-record-serializers';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
-import {updateField001ToParamId, getIdFromRecord, getRecordMetadata} from '../utils';
+import {updateField001ToParamId, getIdFromRecord, getRecordMetadata, isValidAlephId} from '../utils';
 import httpStatus from 'http-status';
 import {promisify, inspect} from 'util';
 import {MarcRecordError} from '@natlibfi/marc-record';
@@ -94,10 +94,10 @@ export default async function ({amqpOperator, mongoOperator, splitterOptions, mo
             logger.debug(`Getting id - use ${number} for CREATE, get ID from record for UPDATE`);
             const id = headers.operation === OPERATIONS.CREATE ? number.toString() : getIdFromRecord(record);
 
-            logger.debug(`ID: ${id}`);
-            if (!id) {
-              logger.debug(`Record ${number} has no id for UPDATE.`);
-              const responsePayload = {message: `Invalid payload! Record ${number} has no id for UPDATE.`};
+            logger.debug(`ID: ${id} for ${headers.operation}`);
+            if (!id || !isValidAlephId(id)) {
+              logger.debug(`Record ${number} has no valid id for UPDATE. Available id: $<${id}>.`);
+              const responsePayload = {message: `Invalid payload! Record ${number} has no valid id for UPDATE. Available id: <${id}>.`};
               const recordResponseItem = createRecordResponseItem({responseStatus: httpStatus.UNPROCESSABLE_ENTITY, responsePayload, recordMetadata, id: undefined});
               addRecordResponseItem({recordResponseItem, correlationId, mongoOperator});
 

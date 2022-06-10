@@ -169,6 +169,14 @@ export function getIdFromRecord(record) {
   return undefined;
 }
 
+// Valid Aleph-Ids contain 9 numbers
+export function isValidAlephId(id) {
+  if (id.length === 9 && (/^\d+$/u).test(id)) {
+    return true;
+  }
+  return false;
+}
+
 
 export function toTwoDigits(number) {
   return number.toString().padStart(2, '0');
