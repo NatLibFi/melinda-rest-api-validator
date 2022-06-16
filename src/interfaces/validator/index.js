@@ -43,7 +43,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
 
     // create recordObject
     logger.debug(`Data is in format: ${format}, prio: ${operationSettings.prio}, noStream: ${operationSettings.noStream}`);
-    const record = operationSettings.prio || format || operationSettings.noStream ? await unserializeAndFormatRecord(data, format, formatOptions) : new MarcRecord(formatRecord(data, formatOptions));
+    const record = operationSettings.prio || format || operationSettings.noStream ? await unserializeAndFormatRecord(data, format, formatOptions) : new MarcRecord(formatRecord(data, formatOptions), {subfieldValues: false});
 
     // Add to recordMetadata data from the record
     // For CREATEs get all possible sourceIds, for UPDATEs get just the 'best' set from 003+001/001, f035az:s, SID:s
@@ -201,7 +201,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       logger.debug(`Check whether merge is needed for update`);
       logger.debug(`headers: ${JSON.stringify(headers)}, updateOperation: ${updateOperation}`);
       const updateMergeNeeded = operationSettings.merge && updateOperation !== 'updateAfterMerge';
-      const {mergedRecord: updatedRecordAfterMerge} = updateMergeNeeded ? await mergeRecordForUpdates({record: updateRecord, existingRecord, id: updateId, headers}) : {mergedRecord: updateRecord};
+      const {mergedRecord: updatedRecordAfterMerge, headers: newHeaders} = updateMergeNeeded ? await mergeRecordForUpdates({record: updateRecord, existingRecord, id: updateId, headers}) : {mergedRecord: updateRecord, headers};
 
       // We could check here whether the update/merge resulted in changes in the existing record
 
@@ -229,7 +229,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       // validationResults: {record, failed: true/false, messages: []}
       const validationResults = runValidations ? await validationService(updatedRecordAfterMerge) : {record: updatedRecordAfterMerge, failed: false};
 
-      return {result: validationResults, recordMetadata, headers};
+      return {result: validationResults, recordMetadata, headers: newHeaders};
     }
 
     logger.debug('No id in headers / merge results');
@@ -476,6 +476,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
     return true;
   }
 
+  // eslint-disable-next-line max-statements
   async function mergeRecordForUpdates({record, existingRecord, id, headers}) {
     logger.debug(`Merging record ${id} to existing record ${id}`);
     const {recordMetadata} = headers;
@@ -502,7 +503,6 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       logger.debug(`Incoming record after merge: ${mergeResult.record}`);
       // get here diff for records
       logger.debug(`Changes merge makes to existing record: ${inspect(detailedDiff(existingRecord, mergeResult.record), {colors: true, depth: 5})}`);
-
       const mergeValidationResult = {merged: mergeResult.status, mergedId: id, preference: preference.value};
 
       // Log merge-action here

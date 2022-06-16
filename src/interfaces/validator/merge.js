@@ -12,28 +12,27 @@ import {Error as MergeError} from '@natlibfi/melinda-commons';
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator:merge');
 const debugData = debug.extend('data');
 
-export default function ({base, source, baseValidators = {}, sourceValidators = {}}) {
+export default function ({base, source}) {
+  // Run first copy-reducers with Melinda-configs and then the specific MelindaReducers
   const reducers = [...MelindaCopyReducerConfigs.map(conf => Reducers.copy(conf)), ...MelindaReducers];
 
-  debug(`Run merge here`);
-  const sourceRecord = MarcRecord.clone(source, sourceValidators);
-  const baseRecord = MarcRecord.clone(base, baseValidators);
+  debugData(`Reducers: ${inspect(reducers, {colors: true, maxArrayLength: 10, depth: 8})})}`);
 
-  debugData(`Reducers: ${inspect(reducers, {colors: true, maxArrayLength: 3, depth: 4})})}`);
-  debugData(`Source: ${sourceRecord}`);
-  debugData(`Base: ${baseRecord}`);
+  // We would need to test for errors here
 
-  // test errors:
-
-  const resultRecord = merger({base: baseRecord, source: sourceRecord, reducers, baseValidators: {subfieldValues: false}, sourceValidators: {subfieldValues: false}});
-  debugData(`Merge result: ${resultRecord}`);
+  // Send records to merge as objects
+  // NOTE: currently validationOptions {"subfieldValues": false} is hardcoded in merge/mergeReducers
+  const result = merger({base: base.toObject(), source: source.toObject(), reducers});
+  //const resultRecord = merger({base: base.toObject(), source: source.toObject(), reducers, baseValidators: {subfieldValues: false}, sourceValidators: {subfieldValues: false}});
+  debug(`Merge result is: ${result.constructor.name}`);
+  debugData(`${result}`);
 
   const mergeResult = {
-    record: resultRecord,
+    record: new MarcRecord(result, {subfieldValues: false}),
     status: true
   };
 
-  if (!resultRecord) {
+  if (!result) {
     throw new MergeError(HttpStatus.UNPROCESSABLE_ENTITY, `Merge resulted in no record`);
   }
 
