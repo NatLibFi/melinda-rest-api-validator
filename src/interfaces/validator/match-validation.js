@@ -34,7 +34,7 @@ export async function matchValidationForMatchResults(record, matchResults, forma
     // format candidate to MelindaInternalFormat
     debug(`Validating match to candidateRecord ${match.candidate.id}`);
     debug(`Formatting candidateRecord to MelindaInternalFormat`);
-    const candidateRecord = new MarcRecord(formatRecord(match.candidate.record, formatOptions).toObj(), {subfieldValues: false});
+    const candidateRecord = new MarcRecord(formatRecord(match.candidate.record, formatOptions), {subfieldValues: false});
     //debug(candidateRecord);
     const matchValidationResult = matchValidation(record, candidateRecord);
     return {
@@ -75,8 +75,9 @@ export async function matchValidationForMatchResults(record, matchResults, forma
 // melinda-record-match-validation is *NOT* async
 export function matchValidation(recordA, recordB) {
   debug(`Running match-validation here:`);
+  debug(`recorA: ${recordA.constructor.name}`);
   // Send records to match-validator as plain objects to avoid problems with differing MarcRecord -versions etc.
-  const matchValidationResult = matchValidator(recordA.toObj(), recordB.toObj());
+  const matchValidationResult = matchValidator(recordA.toObject(), recordB.toObject());
   debugData(inspect(matchValidationResult));
   return matchValidationResult;
 }
