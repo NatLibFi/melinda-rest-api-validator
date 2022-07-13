@@ -128,13 +128,14 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
 
   // Should this handle f003 too? If it should, we should get valid f003 contents from a variable
   function checkAndUpdateId({record, headers}) {
+    logger.debug(`--- Check and update id ---`);
     const recordF001 = getIdFromRecord(record);
     const sequence = headers.recordMetadata.blobSequence;
     const {noStream, prio} = headers.operationSettings;
     logger.debug(`Operation: ${headers.operation}, Id from headers: <${headers.id}>, Id from record: <${recordF001}>, blobSequence: <${sequence}>, noStream: ${noStream}, prio: ${prio}`);
     if (!recordF001 || headers.id !== recordF001) {
-      logger.verbose(`We have a id in headers ${headers.id}, but the id in record is not matching ${recordF001}`);
-      const updatedRecord = updateField001ToParamId(`${sequence}`, record);
+      logger.verbose(`We have a id in headers ${headers.id}, but the f001 in record ${recordF001} is not matching. Updating the record.`);
+      const updatedRecord = updateField001ToParamId(`${headers.id}`, record);
       return updatedRecord;
     }
     return record;

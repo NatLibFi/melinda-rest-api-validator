@@ -244,7 +244,7 @@ export default async function ({
       data: processResult.data
     };
 
-    logger.silly(`app/checkAmqp: sending to queue ${inspect(toQueue, {colors: true, maxArrayLength: 3, depth: 1})}`);
+    logger.silly(`app/checkAmqp: sending to queue ${inspect(toQueue, {colors: true, maxArrayLength: 3, depth: 4})}`);
     await amqpOperator.sendToQueue(toQueue);
 
     // eslint-disable-next-line functional/no-conditional-statement
