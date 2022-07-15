@@ -1,12 +1,11 @@
 import {Json, MARCXML, AlephSequential, ISO2709} from '@natlibfi/marc-record-serializers';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
-import {Error as ApiError} from '@natlibfi/melinda-commons';
+import {Error as ApiError, toAlephId} from '@natlibfi/melinda-commons';
 import {updateField001ToParamId, getIdFromRecord, getRecordMetadata, isValidAlephId} from '../utils';
 import httpStatus from 'http-status';
 import {promisify, inspect} from 'util';
 import {MarcRecordError} from '@natlibfi/marc-record';
 import {OPERATIONS, logError, QUEUE_ITEM_STATE, createRecordResponseItem, addRecordResponseItem, mongoLogFactory} from '@natlibfi/melinda-rest-api-commons';
-
 
 export default async function ({amqpOperator, mongoOperator, splitterOptions, mongoUri}) {
   const {failBulkOnError, keepSplitterReport} = splitterOptions;
@@ -92,12 +91,12 @@ export default async function ({amqpOperator, mongoOperator, splitterOptions, mo
             const recordMetadata = getRecordMetadata({record, number, getAllSourceIds});
 
             logger.debug(`Getting id - use ${number} for CREATE, get ID from record for UPDATE`);
-            const id = headers.operation === OPERATIONS.CREATE ? number.toString() : getIdFromRecord(record);
+            const id = headers.operation === OPERATIONS.CREATE ? toAlephId(number) : getIdFromRecord(record);
 
             logger.debug(`ID: ${id} for ${headers.operation}`);
             if (!id || !isValidAlephId(id)) {
-              logger.debug(`Record ${number} has no valid id for UPDATE. Available id: $<${id}>.`);
-              const responsePayload = {message: `Invalid payload! Record ${number} has no valid id for UPDATE. Available id: <${id}>.`};
+              logger.debug(`Record ${number} has no valid id for ${headers.operation}. Available id: $<${id}>.`);
+              const responsePayload = {message: `Invalid payload! Record ${number} has no valid id for ${headers.operation}. Available id: <${id}>.`};
               const recordResponseItem = createRecordResponseItem({responseStatus: httpStatus.UNPROCESSABLE_ENTITY, responsePayload, recordMetadata, id: undefined});
               addRecordResponseItem({recordResponseItem, correlationId, mongoOperator});
 
