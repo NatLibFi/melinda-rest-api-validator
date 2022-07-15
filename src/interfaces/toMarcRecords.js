@@ -91,7 +91,8 @@ export default async function ({amqpOperator, mongoOperator, splitterOptions, mo
             const recordMetadata = getRecordMetadata({record, number, getAllSourceIds});
 
             logger.debug(`Getting id - use ${number} for CREATE, get ID from record for UPDATE`);
-            const id = headers.operation === OPERATIONS.CREATE ? toAlephId(number) : getIdFromRecord(record);
+            // Note: toAlephId faild non-strings
+            const id = headers.operation === OPERATIONS.CREATE ? toAlephId(number.toString()) : getIdFromRecord(record);
 
             logger.debug(`ID: ${id} for ${headers.operation}`);
             if (!id || !isValidAlephId(id)) {
