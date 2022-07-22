@@ -181,3 +181,4 @@ export function isValidAlephId(id) {
 export function toTwoDigits(number) {
   return number.toString().padStart(2, '0');
 }
+

@@ -38,6 +38,8 @@
 		"@natlibfi/marc-record": "7.0.0",
 		"@natlibfi/marc-record-merge": "6.0.0-beta.6",
 		"@natlibfi/marc-record-serializers": "^8.1.0",
+		"@natlibfi/marc-record-validate": "^7.0.1",
+		"@natlibfi/marc-record-validators-melinda": "^9.0.10-alpha.2",
 		"@natlibfi/melinda-backend-commons": "^2.0.5",
 		"@natlibfi/melinda-commons": "^12.0.3",
 		"@natlibfi/melinda-marc-record-merge-reducers": "1.0.0-alpha.6",

@@ -15,6 +15,7 @@ import * as matcherService from './match';
 import createMatchInterface from '@natlibfi/melinda-record-matching';
 import {validateRecordState} from './validate-record-state';
 import {detailedDiff} from 'deep-object-diff';
+import createPostValidationFixService from './post-validation-fix';
 
 //import createDebugLogger from 'debug';
 
@@ -33,6 +34,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
   const sruClient = createSruClient({url: sruUrl, recordSchema: 'marcxml', retrieveAll: false, maximumRecordsPerRequest: 1});
   logger.debug(`Creating mongoLogOperator in ${mongoUri}`);
   const mongoLogOperator = await mongoLogFactory(mongoUri);
+  const postValidationFixService = await createPostValidationFixService();
 
   return {process};
 
@@ -107,7 +109,11 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
 
       // We should check/update 001 in record to id here
       const validatedRecord = checkAndUpdateId({record: result.record, headers: resultHeaders});
-      return {headers: resultHeaders, data: validatedRecord.toObject()};
+      logger.verbose(`---- Running postValidationFixes ----`);
+      const postValidationFixResult = await postValidationFixService(validatedRecord);
+      logger.debug(inspect(postValidationFixResult));
+      const {record: fixedRecord} = postValidationFixResult;
+      return {headers: resultHeaders, data: fixedRecord.toObject()};
 
     } catch (err) {
       logger.debug(`processNormal: validation errored: ${JSON.stringify(err)}`);
