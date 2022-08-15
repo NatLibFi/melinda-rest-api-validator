@@ -3,13 +3,13 @@ import matchValidator from '@natlibfi/melinda-record-match-validator';
 import {MarcRecord} from '@natlibfi/marc-record';
 import {format} from '@natlibfi/melinda-rest-api-commons';
 import {inspect} from 'util';
-import {Error as ValidationError} from '@natlibfi/melinda-commons';
-import HttpStatus from 'http-status';
+//import {Error as ValidationError} from '@natlibfi/melinda-commons';
+//import HttpStatus from 'http-status';
 
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator:match-validation');
 const debugData = debug.extend('data');
 
-export async function matchValidationForMatchResults(record, matchResults, formatOptions, recordMetadata) {
+export async function matchValidationForMatchResults(record, matchResults, formatOptions) {
   // Format is used to format the candidaterecords (that are in the external format after being fetched from SRU to the internal format)
   const {formatRecord} = format;
 
@@ -55,10 +55,14 @@ export async function matchValidationForMatchResults(record, matchResults, forma
   // If there are no valid results error
 
   const validMatchResults = sortedValidatedMatchResults.filter(match => match.action === 'merge');
+  const invalidMatchResults = sortedValidatedMatchResults.filter(match => match.action !== 'merge');
+
   debug(`${validMatchResults.length} valid matches`);
+  debug(`${invalidMatchResults.length} invalid matches`);
 
   if (validMatchResults.length < 1) {
-    throw new ValidationError(HttpStatus.CONFLICT, {message: `MatchValidation for all ${sortedValidatedMatchResults.length} matches failed.`, ids: sortedValidatedMatchResults.map(match => match.candidate.id), recordMetadata});
+    return {matchValidationResult: {}, sortedValidatedMatchResults};
+    // throw new ValidationError(HttpStatus.CONFLICT, {message: `MatchValidation for all ${sortedValidatedMatchResults.length} matches failed.`, ids: sortedValidatedMatchResults.map(match => match.candidate.id), recordMetadata});
   }
 
   const matchValidationResult = {

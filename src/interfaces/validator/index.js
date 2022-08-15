@@ -318,19 +318,22 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       // does matchValidationResult need to include record?
       // matchValidationResult: {record, result: {candidate: {id, record}, probability, matchSequence, action, preference: {value, name}}} - possible note, matchValidationReport later
 
-      const {matchValidationResult, sortedValidatedMatchResults} = await matchValidationForMatchResults(record, matchResults, formatOptions, recordMetadata);
+      const {matchValidationResult, sortedValidatedMatchResults} = await matchValidationForMatchResults(record, matchResults, formatOptions);
       logger.silly(`MatchValidationResult: ${inspect(matchValidationResult, {colors: true, maxArrayLength: 3, depth: 3})}}`);
 
       const logMatchValidationResult = logMatchValidationAction({headers, record, sortedValidatedMatchResults});
       logger.debug(`logMatchValidationResult: ${logMatchValidationResult}`);
 
+      // Check error cases
+      if (!matchValidationResult.result) {
+        const messages = sortedValidatedMatchResults.map(match => `${match.candidate.id}: ${match.message}`);
+        throw new ValidationError(HttpStatus.CONFLICT, {message: `MatchValidation for all ${sortedValidatedMatchResults.length} matches failed. ${messages.join(`, `)}`, ids: sortedValidatedMatchResults.map(match => match.candidate.id), recordMetadata});
+        //throw new ValidationError(HttpStatus.CONFLICT, {message: `MatchValidation for all matches failed.`, recordMetadata});
+      }
+
       const firstResult = matchValidationResult.result;
       logger.silly(`Result: ${inspect(firstResult, {colors: true, maxArrayLength: 3, depth: 2})}}`);
 
-      // Check error cases
-      if (!matchValidationResult.result) {
-        throw new ValidationError(HttpStatus.CONFLICT, {message: `MatchValidation for all matches failed.`, recordMetadata});
-      }
       if (firstResult.action === false) {
         throw new ValidationError(HttpStatus.CONFLICT, {message: `MatchValidation with ${firstResult.candidate.id} failed. ${firstResult.message}`, ids: [firstResult.candidate.id], recordMetadata});
       }
@@ -444,7 +447,6 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
     logger.debug(`${inspect(matchValidationLogItem)}`);
     const result = mongoLogOperator.addLogItem(matchValidationLogItem);
     logger.debug(result);
-
 
     return true;
   }
