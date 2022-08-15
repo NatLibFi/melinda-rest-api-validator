@@ -30,7 +30,7 @@ import deepEqual from 'deep-eql';
 import {detailedDiff} from 'deep-object-diff';
 import {Error as ValidationError} from '@natlibfi/melinda-commons';
 //import {createLogger} from '@natlibfi/melinda-backend-commons';
-//import {inspect} from 'util';
+import {inspect} from 'util';
 import HttpStatus from 'http-status';
 import createDebugLogger from 'debug';
 import {toTwoDigits} from '../../utils';
@@ -48,7 +48,9 @@ export function validateRecordState({incomingRecord, existingRecord, existingId,
 
   // MarcRecord.get returns empty array if there are no matching fields in the record
   // unique CATs, because in case of a merged incoming record merge uniques CATs in the incoming record, so that duplicate CATs in existing record cause unnecessary CONFLICTs
+  debug(`----- Build ic`);
   const incomingModificationHistory = uniqueModificationHistory(incomingRecord.get(/^CAT$/u).map(normalizeEmptySubfields));
+  debug(`----- Build db`);
   const existingModificationHistory = uniqueModificationHistory(existingRecord.get(/^CAT$/u).map(normalizeEmptySubfields));
 
   debug(`Incoming CATs (${incomingModificationHistory.length}), existing CATs (${existingModificationHistory.length})`);
@@ -65,6 +67,7 @@ export function validateRecordState({incomingRecord, existingRecord, existingId,
   debug(`validateRecordState: OK`);
   return true;
 
+  // eslint-disable-next-line max-statements
   function uniqueModificationHistory(modificationHistory) {
     const uniqueModificationHistory = [...new Set(modificationHistory.map(JSON.stringify))].map(JSON.parse);
 
@@ -74,17 +77,18 @@ export function validateRecordState({incomingRecord, existingRecord, existingId,
     }
     debug(`***********`);
 
-    //debugData(`All (${modificationHistory.length}): ${inspect(modificationHistory, {depth: 5})}`);
-    //debugData(`Unique (${uniqueModificationHistory.length}): ${inspect(uniqueModificationHistory, {depth: 5})}`);
+    debugData(`All (${modificationHistory.length}): ${inspect(modificationHistory, {depth: 5})}`);
+    debugData(`Unique (${uniqueModificationHistory.length}): ${inspect(uniqueModificationHistory, {depth: 5})}`);
 
     // We're diffing uniqued CATs to non-uniqued CATS so removed CATs are labeled as 'added' by diff
     // We get the actual removed fields from diff by doing it this way
     const removed = detailedDiff(uniqueModificationHistory, modificationHistory).added;
     debugData(`Removed CATS: ${JSON.stringify(removed)}`);
-    //debugData(inspect(removed, {depth: 6}));
+    debugData(inspect(removed, {depth: 6}));
 
     if (removed) {
       debug(`Uniquing CAT-fields removed duplicates (${Object.keys(removed).length}).`);
+      debugData(`${inspect(Object.values(removed))}`);
       const removedTimeStamps = Object.values(removed).map(({subfields}) => subfields.filter(subfield => ['c', 'h'].includes(subfield.code)).map(({value}) => value).join(''));
       debugData(removedTimeStamps);
 
