@@ -413,10 +413,9 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
     const matchLogItem = {
       logItemType: 'MATCH_LOG',
       correlationId: headers.correlationId,
-      blobSequenceStart: headers.recordMetadata.blobSequence,
-      blobSequenceEnd: headers.recordMetadata.blobSequence,
+      blobSequence: headers.recordMetadata.blobSequence,
+      ...headers.recordMetadata,
       incomingRecord: record,
-      recordMetadata: headers.recordMetadata,
       matchResult
     };
 
@@ -436,10 +435,9 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
     const matchValidationLogItem = {
       logItemType: 'MATCH_VALIDATION_LOG',
       correlationId: headers.correlationId,
-      blobSequenceStart: headers.recordMetadata.blobSequence,
-      blobSequenceEnd: headers.recordMetadata.blobSequence,
+      blobSequence: headers.recordMetadata.blobSequence,
+      ...headers.recordMetadata,
       incomingRecord: record,
-      recordMetadata: headers.recordMetadata,
       matchValidationResult: sortedValidatedMatchResults
     };
 
@@ -461,10 +459,8 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
     const mergeLogItem = {
       logItemType: 'MERGE_LOG',
       correlationId: headers.correlationId,
-      blobSequenceStart: headers.recordMetadata.blobSequence,
-      blobSequenceEnd: headers.recordMetadata.blobSequence,
-      operation: headers.operation,
-      recordMetadata: headers.recordMetadata,
+      blobSequence: headers.recordMetadata.blobSequence,
+      ...headers.recordMetadata,
       databaseId: id,
       preference: {
         name: preference.name,
