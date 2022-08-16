@@ -18,7 +18,6 @@ import {detailedDiff} from 'deep-object-diff';
 import createPostValidationFixService from './post-validation-fix';
 
 //import createDebugLogger from 'debug';
-
 //const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator');
 //const debugData = debug.extend('data');
 
@@ -273,13 +272,21 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
 
       logger.debug(JSON.stringify(matches.map(({candidate: {id}, probability}) => ({id, probability}))));
 
+      /* We do not need to log MatchAction - all information is in matchValidationLog
       const matchLogResult = logMatchAction({matchResult, headers, record});
       logger.debug(`matchLogresult: ${matchLogResult}`);
+      */
 
       const newHeaders = updateHeadersAfterMatch({matches, headers});
 
       // eslint-disable-next-line functional/no-conditional-statement
       if (matches.length > 0 && !operationSettings.merge) {
+        // we log the matches here before erroring
+        // Should we also validate the matches before erroring?
+        const matchResultsForLog = matches.map((match, index) => ({action: false, preference: false, message: 'Validation not run', matchSequence: index, ...match}));
+
+        const logMatchResult = logMatchAction({headers, record, matchResultsForLog});
+        logger.debug(`logMatchResult: ${logMatchResult}`);
         throw new ValidationError(HttpStatus.CONFLICT, {message: 'Duplicates in database', ids: matches.map(({candidate: {id}}) => id), recordMetadata});
       }
 
@@ -316,13 +323,13 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       // -> error if none of the matches are valid
 
       // does matchValidationResult need to include record?
-      // matchValidationResult: {record, result: {candidate: {id, record}, probability, matchSequence, action, preference: {value, name}}} - possible note, matchValidationReport later
+      // matchValidationResult: {record, result: {candidate: {id, record}, probability, matchSequence, action, preference: {value, name}}}
 
       const {matchValidationResult, sortedValidatedMatchResults} = await matchValidationForMatchResults(record, matchResults, formatOptions);
       logger.silly(`MatchValidationResult: ${inspect(matchValidationResult, {colors: true, maxArrayLength: 3, depth: 3})}}`);
 
-      const logMatchValidationResult = logMatchValidationAction({headers, record, sortedValidatedMatchResults});
-      logger.debug(`logMatchValidationResult: ${logMatchValidationResult}`);
+      const logMatchResult = logMatchAction({headers, record, matchResultsForLog: sortedValidatedMatchResults});
+      logger.debug(`logMatchResult: ${logMatchResult}`);
 
       // Check error cases
       if (!matchValidationResult.result) {
@@ -405,13 +412,12 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
     }
   }
 
-
-  // Do we need this or is all included in the matchValidationResult?
-  function logMatchAction({headers, record, matchResult}) {
+  function logMatchAction({headers, record, matchResultsForLog}) {
+    logger.debug(`I am logging the matchAction to mongo here`);
     logger.debug(inspect(headers));
-    logger.debug(`I should be logging the matchAction to mongo here`);
 
-    // We need correlationId and timestamp? - mongoLogOperator could create that?
+    // matchResultsForLog is an array of matchResult objects:
+    // {action, preference: {name, value}, message, candidate: {id, record}, probability, matchSequence}
 
     const matchLogItem = {
       logItemType: 'MATCH_LOG',
@@ -419,33 +425,11 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       blobSequence: headers.recordMetadata.blobSequence,
       ...headers.recordMetadata,
       incomingRecord: record,
-      matchResult
+      matchResult: matchResultsForLog
     };
 
-    logger.debug(`${inspect(matchLogItem, {depth: 6})}`);
+    logger.debug(`${inspect(matchLogItem)}`);
     const result = mongoLogOperator.addLogItem(matchLogItem);
-    logger.debug(result);
-
-    return true;
-  }
-
-  function logMatchValidationAction({headers, record, sortedValidatedMatchResults}) {
-    logger.debug(`I should be logging the matchValidationAction to mongo here`);
-    logger.debug(inspect(headers));
-
-    // We need correlationId and timestamp? - mongoLogOperator could create that?
-
-    const matchValidationLogItem = {
-      logItemType: 'MATCH_VALIDATION_LOG',
-      correlationId: headers.correlationId,
-      blobSequence: headers.recordMetadata.blobSequence,
-      ...headers.recordMetadata,
-      incomingRecord: record,
-      matchValidationResult: sortedValidatedMatchResults
-    };
-
-    logger.debug(`${inspect(matchValidationLogItem)}`);
-    const result = mongoLogOperator.addLogItem(matchValidationLogItem);
     logger.debug(result);
 
     return true;
