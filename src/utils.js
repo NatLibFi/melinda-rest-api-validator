@@ -1,6 +1,7 @@
 import {toAlephId, getRecordTitle, getRecordStandardIdentifiers} from '@natlibfi/melinda-commons';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import createDebugLogger from 'debug';
+import {MarcRecord} from '@natlibfi/marc-record';
 
 const logger = createLogger();
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:utils');
@@ -182,3 +183,29 @@ export function toTwoDigits(number) {
   return number.toString().padStart(2, '0');
 }
 
+export function normalizeEmptySubfields(field) {
+  return {
+    ...field,
+    subfields: field.subfields.map(normalizeEmptySubfield)
+  };
+
+  function normalizeEmptySubfield(subfield) {
+    if (subfield.value && subfield.value !== undefined && subfield.value !== 'undefined') {
+      //logger.silly('normal subfield');
+      return subfield;
+    }
+    //logger.silly('normalized subfield');
+    return {code: subfield.code, value: ''};
+  }
+
+}
+
+export function normalizeEmptySubfieldsRecord(record) {
+  const controlFields = record.getControlfields();
+  const dataFields = record.getDatafields().map(normalizeEmptySubfields);
+
+  const fields = controlFields.concat(dataFields);
+
+  return new MarcRecord({leader: record.leader, fields});
+
+}

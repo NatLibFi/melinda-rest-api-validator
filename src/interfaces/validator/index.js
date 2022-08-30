@@ -14,6 +14,7 @@ import merger from './merge';
 import * as matcherService from './match';
 import createMatchInterface from '@natlibfi/melinda-record-matching';
 import {validateRecordState} from './validate-record-state';
+import {validateChanges} from './validate-changes';
 import {detailedDiff} from 'deep-object-diff';
 import createPostValidationFixService from './post-validation-fix';
 
@@ -234,6 +235,22 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
 
       // validationResults: {record, failed: true/false, messages: []}
       const validationResults = runValidations ? await validationService(updatedRecordAfterMerge) : {record: updatedRecordAfterMerge, failed: false};
+
+      // Validator should check here (if needed), if the update would actually change the database record
+      logger.verbose(`Checking if the update actually changes the existing record. (skipNoChangeUpdates: ${operationSettings.skipNoChangeUpdates})`);
+      // validate: operationSettings: skipNoChangeUpdates
+      const {changeValidationResult} = validateChanges({incomingRecord: updatedRecordAfterMerge, existingRecord});
+      logger.debug(changeValidationResult);
+      // eslint-disable-next-line functional/no-conditional-statement
+      if (changeValidationResult === false) {
+        const newNote = `No changes while trying to update existing record ${updateId}.`;
+        const updatedHeaders = {
+          operation: 'NO_CHANGES',
+          notes: newHeaders.notes ? newHeaders.notes.concat(`${newNote}`) : [newNote]
+        };
+        const finalHeaders = {...headers, ...updatedHeaders};
+        return {result: validationResults, recordMetadata, headers: finalHeaders};
+      }
 
       return {result: validationResults, recordMetadata, headers: newHeaders};
     }

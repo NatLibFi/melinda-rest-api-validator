@@ -33,7 +33,7 @@ import {Error as ValidationError} from '@natlibfi/melinda-commons';
 import {inspect} from 'util';
 import HttpStatus from 'http-status';
 import createDebugLogger from 'debug';
-import {toTwoDigits} from '../../utils';
+import {toTwoDigits, normalizeEmptySubfields} from '../../utils';
 
 // Checks that the modification history is identical
 export function validateRecordState({incomingRecord, existingRecord, existingId, recordMetadata, validate}) {
@@ -111,22 +111,4 @@ export function validateRecordState({incomingRecord, existingRecord, existingId,
     // We should never get here
     //return uniqueModificationHistory;
   }
-
-  function normalizeEmptySubfields(field) {
-    return {
-      ...field,
-      subfields: field.subfields.map(normalizeEmptySubfield)
-    };
-
-    function normalizeEmptySubfield(subfield) {
-      if (subfield.value && subfield.value !== undefined && subfield.value !== 'undefined') {
-        //logger.silly('normal subfield');
-        return subfield;
-      }
-      //logger.silly('normalized subfield');
-      return {code: subfield.code, value: ''};
-    }
-
-  }
-
 }
