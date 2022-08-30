@@ -239,7 +239,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       // Validator should check here (if needed), if the update would actually change the database record
       logger.verbose(`Checking if the update actually changes the existing record. (skipNoChangeUpdates: ${operationSettings.skipNoChangeUpdates})`);
       // validate: operationSettings: skipNoChangeUpdates
-      const {changeValidationResult} = validateChanges({incomingRecord: updatedRecordAfterMerge, existingRecord});
+      const {changeValidationResult} = validateChanges({incomingRecord: updatedRecordAfterMerge, existingRecord, validate: operationSettings.skipNoChangeUpdates});
       logger.debug(changeValidationResult);
       // eslint-disable-next-line functional/no-conditional-statement
       if (changeValidationResult === false) {
