@@ -290,11 +290,6 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
 
       logger.debug(JSON.stringify(matches.map(({candidate: {id}, probability}) => ({id, probability}))));
 
-      /* We do not need to log MatchAction - all information is in matchValidationLog
-      const matchLogResult = logMatchAction({matchResult, headers, record});
-      logger.debug(`matchLogresult: ${matchLogResult}`);
-      */
-
       const newHeaders = updateHeadersAfterMatch({matches, headers});
 
       // eslint-disable-next-line functional/no-conditional-statement
@@ -492,7 +487,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
     // preference: 'B' : databaseRecord/exisingRecord
     const preference = {value: 'B', name: 'B is the default winner for UPDATE-merge'};
 
-    // Currently we always prefer the databaseRecord
+    // Currently we always prefer the databaseRecord for update-merges
     try {
       const mergeRequest = {
         source: record,
