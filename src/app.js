@@ -196,7 +196,7 @@ export default async function ({
 
   async function processValidated({headers, correlationId, processResult, mongoOperator, prio}) {
 
-    if (processResult.headers.operation === 'NO_CHANGES') {
+    if (processResult.headers.operation === 'SKIPPED') {
       return setSkipResult({correlationId, processResult, mongoOperator, prio});
     }
 
@@ -268,7 +268,7 @@ export default async function ({
 
   async function setSkipResult({correlationId, processResult, mongoOperator, prio}) {
 
-    const status = 'NO_CHANGES';
+    const status = 'SKIPPED';
     const {id} = processResult.headers;
     const {noop} = processResult.headers.operationSettings;
 

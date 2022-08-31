@@ -244,9 +244,9 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       logger.debug(changeValidationResult);
 
       if (changeValidationResult === false) {
-        const newNote = `No changes while trying to update existing record ${updateId}.`;
+        const newNote = `No changes deteted while trying to update existing record ${updateId}, skipped.`;
         const updatedHeaders = {
-          operation: 'NO_CHANGES',
+          operation: 'SKIPPED',
           notes: newHeaders.notes ? newHeaders.notes.concat(`${newNote}`) : [newNote]
         };
         const finalHeaders = {...headers, ...updatedHeaders};
