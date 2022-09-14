@@ -196,6 +196,10 @@ export default async function ({
 
   async function processValidated({headers, correlationId, processResult, mongoOperator, prio}) {
 
+    if (processResult.headers.operation === 'SKIPPED') {
+      return setSkipResult({correlationId, processResult, mongoOperator, prio});
+    }
+
     // check if validation changed operation
     await setOperationsInQueueItem({correlationId, mongoOperator, prio, addOperation: processResult.headers.operation, removeOperation: headers.operation});
 
@@ -229,6 +233,7 @@ export default async function ({
 
   async function setNormalResult({correlationId, processResult, mongoOperator, prio}) {
     const newOperation = processResult.headers.operation;
+
     const operationQueue = `${newOperation}.${correlationId}`;
 
     // eslint-disable-next-line functional/no-conditional-statement
@@ -236,7 +241,7 @@ export default async function ({
       await amqpOperator.checkQueue({queue: operationQueue, style: 'messages', purge: true});
     }
 
-    // Normal (non-noop) data to queue operation.correlationId
+    // Normal (non-noop and not NO_CHANGES) data to queue operation.correlationId
     const toQueue = {
       correlationId,
       queue: operationQueue,
@@ -260,6 +265,31 @@ export default async function ({
 
     return initCheck();
   }
+
+  async function setSkipResult({correlationId, processResult, mongoOperator, prio}) {
+
+    const status = 'SKIPPED';
+    const {id} = processResult.headers;
+    const {noop} = processResult.headers.operationSettings;
+
+    logger.debug(inspect(processResult));
+
+    const {notes} = processResult.headers;
+    const notesString = notes && Array.isArray(notes) && notes.length > 0 ? `${notes.join(' - ')}` : '';
+
+    const responsePayload = noop === true ? {message: `${notesString} - Noop.`} : {message: `${notesString}`};
+
+    const recordResponseItem = createRecordResponseItem({responseStatus: status, responsePayload, recordMetadata: processResult.headers.recordMetadata, id});
+    await addRecordResponseItem({recordResponseItem, correlationId, mongoOperator});
+
+    if (prio) {
+      await mongoOperator.checkAndSetState({correlationId, state: QUEUE_ITEM_STATE.DONE});
+      return initCheck();
+    }
+
+    return initCheck();
+  }
+
 
   async function setNoopResult({correlationId, processResult, mongoOperator, prio}) {
 

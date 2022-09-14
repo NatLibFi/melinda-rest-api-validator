@@ -14,6 +14,7 @@ import merger from './merge';
 import * as matcherService from './match';
 import createMatchInterface from '@natlibfi/melinda-record-matching';
 import {validateRecordState} from './validate-record-state';
+import {validateChanges} from './validate-changes';
 import {detailedDiff} from 'deep-object-diff';
 import createPostValidationFixService from './post-validation-fix';
 
@@ -235,6 +236,23 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       // validationResults: {record, failed: true/false, messages: []}
       const validationResults = runValidations ? await validationService(updatedRecordAfterMerge) : {record: updatedRecordAfterMerge, failed: false};
 
+
+      // Validator checks here (if needed), if the update would actually change the database record
+      logger.verbose(`Checking if the update actually changes the existing record. (skipNoChangeUpdates: ${operationSettings.skipNoChangeUpdates})`);
+
+      const {changeValidationResult} = validateChanges({incomingRecord: updatedRecordAfterMerge, existingRecord, validate: operationSettings.skipNoChangeUpdates});
+      logger.debug(changeValidationResult);
+
+      if (changeValidationResult === false) {
+        const newNote = `No changes deteted while trying to update existing record ${updateId}, skipped.`;
+        const updatedHeaders = {
+          operation: 'SKIPPED',
+          notes: newHeaders.notes ? newHeaders.notes.concat(`${newNote}`) : [newNote]
+        };
+        const finalHeaders = {...headers, ...updatedHeaders};
+        return {result: validationResults, recordMetadata, headers: finalHeaders};
+      }
+
       return {result: validationResults, recordMetadata, headers: newHeaders};
     }
 
@@ -271,11 +289,6 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       const {matches} = matchResult;
 
       logger.debug(JSON.stringify(matches.map(({candidate: {id}, probability}) => ({id, probability}))));
-
-      /* We do not need to log MatchAction - all information is in matchValidationLog
-      const matchLogResult = logMatchAction({matchResult, headers, record});
-      logger.debug(`matchLogresult: ${matchLogResult}`);
-      */
 
       const newHeaders = updateHeadersAfterMatch({matches, headers});
 
@@ -474,7 +487,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
     // preference: 'B' : databaseRecord/exisingRecord
     const preference = {value: 'B', name: 'B is the default winner for UPDATE-merge'};
 
-    // Currently we always prefer the databaseRecord
+    // Currently we always prefer the databaseRecord for update-merges
     try {
       const mergeRequest = {
         source: record,

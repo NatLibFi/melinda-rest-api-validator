@@ -1,0 +1,6 @@
+{
+    "description": "It should skip the validation if validate param is false",
+    "expectedToThrow": false,
+    "skipValidation": true,
+    "enabled": true
+  }
