@@ -9,7 +9,7 @@ import httpStatus from 'http-status';
 const setTimeoutPromise = promisify(setTimeout);
 
 export default async function ({
-  pollRequest, pollWaitTime, amqpUrl, mongoUri, validatorOptions, splitterOptions
+  pollRequest, pollWaitTime, amqpUrl, mongoUri, validatorOptions, splitterOptions, recordType
 }) {
   const logger = createLogger();
   const collection = pollRequest ? 'prio' : 'bulk';
@@ -19,7 +19,7 @@ export default async function ({
   const validator = await validatorFactory({...validatorOptions, mongoUri});
   const toMarcRecords = await toMarcRecordFactory({amqpOperator, mongoOperator, splitterOptions, mongoUri});
 
-  logger.info(`Started Melinda-rest-api-validator: ${pollRequest ? 'PRIORITY' : 'BULK'}`);
+  logger.info(`Started Melinda-rest-api-validator: ${pollRequest ? 'PRIORITY' : 'BULK'} for ${recordType} records`);
 
   const server = await initCheck();
 

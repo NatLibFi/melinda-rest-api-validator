@@ -22,7 +22,7 @@ import createPostValidationFixService from './post-validation-fix';
 //const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator');
 //const debugData = debug.extend('data');
 
-export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUri}) {
+export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUri, recordType}) {
   const logger = createLogger();
   // format: format record to Melinda/Aleph internal format ($w(FI-MELINDA) -> $w(FIN01) etc.)
   const {formatRecord} = format;
@@ -31,6 +31,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
   const ConversionService = conversions();
   // should we have here matcherService? commons mongo/amqp
   const matchers = matchOptionsList.map(matchOptions => createMatchInterface(matchOptions));
+  logger.debug(`We created ${matchers.length} matchers`);
   const sruClient = createSruClient({url: sruUrl, recordSchema: 'marcxml', retrieveAll: false, maximumRecordsPerRequest: 1});
   logger.debug(`Creating mongoLogOperator in ${mongoUri}`);
   const mongoLogOperator = await mongoLogFactory(mongoUri);
@@ -42,6 +43,10 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
   async function process(headers, data) {
     const {format, operationSettings, recordMetadata, operation, id} = headers;
     logger.debug(`process headers ${JSON.stringify(headers)}`);
+
+    if (recordType !== 'bib' && (operationSettings.merge || operationSettings.unique)) {
+      throw new ValidationError(HttpStatus.BAD_REQUEST, {message: `merge=1 and unique=1 are not yet usable with non-bib records. <${recordType}>`, recordMetadata});
+    }
 
     // create recordObject
     logger.debug(`Data is in format: ${format}, prio: ${operationSettings.prio}, noStream: ${operationSettings.noStream}`);
@@ -281,6 +286,10 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
     if (operationSettings.unique || operationSettings.merge) {
       logger.verbose('Attempting to find matching records in the SRU');
 
+      if (matchers.length < 0 || matchers.length !== matchOptionsList.length) {
+        throw new ValidationError(HttpStatus.INTERNAL_SERVER_ERROR, {message: `There's no matcher defined, or no matchOptions for all matchers`, recordMetadata});
+      }
+
       logger.debug(`There are ${matchers.length} matchers with matchOptions: ${JSON.stringify(matchOptionsList)}`);
       // This should use different matchOptions for merge and non-merge cases
       // Note: incoming record is formatted ($w(FIN01)), existing records from SRU are not ($w(FI-MELINDA))
@@ -389,10 +398,12 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       // Prefer database record (B) unless we got an explicit preference for incoming record (A) from matchValidation.result
       const mergeRequest = preference.value && preference.value === 'A' ? {
         source: candidate.record,
-        base: record
+        base: record,
+        recordType
       } : {
         source: record,
-        base: candidate.record
+        base: candidate.record,
+        recordType
       };
 
       //logger.debug(inspect(mergeRequest));
@@ -420,7 +431,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       // -> if all matches error merging semantically?
 
       logError(err);
-      const errorMessage = err.message;
+      const errorMessage = err.message || err.payload;
       throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: `Merge errored: ${errorMessage}`, recordMetadata});
     }
   }

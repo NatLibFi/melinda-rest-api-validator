@@ -12,9 +12,15 @@ import {Error as MergeError} from '@natlibfi/melinda-commons';
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator:merge');
 const debugData = debug.extend('data');
 
-export default function ({base, source}) {
+export default function ({base, source, recordType}) {
   // Run first copy-reducers with Melinda-configs and then the specific MelindaReducers
-  const reducers = [...MelindaCopyReducerConfigs.map(conf => Reducers.copy(conf)), ...MelindaReducers];
+
+  const reducers = recordType === 'bib' ? [...MelindaCopyReducerConfigs.map(conf => Reducers.copy(conf)), ...MelindaReducers] : undefined;
+
+  if (!reducers) {
+    debug(`No reducers!`);
+    throw new MergeError(HttpStatus.INTERNAL_SERVER_ERROR, `No merge-reducers specified for ${recordType} records!`);
+  }
 
   debugData(`Reducers: ${inspect(reducers, {colors: true, maxArrayLength: 10, depth: 8})})}`);
 
