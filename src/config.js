@@ -18,7 +18,7 @@ export const amqpUrl = readEnvironmentVariable('AMQP_URL', {defaultValue: 'amqp:
 // Mongo variables to bulk
 export const mongoUri = readEnvironmentVariable('MONGO_URI', {defaultValue: 'mongodb://127.0.0.1:27017/db'});
 
-const recordType = readEnvironmentVariable('RECORD_TYPE');
+export const recordType = readEnvironmentVariable('RECORD_TYPE');
 
 export const splitterOptions = {
   // failBulkError: fail processing whole bulk of records if there's error on serializing a record
@@ -30,13 +30,20 @@ export const splitterOptions = {
 const validatorMatchPackages = readEnvironmentVariable('VALIDATOR_MATCH_PACKAGES', {defaultValue: 'IDS,CONTENT'}).split(',');
 
 export const validatorOptions = {
+  recordType,
   formatOptions: generateFormatOptions(),
   sruUrl: readEnvironmentVariable('SRU_URL'),
   matchOptionsList: generateMatchOptionsList()
 };
 
 function generateMatchOptionsList() {
-  return validatorMatchPackages.map(matchPackage => generateMatchOptions(matchPackage));
+  if (recordType === 'bib') {
+    return validatorMatchPackages.map(matchPackage => generateMatchOptions(matchPackage));
+  }
+  if (recordType === 'autname') {
+    return [];
+  }
+  throw new Error(`Unsupported record type ${recordType}`);
 }
 
 function generateMatchOptions(validatorMatchPackage) {
@@ -101,7 +108,11 @@ function generateFormatOptions() {
     return format.BIB_FORMAT_SETTINGS;
   }
 
-  throw new Error('Unsupported record type');
+  if (recordType === 'autname') {
+    return undefined;
+  }
+
+  throw new Error(`Unsupported record type ${recordType}`);
 }
 
 function generateStrategy(validatorMatchPackage) {
@@ -129,7 +140,12 @@ function generateStrategy(validatorMatchPackage) {
     throw new Error('Unsupported match validation package');
   }
 
-  throw new Error('Unsupported record type');
+  if (recordType === 'autname') {
+    return undefined;
+  }
+
+  throw new Error(`Unsupported record type ${recordType}`);
+
 }
 
 
@@ -152,5 +168,9 @@ function generateSearchSpec(validatorMatchPackage) {
     throw new Error('Unsupported match validation package');
   }
 
-  throw new Error('Unsupported record type');
+  if (recordType === 'autname') {
+    return undefined;
+  }
+
+  throw new Error(`Unsupported record type ${recordType}`);
 }
