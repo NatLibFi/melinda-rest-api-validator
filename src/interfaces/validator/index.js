@@ -502,7 +502,8 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
     try {
       const mergeRequest = {
         source: record,
-        base: existingRecord
+        base: existingRecord,
+        recordType
       };
 
       // mergeResult.record: merged record that can be used to update the database record
