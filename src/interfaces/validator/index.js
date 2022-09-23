@@ -15,7 +15,7 @@ import * as matcherService from './match';
 import createMatchInterface from '@natlibfi/melinda-record-matching';
 import {validateRecordState} from './validate-record-state';
 import {validateChanges} from './validate-changes';
-import {detailedDiff} from 'deep-object-diff';
+//import {detailedDiff} from 'deep-object-diff';
 import createPostValidationFixService from './post-validation-fix';
 import {LOG_ITEM_TYPE} from '@natlibfi/melinda-rest-api-commons/dist/constants';
 
@@ -191,7 +191,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
 
     const {recordMetadata, operationSettings, cataloger} = headers;
 
-    // Currently force all validations for prio and batchBulk
+    // Currently also melinda-api-http forces all validations (validate=true) for prio and batchBulk
     const runValidations = operationSettings.validate || true;
 
     if (updateId) {
@@ -507,12 +507,6 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
 
       const mergeResult = await merger(mergeRequest);
       logger.debug(`mergeResult: ${JSON.stringify(mergeResult)}`);
-
-      logger.debug(`We merged UPDATE`);
-      logger.debug(`Original incoming record: ${record}`);
-      logger.debug(`Incoming record after merge: ${mergeResult.record}`);
-      // get here diff for records
-      logger.debug(`Changes merge makes to existing record: ${inspect(detailedDiff(existingRecord, mergeResult.record), {colors: true, depth: 5})}`);
       const mergeValidationResult = {merged: mergeResult.status, mergedId: id, preference: preference.value};
 
       // Log merge-action here

@@ -60,14 +60,14 @@ export function validateChanges({incomingRecord, existingRecord, validate = true
   if (deepEqual(normIncomingRecord, normExistingRecord) === true) { // eslint-disable-line functional/no-conditional-statement
 
     debug(`validateChanges: failure - there are no changes between incomingRecord and existingRecord`);
-    debugData(`Differences in records: ${JSON.stringify(detailedDiff(normExistingRecord, normIncomingRecord), {colors: true, depth: 4})}`);
+    debugData(`Differences in records (detailed): ${JSON.stringify(detailedDiff(normExistingRecord, normIncomingRecord), {colors: true, depth: 4})}`);
     debugData(`Incoming record: ${JSON.stringify(incomingRecord)}`);
     debugData(`Existing record: ${JSON.stringify(existingRecord)}`);
     // should we error here or return a result?
     return {changeValidationResult: false};
   }
   debug(`validateChanges: OK - there are changes between incomingRecord and existingRecord`);
-  debugData(`Differences in records: ${JSON.stringify(detailedDiff(normExistingRecord, normIncomingRecord), {colors: true, depth: 4})}`);
+  debugData(`Differences in records (detailed): ${JSON.stringify(detailedDiff(normExistingRecord, normIncomingRecord), {colors: true, depth: 4})}`);
   debugData(`Incoming record: ${JSON.stringify(incomingRecord)}`);
   debugData(`Existing record: ${JSON.stringify(existingRecord)}`);
 
