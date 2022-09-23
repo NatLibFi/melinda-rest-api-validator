@@ -246,8 +246,10 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       // Validator checks here (if needed), if the update would actually change the database record
       logger.verbose(`Checking if the update actually changes the existing record. (skipNoChangeUpdates: ${operationSettings.skipNoChangeUpdates})`);
 
-      const {changeValidationResult} = validateChanges({incomingRecord: updatedRecordAfterMerge, existingRecord, validate: operationSettings.skipNoChangeUpdates});
-      logger.debug(`ChangeValidationResult: ${JSON.stringify(changeValidationResult)}`);
+      const formattedExistingRecord = new MarcRecord(formatRecord(existingRecord, formatOptions), {subfieldValues: false});
+      const {changeValidationResult} = validateChanges({incomingRecord: updatedRecordAfterMerge, existingRecord: formattedExistingRecord, validate: operationSettings.skipNoChangeUpdates});
+
+      logger.debug(changeValidationResult === 'skipped' ? `-- ChangeValidation not needed` : `-- ChangeValidationResult: ${JSON.stringify(changeValidationResult)}`);
 
       if (changeValidationResult === false) {
         const newNote = `No changes detected while trying to update existing record ${updateId}, update skipped.`;
