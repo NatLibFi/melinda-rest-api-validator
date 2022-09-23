@@ -199,7 +199,8 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
 
       logger.verbose(`Reading record ${updateId} from SRU for ${headers.correlationId}`);
       const existingRecord = await getRecord(updateId);
-      logger.silly(`Record from SRU: ${JSON.stringify(existingRecord)}`);
+      const formattedExistingRecord = new MarcRecord(formatRecord(existingRecord, formatOptions), {subfieldValues: false});
+      logger.silly(`Record from SRU: ${JSON.stringify(formattedExistingRecord)}`);
 
       if (!existingRecord) {
         logger.debug(`Record ${updateId} was not found from SRU.`);
@@ -214,7 +215,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       logger.debug(`Check whether merge is needed for update`);
       logger.debug(`headers: ${JSON.stringify(headers)}, updateOperation: ${updateOperation}`);
       const updateMergeNeeded = operationSettings.merge && updateOperation !== 'updateAfterMerge';
-      const {mergedRecord: updatedRecordAfterMerge, headers: newHeaders} = updateMergeNeeded ? await mergeRecordForUpdates({record: updateRecord, existingRecord, id: updateId, headers}) : {mergedRecord: updateRecord, headers};
+      const {mergedRecord: updatedRecordAfterMerge, headers: newHeaders} = updateMergeNeeded ? await mergeRecordForUpdates({record: updateRecord, existingRecord: formattedExistingRecord, id: updateId, headers}) : {mergedRecord: updateRecord, headers};
 
       // We could check here whether the update/merge resulted in changes in the existing record
 
@@ -229,7 +230,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       }
 
       logger.verbose('Checking CAT field history');
-      validateRecordState({incomingRecord: updatedRecordAfterMerge, existingRecord, existingId: updateId, recordMetadata, runValidations});
+      validateRecordState({incomingRecord: updatedRecordAfterMerge, existingRecord, existingId: updateId, recordMetadata, validate: runValidations});
 
       // Note validationService = validation.js from melinda-rest-api-commons
       // which uses marc-record-validate
@@ -246,8 +247,8 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       // Validator checks here (if needed), if the update would actually change the database record
       logger.verbose(`Checking if the update actually changes the existing record. (skipNoChangeUpdates: ${operationSettings.skipNoChangeUpdates})`);
 
-      const formattedExistingRecord = new MarcRecord(formatRecord(existingRecord, formatOptions), {subfieldValues: false});
-      const {changeValidationResult} = validateChanges({incomingRecord: updatedRecordAfterMerge, existingRecord: formattedExistingRecord, validate: operationSettings.skipNoChangeUpdates});
+      // Note: the existingRecord needs to be formatted by same rules as incoming record otherwise differences in the standard format and melindaInternal Format fail the check
+      const {changeValidationResult} = validateChanges({incomingRecord: updatedRecordAfterMerge, existingRecord: formattedExistingRecord, validate: operationSettings.skipNoChangeUpdates && runValidations});
 
       logger.debug(changeValidationResult === 'skipped' ? `-- ChangeValidation not needed` : `-- ChangeValidationResult: ${JSON.stringify(changeValidationResult)}`);
 
@@ -395,13 +396,14 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       logger.verbose(`Preference for merge: Using '${preference.value}' as preferred/base record - '${preference.name}'. (A: incoming record, B: database record)`);
 
       // Prefer database record (B) unless we got an explicit preference for incoming record (A) from matchValidation.result
+      const formattedCandidateRecord = new MarcRecord(formatRecord(candidate.record, formatOptions), {subfieldValues: false});
       const mergeRequest = preference.value && preference.value === 'A' ? {
-        source: candidate.record,
+        source: formattedCandidateRecord,
         base: record,
         recordType
       } : {
         source: record,
-        base: candidate.record,
+        base: formattedCandidateRecord,
         recordType
       };
 

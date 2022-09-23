@@ -41,6 +41,15 @@ export function validateChanges({incomingRecord, existingRecord, validate = true
     return {changeValidationResult: 'skipped'};
   }
 
+  // Optimize the check by first counting the fields
+  if (incomingRecord.fields.length !== existingRecord.fields.length) {
+    debug(`validateChanges: OK - there are changes between incomingRecord and existingRecord`);
+    debugData(`IncomingRecord field count: ${incomingRecord.fields.length}`);
+    debugData(`ExistingRecord field count: ${existingRecord.fields.length}`);
+    return {changeValidationResult: true};
+  }
+
+
   // normalizeEmptySubfieldsRecord is an utility function which normalizes all all cases of empty subfield value {code: x, value: ""}, {code: x}, {code: x, value: undefined}  to {value: ""}
   // this is needed, because there are CAT-fields that have empty value in subfield $b
   // we could optimize this step out, if we could be sure that empty subfield values are normalized somewhere else
