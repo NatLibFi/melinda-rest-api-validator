@@ -17,6 +17,7 @@ import {validateRecordState} from './validate-record-state';
 import {validateChanges} from './validate-changes';
 import {detailedDiff} from 'deep-object-diff';
 import createPostValidationFixService from './post-validation-fix';
+import {LOG_ITEM_TYPE} from '@natlibfi/melinda-rest-api-commons/dist/constants';
 
 //import createDebugLogger from 'debug';
 //const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator');
@@ -112,11 +113,11 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
         throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: result.messages, recordMetadata});
       }
 
-      // We should check/update 001 in record to id here
+      // We check/update 001 in record to id in headers here
       const validatedRecord = checkAndUpdateId({record: result.record, headers: resultHeaders});
       logger.verbose(`---- Running postValidationFixes ----`);
       const postValidationFixResult = await postValidationFixService(validatedRecord);
-      logger.debug(inspect(postValidationFixResult));
+      logger.silly(inspect(postValidationFixResult));
       const {record: fixedRecord} = postValidationFixResult;
       return {headers: resultHeaders, data: fixedRecord.toObject()};
 
@@ -246,10 +247,10 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       logger.verbose(`Checking if the update actually changes the existing record. (skipNoChangeUpdates: ${operationSettings.skipNoChangeUpdates})`);
 
       const {changeValidationResult} = validateChanges({incomingRecord: updatedRecordAfterMerge, existingRecord, validate: operationSettings.skipNoChangeUpdates});
-      logger.debug(changeValidationResult);
+      logger.debug(`ChangeValidationResult: ${JSON.stringify(changeValidationResult)}`);
 
       if (changeValidationResult === false) {
-        const newNote = `No changes deteted while trying to update existing record ${updateId}, skipped.`;
+        const newNote = `No changes detected while trying to update existing record ${updateId}, update skipped.`;
         const updatedHeaders = {
           operation: 'SKIPPED',
           notes: newHeaders.notes ? newHeaders.notes.concat(`${newNote}`) : [newNote]
@@ -297,7 +298,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       const matchResult = await matcherService.iterateMatchers({matchers, matchOptionsList, record, stopWhenFound: false});
       const {matches} = matchResult;
 
-      logger.debug(JSON.stringify(matches.map(({candidate: {id}, probability}) => ({id, probability}))));
+      logger.debug(`Matches: ${JSON.stringify(matches.map(({candidate: {id}, probability}) => ({id, probability})))}`);
 
       const newHeaders = updateHeadersAfterMatch({matches, headers});
 
@@ -385,8 +386,6 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
     const {recordMetadata} = headers;
 
     try {
-      //logger.silly(inspect(record));
-      //logger.silly(inspect(result));
 
       //result: {candidate: {id, record}, probability, matchSequence, action, preference: {value, name}}}
       const {preference, candidate} = validatedMatchResult;
@@ -405,8 +404,6 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
         base: candidate.record,
         recordType
       };
-
-      //logger.debug(inspect(mergeRequest));
 
       // mergeResult.record: merged record that can be used to update the database record
       // mergeResult.status: true
@@ -437,14 +434,14 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
   }
 
   function logMatchAction({headers, record, matchResultsForLog}) {
-    logger.debug(`I am logging the matchAction to mongo here`);
-    logger.debug(inspect(headers));
+    logger.debug(`Logging the matchAction to mongoLogs here`);
+    logger.silly(inspect(headers));
 
     // matchResultsForLog is an array of matchResult objects:
     // {action, preference: {name, value}, message, candidate: {id, record}, probability, matchSequence}
 
     const matchLogItem = {
-      logItemType: 'MATCH_LOG',
+      logItemType: LOG_ITEM_TYPE.MATCH_LOG,
       correlationId: headers.correlationId,
       blobSequence: headers.recordMetadata.blobSequence,
       ...headers.recordMetadata,
@@ -452,7 +449,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       matchResult: matchResultsForLog
     };
 
-    logger.debug(`${inspect(matchLogItem)}`);
+    logger.silly(`MatchLogItem to add: ${inspect(matchLogItem)}`);
     const result = mongoLogOperator.addLogItem(matchLogItem);
     logger.debug(result);
 
@@ -460,14 +457,14 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
   }
 
   function logMergeAction({headers, record, preference, existingRecord, id, mergeResult}) {
-    logger.debug(inspect(headers));
-    logger.debug(`I should be logging the mergeAction to mongo here`);
+    logger.silly(inspect(headers));
+    logger.debug(`Logging the mergeAction to mongoLogs here`);
 
     // note: there's no correlationId in headers?
     // we want also a timestamp here - mongoLogOperator could create that?
 
     const mergeLogItem = {
-      logItemType: 'MERGE_LOG',
+      logItemType: LOG_ITEM_TYPE.MERGE_LOG,
       correlationId: headers.correlationId,
       blobSequence: headers.recordMetadata.blobSequence,
       ...headers.recordMetadata,
@@ -482,7 +479,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       mergedRecord: mergeResult.record
     };
 
-    logger.debug(inspect(mergeLogItem));
+    logger.silly(inspect(mergeLogItem));
     const result = mongoLogOperator.addLogItem(mergeLogItem);
     logger.debug(result);
 

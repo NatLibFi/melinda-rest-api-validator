@@ -186,7 +186,6 @@ export default async function ({
     const processResult = await validator.process(headers, content.data);
     // If not-noop and validator.process fails, it errors
     // for noop failing marc-record-validate return result.failed: true
-    logger.debug(`app/checkAmqp: Validation successfully done`);
     logger.silly(`app/checkAmqp: Validation process results: ${inspect(processResult, {colors: true, maxArrayLength: 3, depth: 1})}`);
     logger.debug(`app/checkAmqp: Validation process results: ${JSON.stringify(processResult)}`);
 
@@ -272,7 +271,7 @@ export default async function ({
     const {id} = processResult.headers;
     const {noop} = processResult.headers.operationSettings;
 
-    logger.debug(inspect(processResult));
+    logger.silly(inspect(processResult));
 
     const {notes} = processResult.headers;
     const notesString = notes && Array.isArray(notes) && notes.length > 0 ? `${notes.join(' - ')}` : '';
@@ -297,7 +296,7 @@ export default async function ({
     const status = processResult.headers.operation === 'CREATE' ? 'CREATED' : 'UPDATED';
     const id = processResult.headers.operation === 'CREATE' ? '000000000' : processResult.headers.id;
 
-    logger.debug(inspect(processResult));
+    logger.silly(inspect(processResult));
 
     const {notes} = processResult.headers;
     const notesString = notes && Array.isArray(notes) && notes.length > 0 ? `${notes.join(' - ')} - ` : '';
@@ -399,7 +398,7 @@ export default async function ({
 
         // Read stream to MarcRecords and send em to queue
         // This is a promise that resolves when all the records are in queue and (currently always, this should be set by operationSettings.failOnError) rejects if any of the records in the stream fail
-        logger.debug(`validateRecord: ${validateRecords}, failOnError: ${failOnError}, noop: ${noop}`);
+        logger.debug(`Some operationSettings: validateRecord: ${validateRecords}, failOnError: ${failOnError}, noop: ${noop}`);
         await toMarcRecords.streamToRecords({correlationId, headers: {correlationId, operation, cataloger, operationSettings}, contentType, stream, validateRecords, failOnError, noop});
 
         // setState to VALIDATOR.PENDING_VALIDATION if we're validating the bulk job
