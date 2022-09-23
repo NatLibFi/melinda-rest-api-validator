@@ -308,8 +308,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
         // Should we also validate the matches before erroring?
         const matchResultsForLog = matches.map((match, index) => ({action: false, preference: false, message: 'Validation not run', matchSequence: index, ...match}));
 
-        const logMatchResult = logMatchAction({headers, record, matchResultsForLog});
-        logger.debug(`logMatchResult: ${logMatchResult}`);
+        logMatchAction({headers, record, matchResultsForLog});
         throw new ValidationError(HttpStatus.CONFLICT, {message: 'Duplicates in database', ids: matches.map(({candidate: {id}}) => id), recordMetadata});
       }
 
@@ -351,8 +350,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       const {matchValidationResult, sortedValidatedMatchResults} = await matchValidationForMatchResults(record, matchResults, formatOptions);
       logger.silly(`MatchValidationResult: ${inspect(matchValidationResult, {colors: true, maxArrayLength: 3, depth: 3})}}`);
 
-      const logMatchResult = logMatchAction({headers, record, matchResultsForLog: sortedValidatedMatchResults});
-      logger.debug(`logMatchResult: ${logMatchResult}`);
+      logMatchAction({headers, record, matchResultsForLog: sortedValidatedMatchResults});
 
       // Check error cases
       if (!matchValidationResult.result) {
@@ -415,8 +413,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       // Should we write merge-note here?
 
       // Log merge-action here
-      const mergeLogResult = logMergeAction({headers, record, existingRecord: validatedMatchResult.candidate.record, id: validatedMatchResult.candidate.id, preference: validatedMatchResult.preference, mergeResult});
-      logger.debug(mergeLogResult);
+      logMergeAction({headers, record, existingRecord: validatedMatchResult.candidate.record, id: validatedMatchResult.candidate.id, preference: validatedMatchResult.preference, mergeResult});
 
       const newHeaders = updateHeadersAfterMerge({mergeValidationResult, headers});
 
@@ -450,10 +447,9 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
     };
 
     logger.silly(`MatchLogItem to add: ${inspect(matchLogItem)}`);
-    const result = mongoLogOperator.addLogItem(matchLogItem);
-    logger.debug(result);
+    mongoLogOperator.addLogItem(matchLogItem);
 
-    return true;
+    return;
   }
 
   function logMergeAction({headers, record, preference, existingRecord, id, mergeResult}) {
@@ -480,10 +476,9 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
     };
 
     logger.silly(inspect(mergeLogItem));
-    const result = mongoLogOperator.addLogItem(mergeLogItem);
-    logger.debug(result);
+    mongoLogOperator.addLogItem(mergeLogItem);
 
-    return true;
+    return;
   }
 
   // eslint-disable-next-line max-statements
@@ -517,8 +512,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       const mergeValidationResult = {merged: mergeResult.status, mergedId: id, preference: preference.value};
 
       // Log merge-action here
-      const mergeLogResult = logMergeAction({headers, record, existingRecord, id, preference, mergeResult});
-      logger.debug(`mergeLogResult: ${mergeLogResult}`);
+      logMergeAction({headers, record, existingRecord, id, preference, mergeResult});
 
       return {mergedRecord: new MarcRecord(mergeResult.record, {subfieldValues: false}), headers: updateHeadersAfterMerge({mergeValidationResult, headers})};
     } catch (err) {

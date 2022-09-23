@@ -182,8 +182,7 @@ export default async function ({amqpOperator, mongoOperator, splitterOptions, mo
         };
 
         logger.silly(`${inspect(splitterLogItem, {depth: 6})}`);
-        const result = mongoLogOperator.addLogItem(splitterLogItem);
-        logger.debug(result);
+        mongoLogOperator.addLogItem(splitterLogItem);
 
         logger.debug(`Creating splitterReport to queueItem if needed`);
         if ((keepSplitterReport === 'ALL') || (keepSplitterReport === 'ERROR' && (readerErrored || transformerErrored))) { // eslint-disable-line no-extra-parens
