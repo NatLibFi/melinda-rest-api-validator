@@ -15,8 +15,9 @@ import * as matcherService from './match';
 import createMatchInterface from '@natlibfi/melinda-record-matching';
 import {validateRecordState} from './validate-record-state';
 import {validateChanges} from './validate-changes';
-import {detailedDiff} from 'deep-object-diff';
+//import {detailedDiff} from 'deep-object-diff';
 import createPostValidationFixService from './post-validation-fix';
+import {LOG_ITEM_TYPE} from '@natlibfi/melinda-rest-api-commons/dist/constants';
 
 //import createDebugLogger from 'debug';
 //const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator');
@@ -112,11 +113,11 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
         throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: result.messages, recordMetadata});
       }
 
-      // We should check/update 001 in record to id here
+      // We check/update 001 in record to id in headers here
       const validatedRecord = checkAndUpdateId({record: result.record, headers: resultHeaders});
       logger.verbose(`---- Running postValidationFixes ----`);
       const postValidationFixResult = await postValidationFixService(validatedRecord);
-      logger.debug(inspect(postValidationFixResult));
+      logger.silly(inspect(postValidationFixResult));
       const {record: fixedRecord} = postValidationFixResult;
       return {headers: resultHeaders, data: fixedRecord.toObject()};
 
@@ -190,7 +191,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
 
     const {recordMetadata, operationSettings, cataloger} = headers;
 
-    // Currently force all validations for prio and batchBulk
+    // Currently also melinda-api-http forces all validations (validate=true) for prio and batchBulk
     const runValidations = operationSettings.validate || true;
 
     if (updateId) {
@@ -198,7 +199,8 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
 
       logger.verbose(`Reading record ${updateId} from SRU for ${headers.correlationId}`);
       const existingRecord = await getRecord(updateId);
-      logger.silly(`Record from SRU: ${JSON.stringify(existingRecord)}`);
+      const formattedExistingRecord = new MarcRecord(formatRecord(existingRecord, formatOptions), {subfieldValues: false});
+      logger.silly(`Record from SRU: ${JSON.stringify(formattedExistingRecord)}`);
 
       if (!existingRecord) {
         logger.debug(`Record ${updateId} was not found from SRU.`);
@@ -213,7 +215,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       logger.debug(`Check whether merge is needed for update`);
       logger.debug(`headers: ${JSON.stringify(headers)}, updateOperation: ${updateOperation}`);
       const updateMergeNeeded = operationSettings.merge && updateOperation !== 'updateAfterMerge';
-      const {mergedRecord: updatedRecordAfterMerge, headers: newHeaders} = updateMergeNeeded ? await mergeRecordForUpdates({record: updateRecord, existingRecord, id: updateId, headers}) : {mergedRecord: updateRecord, headers};
+      const {mergedRecord: updatedRecordAfterMerge, headers: newHeaders} = updateMergeNeeded ? await mergeRecordForUpdates({record: updateRecord, existingRecord: formattedExistingRecord, id: updateId, headers}) : {mergedRecord: updateRecord, headers};
 
       // We could check here whether the update/merge resulted in changes in the existing record
 
@@ -228,7 +230,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       }
 
       logger.verbose('Checking CAT field history');
-      validateRecordState({incomingRecord: updatedRecordAfterMerge, existingRecord, existingId: updateId, recordMetadata, runValidations});
+      validateRecordState({incomingRecord: updatedRecordAfterMerge, existingRecord, existingId: updateId, recordMetadata, validate: runValidations});
 
       // Note validationService = validation.js from melinda-rest-api-commons
       // which uses marc-record-validate
@@ -245,11 +247,13 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       // Validator checks here (if needed), if the update would actually change the database record
       logger.verbose(`Checking if the update actually changes the existing record. (skipNoChangeUpdates: ${operationSettings.skipNoChangeUpdates})`);
 
-      const {changeValidationResult} = validateChanges({incomingRecord: updatedRecordAfterMerge, existingRecord, validate: operationSettings.skipNoChangeUpdates});
-      logger.debug(changeValidationResult);
+      // Note: the existingRecord needs to be formatted by same rules as incoming record otherwise differences in the standard format and melindaInternal Format fail the check
+      const {changeValidationResult} = validateChanges({incomingRecord: updatedRecordAfterMerge, existingRecord: formattedExistingRecord, validate: operationSettings.skipNoChangeUpdates && runValidations});
+
+      logger.debug(changeValidationResult === 'skipped' ? `-- ChangeValidation not needed` : `-- ChangeValidationResult: ${JSON.stringify(changeValidationResult)}`);
 
       if (changeValidationResult === false) {
-        const newNote = `No changes deteted while trying to update existing record ${updateId}, skipped.`;
+        const newNote = `No changes detected while trying to update existing record ${updateId}, update skipped.`;
         const updatedHeaders = {
           operation: 'SKIPPED',
           notes: newHeaders.notes ? newHeaders.notes.concat(`${newNote}`) : [newNote]
@@ -297,7 +301,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       const matchResult = await matcherService.iterateMatchers({matchers, matchOptionsList, record, stopWhenFound: false});
       const {matches} = matchResult;
 
-      logger.debug(JSON.stringify(matches.map(({candidate: {id}, probability}) => ({id, probability}))));
+      logger.debug(`Matches: ${JSON.stringify(matches.map(({candidate: {id}, probability}) => ({id, probability})))}`);
 
       const newHeaders = updateHeadersAfterMatch({matches, headers});
 
@@ -307,8 +311,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
         // Should we also validate the matches before erroring?
         const matchResultsForLog = matches.map((match, index) => ({action: false, preference: false, message: 'Validation not run', matchSequence: index, ...match}));
 
-        const logMatchResult = logMatchAction({headers, record, matchResultsForLog});
-        logger.debug(`logMatchResult: ${logMatchResult}`);
+        logMatchAction({headers, record, matchResultsForLog});
         throw new ValidationError(HttpStatus.CONFLICT, {message: 'Duplicates in database', ids: matches.map(({candidate: {id}}) => id), recordMetadata});
       }
 
@@ -350,8 +353,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       const {matchValidationResult, sortedValidatedMatchResults} = await matchValidationForMatchResults(record, matchResults, formatOptions);
       logger.silly(`MatchValidationResult: ${inspect(matchValidationResult, {colors: true, maxArrayLength: 3, depth: 3})}}`);
 
-      const logMatchResult = logMatchAction({headers, record, matchResultsForLog: sortedValidatedMatchResults});
-      logger.debug(`logMatchResult: ${logMatchResult}`);
+      logMatchAction({headers, record, matchResultsForLog: sortedValidatedMatchResults});
 
       // Check error cases
       if (!matchValidationResult.result) {
@@ -385,8 +387,6 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
     const {recordMetadata} = headers;
 
     try {
-      //logger.silly(inspect(record));
-      //logger.silly(inspect(result));
 
       //result: {candidate: {id, record}, probability, matchSequence, action, preference: {value, name}}}
       const {preference, candidate} = validatedMatchResult;
@@ -396,17 +396,16 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       logger.verbose(`Preference for merge: Using '${preference.value}' as preferred/base record - '${preference.name}'. (A: incoming record, B: database record)`);
 
       // Prefer database record (B) unless we got an explicit preference for incoming record (A) from matchValidation.result
+      const formattedCandidateRecord = new MarcRecord(formatRecord(candidate.record, formatOptions), {subfieldValues: false});
       const mergeRequest = preference.value && preference.value === 'A' ? {
-        source: candidate.record,
+        source: formattedCandidateRecord,
         base: record,
         recordType
       } : {
         source: record,
-        base: candidate.record,
+        base: formattedCandidateRecord,
         recordType
       };
-
-      //logger.debug(inspect(mergeRequest));
 
       // mergeResult.record: merged record that can be used to update the database record
       // mergeResult.status: true
@@ -418,8 +417,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       // Should we write merge-note here?
 
       // Log merge-action here
-      const mergeLogResult = logMergeAction({headers, record, existingRecord: validatedMatchResult.candidate.record, id: validatedMatchResult.candidate.id, preference: validatedMatchResult.preference, mergeResult});
-      logger.debug(mergeLogResult);
+      logMergeAction({headers, record, existingRecord: validatedMatchResult.candidate.record, id: validatedMatchResult.candidate.id, preference: validatedMatchResult.preference, mergeResult});
 
       const newHeaders = updateHeadersAfterMerge({mergeValidationResult, headers});
 
@@ -437,14 +435,14 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
   }
 
   function logMatchAction({headers, record, matchResultsForLog}) {
-    logger.debug(`I am logging the matchAction to mongo here`);
-    logger.debug(inspect(headers));
+    logger.debug(`Logging the matchAction to mongoLogs here`);
+    logger.silly(inspect(headers));
 
     // matchResultsForLog is an array of matchResult objects:
     // {action, preference: {name, value}, message, candidate: {id, record}, probability, matchSequence}
 
     const matchLogItem = {
-      logItemType: 'MATCH_LOG',
+      logItemType: LOG_ITEM_TYPE.MATCH_LOG,
       correlationId: headers.correlationId,
       blobSequence: headers.recordMetadata.blobSequence,
       ...headers.recordMetadata,
@@ -452,22 +450,21 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       matchResult: matchResultsForLog
     };
 
-    logger.debug(`${inspect(matchLogItem)}`);
-    const result = mongoLogOperator.addLogItem(matchLogItem);
-    logger.debug(result);
+    logger.silly(`MatchLogItem to add: ${inspect(matchLogItem)}`);
+    mongoLogOperator.addLogItem(matchLogItem);
 
-    return true;
+    return;
   }
 
   function logMergeAction({headers, record, preference, existingRecord, id, mergeResult}) {
-    logger.debug(inspect(headers));
-    logger.debug(`I should be logging the mergeAction to mongo here`);
+    logger.silly(inspect(headers));
+    logger.debug(`Logging the mergeAction to mongoLogs here`);
 
     // note: there's no correlationId in headers?
     // we want also a timestamp here - mongoLogOperator could create that?
 
     const mergeLogItem = {
-      logItemType: 'MERGE_LOG',
+      logItemType: LOG_ITEM_TYPE.MERGE_LOG,
       correlationId: headers.correlationId,
       blobSequence: headers.recordMetadata.blobSequence,
       ...headers.recordMetadata,
@@ -482,11 +479,10 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       mergedRecord: mergeResult.record
     };
 
-    logger.debug(inspect(mergeLogItem));
-    const result = mongoLogOperator.addLogItem(mergeLogItem);
-    logger.debug(result);
+    logger.silly(inspect(mergeLogItem));
+    mongoLogOperator.addLogItem(mergeLogItem);
 
-    return true;
+    return;
   }
 
   // eslint-disable-next-line max-statements
@@ -511,17 +507,10 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
 
       const mergeResult = await merger(mergeRequest);
       logger.debug(`mergeResult: ${JSON.stringify(mergeResult)}`);
-
-      logger.debug(`We merged UPDATE`);
-      logger.debug(`Original incoming record: ${record}`);
-      logger.debug(`Incoming record after merge: ${mergeResult.record}`);
-      // get here diff for records
-      logger.debug(`Changes merge makes to existing record: ${inspect(detailedDiff(existingRecord, mergeResult.record), {colors: true, depth: 5})}`);
       const mergeValidationResult = {merged: mergeResult.status, mergedId: id, preference: preference.value};
 
       // Log merge-action here
-      const mergeLogResult = logMergeAction({headers, record, existingRecord, id, preference, mergeResult});
-      logger.debug(`mergeLogResult: ${mergeLogResult}`);
+      logMergeAction({headers, record, existingRecord, id, preference, mergeResult});
 
       return {mergedRecord: new MarcRecord(mergeResult.record, {subfieldValues: false}), headers: updateHeadersAfterMerge({mergeValidationResult, headers})};
     } catch (err) {

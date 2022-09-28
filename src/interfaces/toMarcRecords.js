@@ -5,7 +5,7 @@ import {updateField001ToParamId, getIdFromRecord, getRecordMetadata, isValidAlep
 import httpStatus from 'http-status';
 import {promisify, inspect} from 'util';
 import {MarcRecordError} from '@natlibfi/marc-record';
-import {OPERATIONS, logError, QUEUE_ITEM_STATE, createRecordResponseItem, addRecordResponseItem, mongoLogFactory} from '@natlibfi/melinda-rest-api-commons';
+import {OPERATIONS, logError, QUEUE_ITEM_STATE, LOG_ITEM_TYPE, createRecordResponseItem, addRecordResponseItem, mongoLogFactory} from '@natlibfi/melinda-rest-api-commons';
 
 export default async function ({amqpOperator, mongoOperator, splitterOptions, mongoUri}) {
   const {failBulkOnError, keepSplitterReport} = splitterOptions;
@@ -176,14 +176,13 @@ export default async function ({amqpOperator, mongoOperator, splitterOptions, mo
         const splitterReport = {recordNumber, sequenceNumber, readerErrors};
 
         const splitterLogItem = {
-          logItemType: 'SPLITTER_LOG',
+          logItemType: LOG_ITEM_TYPE.SPLITTER_LOG,
           correlationId,
           ...splitterReport
         };
 
-        logger.debug(`${inspect(splitterLogItem, {depth: 6})}`);
-        const result = mongoLogOperator.addLogItem(splitterLogItem);
-        logger.debug(result);
+        logger.silly(`${inspect(splitterLogItem, {depth: 6})}`);
+        mongoLogOperator.addLogItem(splitterLogItem);
 
         logger.debug(`Creating splitterReport to queueItem if needed`);
         if ((keepSplitterReport === 'ALL') || (keepSplitterReport === 'ERROR' && (readerErrored || transformerErrored))) { // eslint-disable-line no-extra-parens
