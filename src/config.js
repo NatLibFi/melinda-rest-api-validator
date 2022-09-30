@@ -109,7 +109,7 @@ function generateFormatOptions() {
   }
 
   if (recordType === 'autname') {
-    return undefined;
+    return format.BIB_FORMAT_SETTINGS;
   }
 
   throw new Error(`Unsupported record type ${recordType}`);
