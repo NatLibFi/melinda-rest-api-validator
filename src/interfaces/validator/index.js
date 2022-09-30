@@ -2,7 +2,7 @@ import HttpStatus from 'http-status';
 import {MARCXML} from '@natlibfi/marc-record-serializers';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ValidationError, toAlephId} from '@natlibfi/melinda-commons';
-import {mongoLogFactory, validations, conversions, format, OPERATIONS, logError} from '@natlibfi/melinda-rest-api-commons';
+import {mongoLogFactory, validations, conversions, format as formatFixRecord, OPERATIONS, logError} from '@natlibfi/melinda-rest-api-commons';
 import createSruClient from '@natlibfi/sru-client';
 import validateOwnChanges from './own-authorization';
 import {updateField001ToParamId, getRecordMetadata, getIdFromRecord, isValidAlephId} from '../../utils';
@@ -23,10 +23,16 @@ import {LOG_ITEM_TYPE} from '@natlibfi/melinda-rest-api-commons/dist/constants';
 //const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator');
 //const debugData = debug.extend('data');
 
-export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUri, recordType}) {
+export default async function ({fixOptions, preValidationFixOptions, postValidationFixOptions, sruUrl, matchOptionsList, mongoUri, recordType}) {
   const logger = createLogger();
-  // format: format record to Melinda/Aleph internal format ($w(FI-MELINDA) -> $w(FIN01) etc.)
-  const {formatRecord} = format;
+  logger.debug(`fixOptions: ${JSON.stringify(fixOptions)}`);
+  logger.debug(`preValidationFixOptions: ${JSON.stringify(preValidationFixOptions)}`);
+  logger.debug(`postValidationFixOptions: ${JSON.stringify(postValidationFixOptions)}`);
+
+  // fixRecord: format record to Melinda/Aleph internal format ($w(FI-MELINDA) -> $w(FIN01) etc.)
+  // formerly known as formatRecord
+  const {formatRecord: fixRecord} = formatFixRecord;
+
   // validationService: marc-record-validate validations from melinda-rest-api-commons
   const validationService = await validations();
   const ConversionService = conversions();
@@ -51,7 +57,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
 
     // create recordObject
     logger.debug(`Data is in format: ${format}, prio: ${operationSettings.prio}, noStream: ${operationSettings.noStream}`);
-    const record = operationSettings.prio || format || operationSettings.noStream ? await unserializeAndFormatRecord(data, format, formatOptions) : new MarcRecord(formatRecord(data, formatOptions), {subfieldValues: false});
+    const record = operationSettings.prio || format || operationSettings.noStream ? await unserializeAndFormatRecord(data, format, fixOptions) : new MarcRecord(fixRecord(data, fixOptions), {subfieldValues: false});
 
     // Add to recordMetadata data from the record
     // For CREATEs get all possible sourceIds, for UPDATEs get just the 'best' set from 003+001/001, f035az:s, SID:s
@@ -153,14 +159,14 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
     return record;
   }
 
-  async function unserializeAndFormatRecord(data, format, formatOptions, recordMetadata) {
+  async function unserializeAndFormatRecord(data, format, fixOptions, recordMetadata) {
     try {
       logger.silly(`Data: ${JSON.stringify(data)}`);
       logger.silly(`Format: ${format}`);
       const unzerialized = await ConversionService.unserialize(data, format);
       logger.silly(`Unserialized data: ${JSON.stringify(unzerialized)}`);
       // Format record - currently for bibs edit $0 and $w ISILs to Aleph internar library codes
-      const recordObject = await formatRecord(unzerialized, formatOptions);
+      const recordObject = await fixRecord(unzerialized, fixOptions);
       logger.silly(`Formated recordObject:\n${JSON.stringify(recordObject)}`);
       return new MarcRecord(recordObject, {subfieldValues: false});
     } catch (err) {
@@ -199,7 +205,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
 
       logger.verbose(`Reading record ${updateId} from SRU for ${headers.correlationId}`);
       const existingRecord = await getRecord(updateId);
-      const formattedExistingRecord = new MarcRecord(formatRecord(existingRecord, formatOptions), {subfieldValues: false});
+      const formattedExistingRecord = new MarcRecord(fixRecord(existingRecord, fixOptions), {subfieldValues: false});
       logger.silly(`Record from SRU: ${JSON.stringify(formattedExistingRecord)}`);
 
       if (!existingRecord) {
@@ -318,7 +324,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       // eslint-disable-next-line functional/no-conditional-statement
       if (matches.length > 0 && operationSettings.merge) {
         logger.debug(`Found matches (${matches.length}) for merging.`);
-        return validateAndMergeMatchResults({record, matchResults: matches, formatOptions, headers: newHeaders});
+        return validateAndMergeMatchResults({record, matchResults: matches, fixOptions, headers: newHeaders});
       }
 
       logger.verbose('No matching records');
@@ -337,7 +343,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
     return {result: validationResults, recordMetadata, headers};
   }
 
-  async function validateAndMergeMatchResults({record, matchResults, formatOptions, headers}) {
+  async function validateAndMergeMatchResults({record, matchResults, fixOptions, headers}) {
     const {recordMetadata} = headers;
     try {
       logger.debug(`We have matchResults (${matchResults.length}) here: ${JSON.stringify(matchResults.map(({candidate: {id}, probability}) => ({id, probability})))}`);
@@ -350,7 +356,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       // does matchValidationResult need to include record?
       // matchValidationResult: {record, result: {candidate: {id, record}, probability, matchSequence, action, preference: {value, name}}}
 
-      const {matchValidationResult, sortedValidatedMatchResults} = await matchValidationForMatchResults(record, matchResults, formatOptions);
+      const {matchValidationResult, sortedValidatedMatchResults} = await matchValidationForMatchResults(record, matchResults, fixOptions);
       logger.silly(`MatchValidationResult: ${inspect(matchValidationResult, {colors: true, maxArrayLength: 3, depth: 3})}}`);
 
       logMatchAction({headers, record, matchResultsForLog: sortedValidatedMatchResults});
@@ -396,7 +402,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       logger.verbose(`Preference for merge: Using '${preference.value}' as preferred/base record - '${preference.name}'. (A: incoming record, B: database record)`);
 
       // Prefer database record (B) unless we got an explicit preference for incoming record (A) from matchValidation.result
-      const formattedCandidateRecord = new MarcRecord(formatRecord(candidate.record, formatOptions), {subfieldValues: false});
+      const formattedCandidateRecord = new MarcRecord(fixRecord(candidate.record, fixOptions), {subfieldValues: false});
       const mergeRequest = preference.value && preference.value === 'A' ? {
         source: formattedCandidateRecord,
         base: record,

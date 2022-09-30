@@ -33,7 +33,7 @@ const validatorMatchPackages = readEnvironmentVariable('VALIDATOR_MATCH_PACKAGES
 
 export const validatorOptions = {
   recordType,
-  formatOptions: generateFormatOptions(),
+  fixOptions: generateFixOptions(),
   preValidationFixOptions: generatePreValidationFixOptions(),
   postValidationFixOptions: generatePostValidationFixOptions(),
   sruUrl: readEnvironmentVariable('SRU_URL'),
@@ -107,7 +107,7 @@ function generateThreshold(validatorMatchPackage) {
 }
 
 
-function generateFormatOptions() {
+function generateFixOptions() {
   if (recordType === 'bib') {
     return fixRecord.BIB_FORMAT_SETTINGS;
   }
