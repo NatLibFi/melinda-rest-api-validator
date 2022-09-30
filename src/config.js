@@ -2,7 +2,7 @@
 import {parseBoolean} from '@natlibfi/melinda-commons';
 import {readEnvironmentVariable} from '@natlibfi/melinda-backend-commons';
 import {candidateSearch, matchDetection} from '@natlibfi/melinda-record-matching';
-import {format as fixRecord} from '@natlibfi/melinda-rest-api-commons';
+import {fixes} from '@natlibfi/melinda-rest-api-commons';
 import createDebugLogger from 'debug';
 
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:config');
@@ -33,9 +33,9 @@ const validatorMatchPackages = readEnvironmentVariable('VALIDATOR_MATCH_PACKAGES
 
 export const validatorOptions = {
   recordType,
-  fixOptions: generateFixOptions(),
   preValidationFixOptions: generatePreValidationFixOptions(),
-  postValidationFixOptions: generatePostValidationFixOptions(),
+  postMergeFixOptions: generatePostMergeFixOptions(),
+  preImportFixOptions: generatePreImportFixOptions(),
   sruUrl: readEnvironmentVariable('SRU_URL'),
   matchOptionsList: generateMatchOptionsList()
 };
@@ -106,22 +106,9 @@ function generateThreshold(validatorMatchPackage) {
   return readEnvironmentVariable('MATCHING_TRESHOLD', {defaultValue: 0.9, format: v => Number(v)});
 }
 
-
-function generateFixOptions() {
-  if (recordType === 'bib') {
-    return fixRecord.BIB_FORMAT_SETTINGS;
-  }
-
-  if (recordType === 'autname') {
-    return fixRecord.BIB_FORMAT_SETTINGS;
-  }
-
-  throw new Error(`Unsupported record type ${recordType}`);
-}
-
 function generatePreValidationFixOptions() {
   if (recordType === 'bib') {
-    return fixRecord.BIB_PREVALIDATION_FIX_SETTINGS;
+    return fixes.BIB_PREVALIDATION_FIX_SETTINGS;
   }
 
   // No preValidationFix for aut-names
@@ -132,19 +119,27 @@ function generatePreValidationFixOptions() {
   throw new Error(`Unsupported record type ${recordType}`);
 }
 
-function generatePostValidationFixOptions() {
+function generatePostMergeFixOptions() {
   if (recordType === 'bib') {
-    return fixRecord.BIB_POSTVALIDATION_FIX_SETTINGS;
+    return fixes.BIB_POSTMERGE_FIX_SETTINGS;
+  }
+  if (recordType === 'autname') {
+    return {};
+  }
+  throw new Error(`Unsupported record type ${recordType}`);
+}
+
+function generatePreImportFixOptions() {
+  if (recordType === 'bib') {
+    return fixes.BIB_PREIMPORT_FIX_SETTINGS;
   }
 
-  // make different option for autnames
   if (recordType === 'autname') {
-    return fixRecord.BIB_POSTVALIDATION_FIX_SETTINGS;
+    return fixes.BIB_PREIMPORT_FIX_SETTINGS;
   }
 
   throw new Error(`Unsupported record type ${recordType}`);
 }
-
 
 function generateStrategy(validatorMatchPackage) {
   if (recordType === 'bib') {

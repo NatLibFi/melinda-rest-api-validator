@@ -1,7 +1,5 @@
 import createDebugLogger from 'debug';
 import matchValidator from '@natlibfi/melinda-record-match-validator';
-import {MarcRecord} from '@natlibfi/marc-record';
-import {format} from '@natlibfi/melinda-rest-api-commons';
 import {inspect} from 'util';
 //import {Error as ValidationError} from '@natlibfi/melinda-commons';
 //import HttpStatus from 'http-status';
@@ -9,9 +7,9 @@ import {inspect} from 'util';
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator:match-validation');
 const debugData = debug.extend('data');
 
-export async function matchValidationForMatchResults(record, matchResults, formatOptions) {
+export async function matchValidationForMatchResults(record, matchResults) {
   // Format is used to format the candidaterecords (that are in the external format after being fetched from SRU to the internal format)
-  const {formatRecord} = format;
+  //const {formatRecord} = format;
 
   // matches : array of matching candidate records
   // - candidate.id
@@ -33,8 +31,7 @@ export async function matchValidationForMatchResults(record, matchResults, forma
   const matchResultsAndMatchValidations = await matchResultClone.map(match => {
     // format candidate to MelindaInternalFormat
     debug(`Validating match to candidateRecord ${match.candidate.id}`);
-    debug(`Formatting candidateRecord to MelindaInternalFormat`);
-    const candidateRecord = new MarcRecord(formatRecord(match.candidate.record, formatOptions), {subfieldValues: false});
+    const candidateRecord = match.candidate.record;
     //debug(candidateRecord);
     const matchValidationResult = matchValidation(record, candidateRecord);
     return {

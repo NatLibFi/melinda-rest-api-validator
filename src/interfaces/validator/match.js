@@ -47,7 +47,7 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
       // - only one stopReason is returned (if there would be several possible stopReasons, stopReason is picked in the above order)
       // - currently stopReason can be non-empty also in cases where status is true, if matcher hit the stop reason when handling the last available candidate record
 
-      // Note: candidate.record is in external format (as it is fetched from SRU)
+      // Note: candidate.record is in external format (as it is fetched from SRU) - we keep also the incoming record in external format to avoid problems
 
       const matchResults = await matcher(record);
 
