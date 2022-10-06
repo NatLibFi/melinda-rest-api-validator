@@ -2,7 +2,7 @@ import HttpStatus from 'http-status';
 import {MARCXML} from '@natlibfi/marc-record-serializers';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ValidationError, toAlephId} from '@natlibfi/melinda-commons';
-import {mongoLogFactory, validations, conversions, format, OPERATIONS, logError} from '@natlibfi/melinda-rest-api-commons';
+import {mongoLogFactory, validations, conversions, fixes, OPERATIONS, logError} from '@natlibfi/melinda-rest-api-commons';
 import createSruClient from '@natlibfi/sru-client';
 import validateOwnChanges from './own-authorization';
 import {updateField001ToParamId, getRecordMetadata, getIdFromRecord, isValidAlephId} from '../../utils';
@@ -16,17 +16,30 @@ import createMatchInterface from '@natlibfi/melinda-record-matching';
 import {validateRecordState} from './validate-record-state';
 import {validateChanges} from './validate-changes';
 //import {detailedDiff} from 'deep-object-diff';
-import createPostValidationFixService from './post-validation-fix';
 import {LOG_ITEM_TYPE} from '@natlibfi/melinda-rest-api-commons/dist/constants';
 
 //import createDebugLogger from 'debug';
 //const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator');
 //const debugData = debug.extend('data');
 
-export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUri, recordType}) {
+export default async function ({preValidationFixOptions, postMergeFixOptions, preImportFixOptions, sruUrl, matchOptionsList, mongoUri, recordType}) {
   const logger = createLogger();
-  // format: format record to Melinda/Aleph internal format ($w(FI-MELINDA) -> $w(FIN01) etc.)
-  const {formatRecord} = format;
+  logger.debug(`preValidationFixOptions: ${JSON.stringify(preValidationFixOptions)}`);
+  logger.debug(`postMergeFixOptions: ${JSON.stringify(postMergeFixOptions)}`);
+  logger.debug(`postImportFixOptions: ${JSON.stringify(preImportFixOptions)}`);
+
+  // fixRecord: record fixes from melinda-rest-api-commons
+  // for pre-, mid- and postValidation fixing the record
+  // preValidationFix:
+  //    - add missing sids
+  // postMergeFix:
+  //    - handle tempURNs
+  //    - this should handle extra f884s too
+  // preImportFix:
+  //    - format $w and $0 codes to alephInternal Format
+  // formerly known as formatRecord
+  const {fixRecord} = fixes;
+
   // validationService: marc-record-validate validations from melinda-rest-api-commons
   const validationService = await validations();
   const ConversionService = conversions();
@@ -36,7 +49,6 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
   const sruClient = createSruClient({url: sruUrl, recordSchema: 'marcxml', retrieveAll: false, maximumRecordsPerRequest: 1});
   logger.debug(`Creating mongoLogOperator in ${mongoUri}`);
   const mongoLogOperator = await mongoLogFactory(mongoUri);
-  const postValidationFixService = await createPostValidationFixService();
 
   return {process};
 
@@ -51,7 +63,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
 
     // create recordObject
     logger.debug(`Data is in format: ${format}, prio: ${operationSettings.prio}, noStream: ${operationSettings.noStream}`);
-    const record = operationSettings.prio || format || operationSettings.noStream ? await unserializeAndFormatRecord(data, format, formatOptions) : new MarcRecord(formatRecord(data, formatOptions), {subfieldValues: false});
+    const record = operationSettings.prio || format || operationSettings.noStream ? await unserializeAndFormatRecord(data, format, preValidationFixOptions) : new MarcRecord(fixRecord(data, preValidationFixOptions), {subfieldValues: false});
 
     // Add to recordMetadata data from the record
     // For CREATEs get all possible sourceIds, for UPDATEs get just the 'best' set from 003+001/001, f035az:s, SID:s
@@ -114,12 +126,12 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       }
 
       // We check/update 001 in record to id in headers here
-      const validatedRecord = checkAndUpdateId({record: result.record, headers: resultHeaders});
-      logger.verbose(`---- Running postValidationFixes ----`);
-      const postValidationFixResult = await postValidationFixService(validatedRecord);
-      logger.silly(inspect(postValidationFixResult));
-      const {record: fixedRecord} = postValidationFixResult;
-      return {headers: resultHeaders, data: fixedRecord.toObject()};
+      const validatedRecord = await checkAndUpdateId({record: result.record, headers: resultHeaders});
+
+      // preImportFix - format $0 and $w to alephInternal format
+      const fixedRecordObject = await fixRecord(validatedRecord, preImportFixOptions);
+
+      return {headers: resultHeaders, data: fixedRecordObject};
 
     } catch (err) {
       logger.debug(`processNormal: validation errored: ${JSON.stringify(err)}`);
@@ -153,14 +165,14 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
     return record;
   }
 
-  async function unserializeAndFormatRecord(data, format, formatOptions, recordMetadata) {
+  async function unserializeAndFormatRecord(data, format, prevalidationFixOptions, recordMetadata) {
     try {
       logger.silly(`Data: ${JSON.stringify(data)}`);
       logger.silly(`Format: ${format}`);
       const unzerialized = await ConversionService.unserialize(data, format);
       logger.silly(`Unserialized data: ${JSON.stringify(unzerialized)}`);
       // Format record - currently for bibs edit $0 and $w ISILs to Aleph internar library codes
-      const recordObject = await formatRecord(unzerialized, formatOptions);
+      const recordObject = await fixRecord(unzerialized, preValidationFixOptions);
       logger.silly(`Formated recordObject:\n${JSON.stringify(recordObject)}`);
       return new MarcRecord(recordObject, {subfieldValues: false});
     } catch (err) {
@@ -199,8 +211,8 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
 
       logger.verbose(`Reading record ${updateId} from SRU for ${headers.correlationId}`);
       const existingRecord = await getRecord(updateId);
-      const formattedExistingRecord = new MarcRecord(formatRecord(existingRecord, formatOptions), {subfieldValues: false});
-      logger.silly(`Record from SRU: ${JSON.stringify(formattedExistingRecord)}`);
+      // let's not fixFormat existing record, we have the incoming record in the externalFormat still
+      logger.silly(`Record from SRU: ${JSON.stringify(existingRecord)}`);
 
       if (!existingRecord) {
         logger.debug(`Record ${updateId} was not found from SRU.`);
@@ -215,7 +227,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       logger.debug(`Check whether merge is needed for update`);
       logger.debug(`headers: ${JSON.stringify(headers)}, updateOperation: ${updateOperation}`);
       const updateMergeNeeded = operationSettings.merge && updateOperation !== 'updateAfterMerge';
-      const {mergedRecord: updatedRecordAfterMerge, headers: newHeaders} = updateMergeNeeded ? await mergeRecordForUpdates({record: updateRecord, existingRecord: formattedExistingRecord, id: updateId, headers}) : {mergedRecord: updateRecord, headers};
+      const {mergedRecord: updatedRecordAfterMerge, headers: newHeaders} = updateMergeNeeded ? await mergeRecordForUpdates({record: updateRecord, existingRecord, id: updateId, headers}) : {mergedRecord: updateRecord, headers};
 
       // We could check here whether the update/merge resulted in changes in the existing record
 
@@ -243,12 +255,10 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       // validationResults: {record, failed: true/false, messages: []}
       const validationResults = runValidations ? await validationService(updatedRecordAfterMerge) : {record: updatedRecordAfterMerge, failed: false};
 
-
       // Validator checks here (if needed), if the update would actually change the database record
       logger.verbose(`Checking if the update actually changes the existing record. (skipNoChangeUpdates: ${operationSettings.skipNoChangeUpdates})`);
 
-      // Note: the existingRecord needs to be formatted by same rules as incoming record otherwise differences in the standard format and melindaInternal Format fail the check
-      const {changeValidationResult} = validateChanges({incomingRecord: updatedRecordAfterMerge, existingRecord: formattedExistingRecord, validate: operationSettings.skipNoChangeUpdates && runValidations});
+      const {changeValidationResult} = validateChanges({incomingRecord: updatedRecordAfterMerge, existingRecord, validate: operationSettings.skipNoChangeUpdates && runValidations});
 
       logger.debug(changeValidationResult === 'skipped' ? `-- ChangeValidation not needed` : `-- ChangeValidationResult: ${JSON.stringify(changeValidationResult)}`);
 
@@ -318,7 +328,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       // eslint-disable-next-line functional/no-conditional-statement
       if (matches.length > 0 && operationSettings.merge) {
         logger.debug(`Found matches (${matches.length}) for merging.`);
-        return validateAndMergeMatchResults({record, matchResults: matches, formatOptions, headers: newHeaders});
+        return validateAndMergeMatchResults({record, matchResults: matches, headers: newHeaders});
       }
 
       logger.verbose('No matching records');
@@ -337,7 +347,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
     return {result: validationResults, recordMetadata, headers};
   }
 
-  async function validateAndMergeMatchResults({record, matchResults, formatOptions, headers}) {
+  async function validateAndMergeMatchResults({record, matchResults, headers}) {
     const {recordMetadata} = headers;
     try {
       logger.debug(`We have matchResults (${matchResults.length}) here: ${JSON.stringify(matchResults.map(({candidate: {id}, probability}) => ({id, probability})))}`);
@@ -350,7 +360,7 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       // does matchValidationResult need to include record?
       // matchValidationResult: {record, result: {candidate: {id, record}, probability, matchSequence, action, preference: {value, name}}}
 
-      const {matchValidationResult, sortedValidatedMatchResults} = await matchValidationForMatchResults(record, matchResults, formatOptions);
+      const {matchValidationResult, sortedValidatedMatchResults} = await matchValidationForMatchResults(record, matchResults);
       logger.silly(`MatchValidationResult: ${inspect(matchValidationResult, {colors: true, maxArrayLength: 3, depth: 3})}}`);
 
       logMatchAction({headers, record, matchResultsForLog: sortedValidatedMatchResults});
@@ -396,14 +406,14 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       logger.verbose(`Preference for merge: Using '${preference.value}' as preferred/base record - '${preference.name}'. (A: incoming record, B: database record)`);
 
       // Prefer database record (B) unless we got an explicit preference for incoming record (A) from matchValidation.result
-      const formattedCandidateRecord = new MarcRecord(formatRecord(candidate.record, formatOptions), {subfieldValues: false});
+
       const mergeRequest = preference.value && preference.value === 'A' ? {
-        source: formattedCandidateRecord,
+        source: candidate.record,
         base: record,
         recordType
       } : {
         source: record,
-        base: formattedCandidateRecord,
+        base: candidate.record,
         recordType
       };
 
@@ -421,7 +431,10 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
 
       const newHeaders = updateHeadersAfterMerge({mergeValidationResult, headers});
 
-      return updateValidations({updateId: candidate.id, updateRecord: new MarcRecord(mergeResult.record, {subfieldValues: false}), updateOperation: 'updateAfterMerge', mergeValidationResult, headers: newHeaders});
+      logger.verbose(`PostMergeFixing merged record: ${JSON.stringify(postMergeFixOptions)}`);
+      const postMergeFixedRecordObject = await fixRecord(mergeResult.record, postMergeFixOptions);
+
+      return updateValidations({updateId: candidate.id, updateRecord: new MarcRecord(postMergeFixedRecordObject, {subfieldValues: false}), updateOperation: 'updateAfterMerge', mergeValidationResult, headers: newHeaders});
     } catch (err) {
       logger.debug(`mergeMatchResults errored: ${err}`);
 
@@ -512,7 +525,10 @@ export default async function ({formatOptions, sruUrl, matchOptionsList, mongoUr
       // Log merge-action here
       logMergeAction({headers, record, existingRecord, id, preference, mergeResult});
 
-      return {mergedRecord: new MarcRecord(mergeResult.record, {subfieldValues: false}), headers: updateHeadersAfterMerge({mergeValidationResult, headers})};
+      logger.verbose(`PostMergeFixing merged record: ${JSON.stringify(postMergeFixOptions)}`);
+      const postMergeFixedRecordObject = await fixRecord(mergeResult.record, postMergeFixOptions);
+
+      return {mergedRecord: new MarcRecord(postMergeFixedRecordObject, {subfieldValues: false}), headers: updateHeadersAfterMerge({mergeValidationResult, headers})};
     } catch (err) {
       logger.error(`mergeRecordForUpdates errored: ${err}`);
       logError(err);

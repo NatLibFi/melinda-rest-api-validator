@@ -2,7 +2,7 @@
 import {parseBoolean} from '@natlibfi/melinda-commons';
 import {readEnvironmentVariable} from '@natlibfi/melinda-backend-commons';
 import {candidateSearch, matchDetection} from '@natlibfi/melinda-record-matching';
-import {format} from '@natlibfi/melinda-rest-api-commons';
+import {fixes} from '@natlibfi/melinda-rest-api-commons';
 import createDebugLogger from 'debug';
 
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:config');
@@ -29,9 +29,13 @@ export const splitterOptions = {
 
 const validatorMatchPackages = readEnvironmentVariable('VALIDATOR_MATCH_PACKAGES', {defaultValue: 'IDS,CONTENT'}).split(',');
 
+// We could have also settings matchValidation and merge here
+
 export const validatorOptions = {
   recordType,
-  formatOptions: generateFormatOptions(),
+  preValidationFixOptions: generatePreValidationFixOptions(),
+  postMergeFixOptions: generatePostMergeFixOptions(),
+  preImportFixOptions: generatePreImportFixOptions(),
   sruUrl: readEnvironmentVariable('SRU_URL'),
   matchOptionsList: generateMatchOptionsList()
 };
@@ -102,14 +106,36 @@ function generateThreshold(validatorMatchPackage) {
   return readEnvironmentVariable('MATCHING_TRESHOLD', {defaultValue: 0.9, format: v => Number(v)});
 }
 
-
-function generateFormatOptions() {
+function generatePreValidationFixOptions() {
   if (recordType === 'bib') {
-    return format.BIB_FORMAT_SETTINGS;
+    return fixes.BIB_PREVALIDATION_FIX_SETTINGS;
+  }
+
+  // No preValidationFix for aut-names
+  if (recordType === 'autname') {
+    return {};
+  }
+
+  throw new Error(`Unsupported record type ${recordType}`);
+}
+
+function generatePostMergeFixOptions() {
+  if (recordType === 'bib') {
+    return fixes.BIB_POSTMERGE_FIX_SETTINGS;
+  }
+  if (recordType === 'autname') {
+    return {};
+  }
+  throw new Error(`Unsupported record type ${recordType}`);
+}
+
+function generatePreImportFixOptions() {
+  if (recordType === 'bib') {
+    return fixes.BIB_PREIMPORT_FIX_SETTINGS;
   }
 
   if (recordType === 'autname') {
-    return format.BIB_FORMAT_SETTINGS;
+    return fixes.BIB_PREIMPORT_FIX_SETTINGS;
   }
 
   throw new Error(`Unsupported record type ${recordType}`);
