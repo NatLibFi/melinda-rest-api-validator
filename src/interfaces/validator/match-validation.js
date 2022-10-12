@@ -29,11 +29,13 @@ export async function matchValidationForMatchResults(record, matchResults) {
   // This could be optimized so that it would be done when it finds the first valid match?
 
   const matchResultsAndMatchValidations = await matchResultClone.map(match => {
-    // format candidate to MelindaInternalFormat
     debug(`Validating match to candidateRecord ${match.candidate.id}`);
     const candidateRecord = match.candidate.record;
+    const record1External = {recordType: 'incomingRecord'};
+    const record2External = {recordType: 'databaseRecord'};
     //debug(candidateRecord);
-    const matchValidationResult = matchValidation(record, candidateRecord);
+
+    const matchValidationResult = matchValidation({record1: record, record2: candidateRecord, record1External, record2External});
     return {
       ...matchValidationResult,
       ...match
@@ -74,11 +76,11 @@ export async function matchValidationForMatchResults(record, matchResults) {
 }
 
 // melinda-record-match-validation is *NOT* async
-export function matchValidation(recordA, recordB) {
+export function matchValidation({record1, record2, record1External, record2External}) {
   debug(`Running match-validation here:`);
-  debug(`recorA: ${recordA.constructor.name}`);
+  debug(`recorA: ${record1.constructor.name}`);
   // Send records to match-validator as plain objects to avoid problems with differing MarcRecord -versions etc.
-  const matchValidationResult = matchValidator(recordA.toObject(), recordB.toObject());
+  const matchValidationResult = matchValidator({record1Object: record1.toObject(), record2Object: record2.toObject(), record1External, record2External});
   debugData(inspect(matchValidationResult));
   return matchValidationResult;
 }
