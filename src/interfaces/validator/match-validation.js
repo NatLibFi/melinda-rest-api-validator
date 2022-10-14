@@ -31,8 +31,8 @@ export async function matchValidationForMatchResults(record, matchResults) {
   const matchResultsAndMatchValidations = await matchResultClone.map(match => {
     debug(`Validating match to candidateRecord ${match.candidate.id}`);
     const candidateRecord = match.candidate.record;
-    const record1External = {recordType: 'incomingRecord'};
-    const record2External = {recordType: 'databaseRecord'};
+    const record1External = {recordSource: 'incomingRecord'};
+    const record2External = {recordSource: 'databaseRecord'};
     //debug(candidateRecord);
 
     const matchValidationResult = matchValidation({record1: record, record2: candidateRecord, record1External, record2External});
