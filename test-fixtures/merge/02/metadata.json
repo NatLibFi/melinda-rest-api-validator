@@ -1,0 +1,7 @@
+{
+    "description": "Should throw error if recordType has no defined merge-reducers",
+    "recordType": "FOO",
+    "expectedToThrow": true,
+    "expectedStatus": 500,
+    "expectedError": "No merge-reducers specified for FOO records!"
+  }

@@ -15,10 +15,12 @@ const debugData = debug.extend('data');
 export default function ({base, source, recordType}) {
   // Run first copy-reducers with Melinda-configs and then the specific MelindaReducers
 
+  debug(' ----- MERGE ----- ');
+
   const reducers = recordType === 'bib' ? [...MelindaCopyReducerConfigs.map(conf => Reducers.copy(conf)), ...MelindaReducers] : undefined;
 
   if (!reducers) {
-    debug(`No reducers!`);
+    debug(`No reducers! RecordType: ${recordType}`);
     throw new MergeError(HttpStatus.INTERNAL_SERVER_ERROR, `No merge-reducers specified for ${recordType} records!`);
   }
 
@@ -26,9 +28,9 @@ export default function ({base, source, recordType}) {
 
   // We would need to test for errors here
 
-  // Send records to merge as objects
+  // Send records to merge/merge-reducers as MarcRecords
   // NOTE: currently validationOptions {"subfieldValues": false} is hardcoded in merge/mergeReducers
-  const result = merger({base: base.toObject(), source: source.toObject(), reducers});
+  const result = merger({base, source, reducers});
   //const resultRecord = merger({base: base.toObject(), source: source.toObject(), reducers, baseValidators: {subfieldValues: false}, sourceValidators: {subfieldValues: false}});
   debug(`Merge result is: ${result.constructor.name}`);
   debugData(`${result}`);
@@ -38,9 +40,11 @@ export default function ({base, source, recordType}) {
     status: true
   };
 
+  /*
   if (!result) {
     throw new MergeError(HttpStatus.UNPROCESSABLE_ENTITY, `Merge resulted in no record`);
   }
+  */
 
   return mergeResult;
 }
