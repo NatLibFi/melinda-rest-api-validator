@@ -1,0 +1,39 @@
+{
+  "leader": "02518cam a2200745zi 4500",
+  "fields": [
+    {
+      "tag": "001",
+      "value": "000019640"
+    },
+    {
+      "tag": "020",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "978-952-62-2477-0"
+        },
+        {
+          "code": "q",
+          "value": "PDF"
+        }
+      ]
+    },
+    {
+      "tag": "245",
+      "ind1": "1",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "foo."
+        },
+        {
+          "code": "b",
+          "value": "bar"
+        }
+      ]
+    }
+  ]
+}
