@@ -97,8 +97,7 @@
 	"nyc": {
 		"exclude": [
 			"**/*.spec.js",
-			"src/utils.js",
-			"src/interfaces/validator/merge.js"
+			"src/utils.js"
 		],
 		"reporter": [
 			"lcov",
