@@ -14,10 +14,13 @@ const debugData = debug.extend('data');
 
 export default function ({base, source, recordType}) {
   // Run first copy-reducers with Melinda-configs and then the specific MelindaReducers
+  // Do we still have any melinda-configs for copy-reducers?
 
   debug(' ----- MERGE ----- ');
 
-  const reducers = recordType === 'bib' ? [...MelindaCopyReducerConfigs.map(conf => Reducers.copy(conf)), ...MelindaReducers] : undefined;
+  /* istanbul ignore next */
+  const melindaCopyReducers = MelindaCopyReducerConfigs.map(conf => Reducers.copy(conf));
+  const reducers = recordType === 'bib' ? [...melindaCopyReducers, ...MelindaReducers] : undefined;
 
   if (!reducers) {
     debug(`No reducers! RecordType: ${recordType}`);
