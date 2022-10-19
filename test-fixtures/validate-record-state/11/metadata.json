@@ -1,5 +1,5 @@
 {
-    "description": "SKIP: It should not throw error for mismatch caused by (non-current) duplicate CAT-fields",
+    "description": "It should not throw error for mismatch caused by (non-current) duplicate CAT-fields",
     "expectedToThrow": false,
-    "enabled": false
+    "enabled": true
   }

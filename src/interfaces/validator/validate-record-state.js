@@ -30,7 +30,7 @@ import deepEqual from 'deep-eql';
 import {detailedDiff} from 'deep-object-diff';
 import {Error as ValidationError} from '@natlibfi/melinda-commons';
 //import {createLogger} from '@natlibfi/melinda-backend-commons';
-import {inspect} from 'util';
+//import {inspect} from 'util';
 import HttpStatus from 'http-status';
 import createDebugLogger from 'debug';
 import {toTwoDigits, normalizeEmptySubfields} from '../../utils';
@@ -53,11 +53,12 @@ export function validateRecordState({incomingRecord, existingRecord, existingId,
   debug(`----- Build db`);
   const existingModificationHistory = uniqueModificationHistory(existingRecord.get(/^CAT$/u).map(normalizeEmptySubfields));
 
+  debug(`---- Comparing CATs`);
   debug(`Incoming CATs (${incomingModificationHistory.length}), existing CATs (${existingModificationHistory.length})`);
   debugData(`Incoming unique CATs (${incomingModificationHistory.length}): ${JSON.stringify(incomingModificationHistory)}`);
   debugData(`Existing unique CATs (${existingId}) (${existingModificationHistory.length}): ${JSON.stringify(existingModificationHistory)}`);
 
-  if (deepEqual(incomingModificationHistory, existingModificationHistory) === false) { // eslint-disable-line functional/no-conditional-statement
+  if (deepEqual(incomingModificationHistory, existingModificationHistory) === false) {
     debug(`validateRecordState: failure`);
     debugData(`Differences in CATs: ${JSON.stringify(detailedDiff(incomingModificationHistory, existingModificationHistory), {colors: true, depth: 4})}`);
     debugData(`Incoming record: ${JSON.stringify(incomingRecord)}`);
@@ -69,28 +70,27 @@ export function validateRecordState({incomingRecord, existingRecord, existingId,
 
   // eslint-disable-next-line max-statements
   function uniqueModificationHistory(modificationHistory) {
-    const uniqueModificationHistory = [...new Set(modificationHistory.map(JSON.stringify))].map(JSON.parse);
+    const modificationHistoryStringArray = modificationHistory.map(JSON.stringify);
+    const uniqueModificationHistoryStringArray = [...new Set(modificationHistory.map(JSON.stringify))];
 
-    if (modificationHistory.length === uniqueModificationHistory.length) {
+    if (modificationHistoryStringArray.length === uniqueModificationHistoryStringArray.length) {
       debug(`*** No duplicate CATs to remove ****`);
       return modificationHistory;
     }
-    debug(`***********`);
 
-    debugData(`All (${modificationHistory.length}): ${inspect(modificationHistory, {depth: 5})}`);
-    debugData(`Unique (${uniqueModificationHistory.length}): ${inspect(uniqueModificationHistory, {depth: 5})}`);
+    debugData(`All (${modificationHistoryStringArray.length}): ${modificationHistoryStringArray})}`);
+    debugData(`Unique (${uniqueModificationHistoryStringArray.length}): ${uniqueModificationHistoryStringArray}`);
 
     // We're diffing uniqued CATs to non-uniqued CATS so removed CATs are labeled as 'added' by diff
     // We get the actual removed fields from diff by doing it this way
-    const removed = detailedDiff(uniqueModificationHistory, modificationHistory).added;
-    debugData(`Removed CATS: ${JSON.stringify(removed)}`);
-    debugData(inspect(removed, {depth: 6}));
+    const removed = detailedDiff(uniqueModificationHistoryStringArray, modificationHistoryStringArray).added;
 
     if (removed) {
       debug(`Uniquing CAT-fields removed duplicates (${Object.keys(removed).length}).`);
-      debugData(`${inspect(Object.values(removed))}`);
-      const removedTimeStamps = Object.values(removed).map(({subfields}) => subfields.filter(subfield => ['c', 'h'].includes(subfield.code)).map(({value}) => value).join(''));
-      debugData(removedTimeStamps);
+      const removedCats = Object.values(removed).map(JSON.parse);
+      debugData(`Removed duplicate CATs: ${JSON.stringify(removedCats)}`);
+      const removedTimeStamps = removedCats.map(({subfields}) => subfields.filter(subfield => ['c', 'h'].includes(subfield.code)).map(({value}) => value).join(''));
+      debugData(`Removed timestamps: ${removedTimeStamps}`);
 
       const date = new Date(Date.now());
       // We the current timeStamp in the local timezone - this might cause problems some time?
@@ -101,12 +101,12 @@ export function validateRecordState({incomingRecord, existingRecord, existingId,
 
       // throw CONFLICT for current duplicate CATs, because we cannot know whether there would have been the same duplicate CAT in the incoming merged record or if the existing record was updated again
       if (currentRemoved.length > 0) {
-        debug(`There are non-unique CATs that are current - cannot unique CATs`);
+        debug(`There are non-unique CATs that are current (${currentRemoved.length}) - cannot unique CATs`);
         debugData(`Current CATs that would have been removed: ${JSON.stringify(currentRemoved)}`);
         throw new ValidationError(HttpStatus.CONFLICT, {message: `Possible modification history mismatch (CAT) with existing record ${existingId}`, recordMetadata, ids: [existingId]});
       }
       debug(`There are non-unique CATs, but they are not current - using uniqued CATs`);
-      return uniqueModificationHistory;
+      return uniqueModificationHistoryStringArray.map(JSON.parse);
     }
     // We should never get here
     //return uniqueModificationHistory;
