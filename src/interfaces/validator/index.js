@@ -117,7 +117,7 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
 
       // We got headers back
       logger.debug(`validator/index/process: Headers after validation: ${JSON.stringify(resultHeaders)}`);
-      logger.debug(`validator/index/process: Validation result: ${inspect(result, {colors: true, maxArrayLength: 3, depth: 4})}`);
+      logger.silly(`validator/index/process: Validation result: ${inspect(result, {colors: true, maxArrayLength: 3, depth: 4})}`);
 
       // throw ValidationError for failed validationService
       if (result.failed) { // eslint-disable-line functional/no-conditional-statement
