@@ -1,0 +1,469 @@
+{
+  "leader": "01412cam a22004213i 4500",
+  "fields": [
+    {
+      "tag": "001",
+      "value": "007329510"
+    },
+    {
+      "tag": "003",
+      "value": "FI-MELINDA"
+    },
+    {
+      "tag": "005",
+      "value": "20160728120256.0"
+    },
+    {
+      "tag": "008",
+      "value": "151120s2016    fi           |||| ||fin||"
+    },
+    {
+      "tag": "020",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "978-952-16-1820-8"
+        },
+        {
+          "code": "q",
+          "value": "nidottu"
+        }
+      ]
+    },
+    {
+      "tag": "035",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "(FI-MELINDA)007329510"
+        }
+      ]
+    },
+    {
+      "tag": "041",
+      "ind1": "0",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "fin"
+        }
+      ]
+    },
+    {
+      "tag": "084",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "85.32"
+        },
+        {
+          "code": "2",
+          "value": "ykl"
+        }
+      ]
+    },
+    {
+      "tag": "100",
+      "ind1": "1",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "Isayama, Hajime."
+        }
+      ]
+    },
+    {
+      "tag": "245",
+      "ind1": "1",
+      "ind2": "0",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "Titaanien sota 6."
+        }
+      ]
+    },
+    {
+      "tag": "260",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "b",
+          "value": "Sangatsumanga,"
+        },
+        {
+          "code": "c",
+          "value": "2016."
+        }
+      ]
+    },
+    {
+      "tag": "336",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "teksti"
+        },
+        {
+          "code": "b",
+          "value": "txt"
+        },
+        {
+          "code": "2",
+          "value": "rdacontent"
+        }
+      ]
+    },
+    {
+      "tag": "337",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "käytettävissä ilman laitetta"
+        },
+        {
+          "code": "b",
+          "value": "n"
+        },
+        {
+          "code": "2",
+          "value": "rdamedia"
+        }
+      ]
+    },
+    {
+      "tag": "338",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "nide"
+        },
+        {
+          "code": "b",
+          "value": "nc"
+        },
+        {
+          "code": "2",
+          "value": "rdacarrier"
+        }
+      ]
+    },
+    {
+      "tag": "490",
+      "ind1": "0",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "Sangatsu Manga"
+        }
+      ]
+    },
+    {
+      "tag": "700",
+      "ind1": "1",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "Kokkonen, Antti,"
+        },
+        {
+          "code": "e",
+          "value": "kääntäjä."
+        }
+      ]
+    },
+    {
+      "tag": "SID",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "c",
+          "value": "(ANDL100013)1504442"
+        },
+        {
+          "code": "b",
+          "value": "ander"
+        }
+      ]
+    },
+    {
+      "tag": "CAT",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "FENNI-KV"
+        },
+        {
+          "code": "b",
+          "value": "30"
+        },
+        {
+          "code": "c",
+          "value": "20150812"
+        },
+        {
+          "code": "l",
+          "value": "FIN01"
+        },
+        {
+          "code": "h",
+          "value": "0702"
+        }
+      ]
+    },
+    {
+      "tag": "CAT",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "FENNI-KV"
+        },
+        {
+          "code": "b",
+          "value": "30"
+        },
+        {
+          "code": "c",
+          "value": "20150902"
+        },
+        {
+          "code": "l",
+          "value": "FIN01"
+        },
+        {
+          "code": "h",
+          "value": "0702"
+        }
+      ]
+    },
+    {
+      "tag": "CAT",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "FENNI-KV"
+        },
+        {
+          "code": "b",
+          "value": "30"
+        },
+        {
+          "code": "c",
+          "value": "20150903"
+        },
+        {
+          "code": "l",
+          "value": "FIN01"
+        },
+        {
+          "code": "h",
+          "value": "0701"
+        }
+      ]
+    },
+    {
+      "tag": "CAT",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "FENNI-KV"
+        },
+        {
+          "code": "b",
+          "value": "30"
+        },
+        {
+          "code": "c",
+          "value": "20160301"
+        },
+        {
+          "code": "l",
+          "value": "FIN01"
+        },
+        {
+          "code": "h",
+          "value": "0701"
+        }
+      ]
+    },
+    {
+      "tag": "CAT",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "FENNI-KV"
+        },
+        {
+          "code": "b",
+          "value": "30"
+        },
+        {
+          "code": "c",
+          "value": "20160301"
+        },
+        {
+          "code": "l",
+          "value": "FIN01"
+        },
+        {
+          "code": "h",
+          "value": "0701"
+        }
+      ]
+    },
+    {
+      "tag": "CAT",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "CONV-RDA"
+        },
+        {
+          "code": "c",
+          "value": "20160319"
+        },
+        {
+          "code": "l",
+          "value": "FIN01"
+        },
+        {
+          "code": "h",
+          "value": "0831"
+        }
+      ]
+    },
+    {
+      "tag": "CAT",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "PIKI7001"
+        },
+        {
+          "code": "b",
+          "value": "30"
+        },
+        {
+          "code": "c",
+          "value": "20160406"
+        },
+        {
+          "code": "l",
+          "value": "FIN01"
+        },
+        {
+          "code": "h",
+          "value": "0921"
+        }
+      ]
+    },
+    {
+      "tag": "CAT",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "PIKI7001"
+        },
+        {
+          "code": "b",
+          "value": "30"
+        },
+        {
+          "code": "c",
+          "value": "20160406"
+        },
+        {
+          "code": "l",
+          "value": "FIN01"
+        },
+        {
+          "code": "h",
+          "value": "0921"
+        }
+      ]
+    },
+    {
+      "tag": "CAT",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "FENNI4007"
+        },
+        {
+          "code": "b",
+          "value": "30"
+        },
+        {
+          "code": "c",
+          "value": "20160728"
+        },
+        {
+          "code": "l",
+          "value": "FIN01"
+        },
+        {
+          "code": "h",
+          "value": "1202"
+        }
+      ]
+    },
+    {
+      "tag": "LOW",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "ANDER"
+        }
+      ]
+    },
+    {
+      "tag": "LOW",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "PIKI"
+        }
+      ]
+    }
+  ]
+}
