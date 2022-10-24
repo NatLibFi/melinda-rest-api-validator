@@ -308,7 +308,8 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
       // This should use different matchOptions for merge and non-merge cases
       // Note: incoming record is formatted ($w(FIN01)), existing records from SRU are not ($w(FI-MELINDA))
       // stopWhenFound stops iterating matchers when a match is found
-      const matchResult = await matcherService.iterateMatchers({matchers, matchOptionsList, record, stopWhenFound: false});
+      //const matchResult = await matcherService.iterateMatchers({matchers, matchOptionsList, record, stopWhenFound: false});
+      const matchResult = await matcherService.iterateMatchers({matchers, matchOptionsList, record, stopWhenFound: true});
       const {matches} = matchResult;
 
       logger.debug(`Matches: ${JSON.stringify(matches.map(({candidate: {id}, probability}) => ({id, probability})))}`);
