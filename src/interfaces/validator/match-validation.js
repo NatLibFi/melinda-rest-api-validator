@@ -60,8 +60,8 @@ export async function matchValidationForMatchResults(record, matchResults) {
   debug(`${invalidMatchResults.length} invalid matches`);
 
   if (validMatchResults.length < 1) {
+    debug(`No matchValidationResults`);
     return {matchValidationResult: {}, sortedValidatedMatchResults};
-    // throw new ValidationError(HttpStatus.CONFLICT, {message: `MatchValidation for all ${sortedValidatedMatchResults.length} matches failed.`, ids: sortedValidatedMatchResults.map(match => match.candidate.id), recordMetadata});
   }
 
   const matchValidationResult = {
@@ -70,7 +70,7 @@ export async function matchValidationForMatchResults(record, matchResults) {
   };
 
   debug(`Returning first valid result: ${matchValidationResult}}`);
-  debugData(`MatchValidationResutlt: ${inspect(matchValidationResult)}`);
+  debugData(`MatchValidationResult: ${inspect(matchValidationResult)}`);
 
   return {matchValidationResult, sortedValidatedMatchResults};
 }
@@ -78,7 +78,7 @@ export async function matchValidationForMatchResults(record, matchResults) {
 // melinda-record-match-validation is *NOT* async
 export function matchValidation({record1, record2, record1External, record2External}) {
   debug(`Running match-validation here:`);
-  debug(`recorA: ${record1.constructor.name}`);
+  debug(`recordA: ${record1.constructor.name}`);
   // Send records to match-validator as plain objects to avoid problems with differing MarcRecord -versions etc.
   const matchValidationResult = matchValidator({record1Object: record1.toObject(), record2Object: record2.toObject(), record1External, record2External});
   debugData(inspect(matchValidationResult));

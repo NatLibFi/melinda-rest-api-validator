@@ -299,48 +299,7 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
 
     if (operationSettings.unique || operationSettings.merge) {
       logger.verbose('Attempting to find matching records in the SRU');
-
-      if (matchers.length < 0 || matchers.length !== matchOptionsList.length) {
-        throw new ValidationError(HttpStatus.INTERNAL_SERVER_ERROR, {message: `There's no matcher defined, or no matchOptions for all matchers`, recordMetadata});
-      }
-
-      logger.debug(`There are ${matchers.length} matchers with matchOptions: ${JSON.stringify(matchOptionsList)}`);
-      // This should use different matchOptions for merge and non-merge cases
-      // Note: incoming record is formatted ($w(FIN01)), existing records from SRU are not ($w(FI-MELINDA))
-      // stopWhenFound stops iterating matchers when a match is found
-      // stopWhenFound defaults to true but it is configurable in env variable STOP_WHEN_FOUND
-      const matchResult = await matcherService.iterateMatchers({matchers, matchOptionsList, record, stopWhenFound});
-      const {matches} = matchResult;
-
-      logger.debug(`Matches: ${JSON.stringify(matches.map(({candidate: {id}, probability}) => ({id, probability})))}`);
-
-      const newHeaders = updateHeadersAfterMatch({matches, headers});
-
-      // eslint-disable-next-line functional/no-conditional-statement
-      if (matches.length > 0 && !operationSettings.merge) {
-        // we log the matches here before erroring
-        // Should we also validate the matches before erroring?
-        const matchResultsForLog = matches.map((match, index) => ({action: false, preference: false, message: 'Validation not run', matchSequence: index, ...match}));
-
-        logMatchAction({headers, record, matchResultsForLog});
-        throw new ValidationError(HttpStatus.CONFLICT, {message: 'Duplicates in database', ids: matches.map(({candidate: {id}}) => id), recordMetadata});
-      }
-
-      // eslint-disable-next-line functional/no-conditional-statement
-      if (matches.length > 0 && operationSettings.merge) {
-        logger.debug(`Found matches (${matches.length}) for merging.`);
-        return validateAndMergeMatchResults({record, matchResults: matches, headers: newHeaders});
-      }
-
-      logger.verbose('No matching records');
-
-      // Note validationService = validation.js from melinda-rest-api-commons
-      // which uses marc-record-validate
-      // currently checks only that possible f003 has value FI-MELINDA
-      // for some reason this does not work for noop CREATEs
-
-      const validationResults = await validationService(record);
-      return {result: validationResults, recordMetadata, headers: newHeaders};
+      return runMatching({operationSettings, matchers, matchOptionsList, stopWhenFound, record, headers, recordMetadata});
     }
 
     logger.debug('No unique/merge');
@@ -348,7 +307,56 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
     return {result: validationResults, recordMetadata, headers};
   }
 
-  async function validateAndMergeMatchResults({record, matchResults, headers}) {
+  // eslint-disable-next-line max-statements
+  async function runMatching({operationSettings, matchers, matchOptionsList, stopWhenFound, record, headers, recordMetadata, prevMatcher = 0}) {
+    if (matchers.length < 0 || matchers.length !== matchOptionsList.length) {
+      throw new ValidationError(HttpStatus.INTERNAL_SERVER_ERROR, {message: `There's no matcher defined, or no matchOptions for all matchers`, recordMetadata});
+    }
+
+    logger.debug(`There are ${matchers.length} matchers with matchOptions: ${JSON.stringify(matchOptionsList)}`);
+    // This should use different matchOptions for merge and non-merge cases
+    // Note: incoming record is formatted ($w(FIN01)), existing records from SRU are not ($w(FI-MELINDA))
+    // stopWhenFound stops iterating matchers when a match is found
+    // stopWhenFound defaults to true but it is configurable in env variable STOP_WHEN_FOUND
+    logger.debug(`StopWhenFound: ${stopWhenFound}}`);
+    const matchResult = await matcherService.iterateMatchers({matchers, matchOptionsList, record, stopWhenFound, prevMatcher});
+    const {matches, matcherCount} = matchResult;
+
+    logger.debug(`The last matcher run was ${matcherCount} out of ${matchers.length}`);
+    const latestMatcher = matcherCount < matchers.length ? matcherCount : undefined;
+    logger.debug(`Matches: ${JSON.stringify(matches.map(({candidate: {id}, probability}) => ({id, probability})))}`);
+
+    const newHeaders = updateHeadersAfterMatch({matches, headers});
+
+    // eslint-disable-next-line functional/no-conditional-statement
+    if (matches.length > 0 && !operationSettings.merge) {
+      // we log the matches here before erroring
+      // Should we also validate the matches before erroring?
+      const matchResultsForLog = matches.map((match, index) => ({action: false, preference: false, message: 'Validation not run', matchSequence: index, ...match}));
+
+      logMatchAction({headers, record, matchResultsForLog});
+      throw new ValidationError(HttpStatus.CONFLICT, {message: 'Duplicates in database', ids: matches.map(({candidate: {id}}) => id), recordMetadata});
+    }
+
+    if (matches.length > 0 && operationSettings.merge) {
+      const matchParam = {operationSettings, matchers, matchOptionsList, stopWhenFound, record, headers, recordMetadata, prevMatcher: latestMatcher};
+      logger.debug(`Found matches (${matches.length}) for merging.`);
+      return validateAndMergeMatchResults({record, matchResults: matches, headers: newHeaders, matchParam});
+    }
+
+    logger.verbose('No matching records');
+
+    // Note validationService = validation.js from melinda-rest-api-commons
+    // which uses marc-record-validate
+    // currently checks only that possible f003 has value FI-MELINDA
+    // for some reason this does not work for noop CREATEs
+
+    const validationResults = await validationService(record);
+    return {result: validationResults, recordMetadata, headers: newHeaders};
+  }
+
+  // eslint-disable-next-line max-statements
+  async function validateAndMergeMatchResults({record, matchResults, headers, matchParam}) {
     const {recordMetadata} = headers;
     try {
       logger.debug(`We have matchResults (${matchResults.length}) here: ${JSON.stringify(matchResults.map(({candidate: {id}, probability}) => ({id, probability})))}`);
@@ -369,19 +377,33 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
       // Check error cases
       if (!matchValidationResult.result) {
         const messages = sortedValidatedMatchResults.map(match => `${match.candidate.id}: ${match.message}`);
+
+        // Here we could loop back to matching if our we had stopWhenFound active and we have matchers left
+        // Here we could also loop back to creating the record if we didn't have any valid matches
+        if (matchParam.prevMatcher < matchParam.matchers.length) {
+          logger.verbose(`WARNING: Match from ${matchParam.prevMatcher} failed matchValidation - we would have matchers left. We could loop back to matching.`);
+          return runMatching(matchParam);
+          //throw new ValidationError(HttpStatus.CONFLICT, {message: `MatchValidation for all ${sortedValidatedMatchResults.length} matches failed. ${messages.join(`, `)}`, ids: sortedValidatedMatchResults.map(match => match.candidate.id), recordMetadata});
+        }
+        logger.debug(`No valid matches found.`);
         throw new ValidationError(HttpStatus.CONFLICT, {message: `MatchValidation for all ${sortedValidatedMatchResults.length} matches failed. ${messages.join(`, `)}`, ids: sortedValidatedMatchResults.map(match => match.candidate.id), recordMetadata});
-        //throw new ValidationError(HttpStatus.CONFLICT, {message: `MatchValidation for all matches failed.`, recordMetadata});
       }
 
       const firstResult = matchValidationResult.result;
       logger.silly(`Result: ${inspect(firstResult, {colors: true, maxArrayLength: 3, depth: 2})}}`);
 
       if (firstResult.action === false) {
+        // Here we could loop back to matching if our we had stopWhenFound active and we have matchers left
+        // Here we could also loop back to creating the record if we didn't have any valid matches
+        if (matchParam.prevMatcher < matchParam.matchers.length) {
+          logger.verbose(`WARNING: Match from ${matchParam.prevMatcher} failed matchValidation - we would have matchers left. We could loop back to matching.`);
+          throw new ValidationError(HttpStatus.CONFLICT, {message: `MatchValidation with ${firstResult.candidate.id} failed. ${firstResult.message}`, ids: [firstResult.candidate.id], recordMetadata});
+        }
+        logger.debug(`No valid matches found.`);
         throw new ValidationError(HttpStatus.CONFLICT, {message: `MatchValidation with ${firstResult.candidate.id} failed. ${firstResult.message}`, ids: [firstResult.candidate.id], recordMetadata});
       }
 
       // We don't have a matchValidationNote, because the preference information is available in the mergeNote
-
       logger.debug(`Action from matchValidation: ${firstResult.action}`);
 
       // run merge for record with the best valid match
