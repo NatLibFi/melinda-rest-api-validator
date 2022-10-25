@@ -27,7 +27,8 @@ export const splitterOptions = {
   keepSplitterReport: readEnvironmentVariable('KEEP_SPLITTER_REPORT', {defaultValue: 'ERROR'})
 };
 
-const validatorMatchPackages = readEnvironmentVariable('VALIDATOR_MATCH_PACKAGES', {defaultValue: 'IDS,CONTENT'}).split(',');
+const validatorMatchPackages = readEnvironmentVariable('VALIDATOR_MATCH_PACKAGES', {defaultValue: 'IDS,STANDARD_IDS,CONTENT'}).split(',');
+const stopWhenFound = readEnvironmentVariable('STOP_WHEN_FOUND', {defaultValue: true});
 
 // We could have also settings matchValidation and merge here
 
@@ -37,7 +38,8 @@ export const validatorOptions = {
   postMergeFixOptions: generatePostMergeFixOptions(),
   preImportFixOptions: generatePreImportFixOptions(),
   sruUrl: readEnvironmentVariable('SRU_URL'),
-  matchOptionsList: generateMatchOptionsList()
+  matchOptionsList: generateMatchOptionsList(),
+  stopWhenFound
 };
 
 function generateMatchOptionsList() {
@@ -74,6 +76,12 @@ function generateMaxMatches(validatorMatchPackage) {
     return value;
   }
 
+  if (validatorMatchPackage === 'STANDARD_IDS') {
+    const value = 10;
+    debug(`MaxMatches for ${validatorMatchPackage} is defined in in config: ${value}`);
+    return value;
+  }
+
   if (validatorMatchPackage === 'CONTENT') {
     const value = 10;
     debug(`MaxMatches for ${validatorMatchPackage} is defined in in config: ${value}`);
@@ -86,6 +94,12 @@ function generateMaxMatches(validatorMatchPackage) {
 
 function generateMaxCandidates(validatorMatchPackage) {
   if (validatorMatchPackage === 'IDS') {
+    const value = 50;
+    debug(`MaxCandidates for ${validatorMatchPackage} is defined in in config: ${value}`);
+    return value;
+  }
+
+  if (validatorMatchPackage === 'STANDARD_IDS') {
     const value = 50;
     debug(`MaxCandidates for ${validatorMatchPackage} is defined in in config: ${value}`);
     return value;
@@ -149,7 +163,8 @@ function generateStrategy(validatorMatchPackage) {
         matchDetection.features.bib.allSourceIds()
       ];
     }
-    if (validatorMatchPackage === 'CONTENT') {
+
+    if (validatorMatchPackage === 'CONTENT' || validatorMatchPackage === 'STANDARD_IDS') {
       return [
         matchDetection.features.bib.hostComponent(),
         matchDetection.features.bib.isbn(),
@@ -184,10 +199,13 @@ function generateSearchSpec(validatorMatchPackage) {
       ];
     }
 
+    if (validatorMatchPackage === 'STANDARD_IDS') {
+      return [candidateSearch.searchTypes.bib.standardIdentifiers];
+    }
+
     if (validatorMatchPackage === 'CONTENT') {
       return [
         candidateSearch.searchTypes.bib.hostComponents,
-        candidateSearch.searchTypes.bib.standardIdentifiers,
         candidateSearch.searchTypes.bib.title
       ];
     }

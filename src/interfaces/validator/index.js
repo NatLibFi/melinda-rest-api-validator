@@ -22,7 +22,7 @@ import {LOG_ITEM_TYPE} from '@natlibfi/melinda-rest-api-commons/dist/constants';
 //const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator');
 //const debugData = debug.extend('data');
 
-export default async function ({preValidationFixOptions, postMergeFixOptions, preImportFixOptions, sruUrl, matchOptionsList, mongoUri, recordType}) {
+export default async function ({preValidationFixOptions, postMergeFixOptions, preImportFixOptions, sruUrl, matchOptionsList, mongoUri, recordType, stopWhenFound}) {
   const logger = createLogger();
   logger.debug(`preValidationFixOptions: ${JSON.stringify(preValidationFixOptions)}`);
   logger.debug(`postMergeFixOptions: ${JSON.stringify(postMergeFixOptions)}`);
@@ -308,8 +308,8 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
       // This should use different matchOptions for merge and non-merge cases
       // Note: incoming record is formatted ($w(FIN01)), existing records from SRU are not ($w(FI-MELINDA))
       // stopWhenFound stops iterating matchers when a match is found
-      //const matchResult = await matcherService.iterateMatchers({matchers, matchOptionsList, record, stopWhenFound: false});
-      const matchResult = await matcherService.iterateMatchers({matchers, matchOptionsList, record, stopWhenFound: true});
+      // stopWhenFound defaults to true but it is configurable in env variable STOP_WHEN_FOUND
+      const matchResult = await matcherService.iterateMatchers({matchers, matchOptionsList, record, stopWhenFound});
       const {matches} = matchResult;
 
       logger.debug(`Matches: ${JSON.stringify(matches.map(({candidate: {id}, probability}) => ({id, probability})))}`);
