@@ -22,7 +22,7 @@ import {LOG_ITEM_TYPE} from '@natlibfi/melinda-rest-api-commons/dist/constants';
 //const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator');
 //const debugData = debug.extend('data');
 
-export default async function ({preValidationFixOptions, postMergeFixOptions, preImportFixOptions, sruUrl, matchOptionsList, mongoUri, recordType}) {
+export default async function ({preValidationFixOptions, postMergeFixOptions, preImportFixOptions, sruUrl, matchOptionsList, mongoUri, recordType, stopWhenFound}) {
   const logger = createLogger();
   logger.debug(`preValidationFixOptions: ${JSON.stringify(preValidationFixOptions)}`);
   logger.debug(`postMergeFixOptions: ${JSON.stringify(postMergeFixOptions)}`);
@@ -229,17 +229,7 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
       const updateMergeNeeded = operationSettings.merge && updateOperation !== 'updateAfterMerge';
       const {mergedRecord: updatedRecordAfterMerge, headers: newHeaders} = updateMergeNeeded ? await mergeRecordForUpdates({record: updateRecord, existingRecord, id: updateId, headers}) : {mergedRecord: updateRecord, headers};
 
-      // We could check here whether the update/merge resulted in changes in the existing record
-
-      // bulk does not have cataloger.authorization
-      // eslint-disable-next-line functional/no-conditional-statement
-      if (cataloger.authorization) {
-        logger.verbose('Checking LOW-tag authorization');
-        validateOwnChanges({ownTags: cataloger.authorization, incomingRecord: updatedRecordAfterMerge, existingRecord, recordMetadata, validate: runValidations});
-        // eslint-disable-next-line functional/no-conditional-statement
-      } else {
-        logger.verbose(`No cataloger.authorization available for checking LOW-tags`);
-      }
+      runValidateOwnChanges({cataloger, record: updatedRecordAfterMerge, recordMetadata, runValidations});
 
       logger.verbose('Checking CAT field history');
       validateRecordState({incomingRecord: updatedRecordAfterMerge, existingRecord, existingId: updateId, recordMetadata, validate: runValidations});
@@ -287,15 +277,7 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
 
     logger.verbose(`Validations for CREATE operation. Unique: ${operationSettings.unique}, merge: ${operationSettings.merge}`);
 
-    // bulks do not have cataloger.authorization
-    // eslint-disable-next-line functional/no-conditional-statement
-    if (cataloger.authorization) {
-      logger.verbose('Checking LOW-tag authorization');
-      validateOwnChanges({ownTags: cataloger.authorization, incomingRecord: record, recordMetadata, validate: runValidations});
-      // eslint-disable-next-line functional/no-conditional-statement
-    } else {
-      logger.verbose(`No cataloger.authorization available for checking LOW-tags`);
-    }
+    runValidateOwnChanges({cataloger, record, recordMetadata, runValidations});
 
     if (operationSettings.unique || operationSettings.merge) {
       logger.verbose('Attempting to find matching records in the SRU');
@@ -306,9 +288,9 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
 
       logger.debug(`There are ${matchers.length} matchers with matchOptions: ${JSON.stringify(matchOptionsList)}`);
       // This should use different matchOptions for merge and non-merge cases
-      // Note: incoming record is formatted ($w(FIN01)), existing records from SRU are not ($w(FI-MELINDA))
       // stopWhenFound stops iterating matchers when a match is found
-      const matchResult = await matcherService.iterateMatchers({matchers, matchOptionsList, record, stopWhenFound: false});
+      // stopWhenFound defaults to true but it is configurable in env variable STOP_WHEN_FOUND
+      const matchResult = await matcherService.iterateMatchers({matchers, matchOptionsList, record, stopWhenFound});
       const {matches} = matchResult;
 
       logger.debug(`Matches: ${JSON.stringify(matches.map(({candidate: {id}, probability}) => ({id, probability})))}`);
@@ -318,14 +300,13 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
       // eslint-disable-next-line functional/no-conditional-statement
       if (matches.length > 0 && !operationSettings.merge) {
         // we log the matches here before erroring
-        // Should we also validate the matches before erroring?
+        // Should we also validate the matches before erroring? Now we error also those cases, where the match would fail matchValidation
         const matchResultsForLog = matches.map((match, index) => ({action: false, preference: false, message: 'Validation not run', matchSequence: index, ...match}));
 
         logMatchAction({headers, record, matchResultsForLog});
         throw new ValidationError(HttpStatus.CONFLICT, {message: 'Duplicates in database', ids: matches.map(({candidate: {id}}) => id), recordMetadata});
       }
 
-      // eslint-disable-next-line functional/no-conditional-statement
       if (matches.length > 0 && operationSettings.merge) {
         logger.debug(`Found matches (${matches.length}) for merging.`);
         return validateAndMergeMatchResults({record, matchResults: matches, headers: newHeaders});
@@ -337,6 +318,7 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
       // which uses marc-record-validate
       // currently checks only that possible f003 has value FI-MELINDA
       // for some reason this does not work for noop CREATEs
+      // Do we actually need this validation?
 
       const validationResults = await validationService(record);
       return {result: validationResults, recordMetadata, headers: newHeaders};
@@ -366,15 +348,17 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
       logMatchAction({headers, record, matchResultsForLog: sortedValidatedMatchResults});
 
       // Check error cases
+      // Note that if we had stopWhenFound active, and did not run all the matchers because a match was found, we'll probably have cases, where we error records, that might
+      // have a valid match that could be found by later matchers
       if (!matchValidationResult.result) {
         const messages = sortedValidatedMatchResults.map(match => `${match.candidate.id}: ${match.message}`);
         throw new ValidationError(HttpStatus.CONFLICT, {message: `MatchValidation for all ${sortedValidatedMatchResults.length} matches failed. ${messages.join(`, `)}`, ids: sortedValidatedMatchResults.map(match => match.candidate.id), recordMetadata});
-        //throw new ValidationError(HttpStatus.CONFLICT, {message: `MatchValidation for all matches failed.`, recordMetadata});
       }
 
       const firstResult = matchValidationResult.result;
       logger.silly(`Result: ${inspect(firstResult, {colors: true, maxArrayLength: 3, depth: 2})}}`);
 
+      // Do we ever get this kind of result from the matchValidation?
       if (firstResult.action === false) {
         throw new ValidationError(HttpStatus.CONFLICT, {message: `MatchValidation with ${firstResult.candidate.id} failed. ${firstResult.message}`, ids: [firstResult.candidate.id], recordMetadata});
       }
@@ -390,6 +374,19 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
       logger.error(err);
       throw err;
     }
+  }
+
+  function runValidateOwnChanges({cataloger, record, recordMetadata, runValidations}) {
+    logger.debug(`cataloger: ${JSON.stringify(cataloger)}`);
+    // bulks do not currently have cataloger.id AND cataloger.authorization
+    // what if we have empty authorization?
+    if (cataloger.id && cataloger.authorization) {
+      logger.verbose('Checking LOW-tag authorization');
+      validateOwnChanges({ownTags: cataloger.authorization, incomingRecord: record, recordMetadata, validate: runValidations});
+      return;
+    }
+    logger.verbose(`No cataloger.authorization available for checking LOW-tags`);
+    return;
   }
 
   async function mergeValidatedMatchResults({record, validatedMatchResult, headers}) {
