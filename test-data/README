@@ -1,0 +1,2 @@
+This folder contains different kinds of test data
+- transformed_nosids.json: 120 records as an array of marc-record-objects
