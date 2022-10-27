@@ -1,5 +1,5 @@
 {
-    "description": "It should run keep LOWs when merging",
+    "description": "It should keep LOWs when merging",
     "recordType": "bib",
     "expectedToThrow": false,
     "enabled": true,
