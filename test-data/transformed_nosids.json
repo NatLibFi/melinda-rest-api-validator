@@ -7748,7 +7748,11 @@
         "subfields": [
           {
             "code": "a",
-            "value": "Meurman, Sari,€kirjoittaja."
+            "value": "Meurman, Sari,"
+          },
+          {
+            "code": "e",
+            "value": "kirjoittaja."
           }
         ]
       },

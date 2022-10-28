@@ -1,0 +1,363 @@
+{
+    "_validationOptions": {},
+    "leader": "00000nam a22002654i 4500",
+    "fields": [
+      {
+        "tag": "005",
+        "value": "20190530082001.0"
+      },
+      {
+        "tag": "008",
+        "value": "000101s2016    fi     g|    |||||||fin|d"
+      },
+      {
+        "tag": "020",
+        "ind1": " ",
+        "ind2": " ",
+        "subfields": [
+          {
+            "code": "a",
+            "value": "978-952-63-0792-3"
+          }
+        ]
+      },
+      {
+        "tag": "024",
+        "ind1": "3",
+        "ind2": " ",
+        "subfields": [
+          {
+            "code": "a",
+            "value": "9789526307923"
+          }
+        ]
+      },
+      {
+        "tag": "040",
+        "ind1": " ",
+        "ind2": " ",
+        "subfields": [
+          {
+            "code": "a",
+            "value": "FI-BTJ"
+          }
+        ]
+      },
+      {
+        "tag": "041",
+        "ind1": "0",
+        "ind2": " ",
+        "subfields": [
+          {
+            "code": "a",
+            "value": "ita"
+          },
+          {
+            "code": "a",
+            "value": "fin"
+          }
+        ]
+      },
+      {
+        "tag": "084",
+        "ind1": " ",
+        "ind2": " ",
+        "subfields": [
+          {
+            "code": "a",
+            "value": "89.6207"
+          },
+          {
+            "code": "2",
+            "value": "ykl"
+          }
+        ]
+      },
+      {
+        "tag": "245",
+        "ind1": "0",
+        "ind2": "0",
+        "subfields": [
+          {
+            "code": "a",
+            "value": "Bella vista 1 :"
+          },
+          {
+            "code": "b",
+            "value": "italiaa aikuisille ja lukioon : corsi 1-3 /"
+          },
+          {
+            "code": "c",
+            "value": "Ciro Imperato, Katri Kuusela, Sari Meurman ja Giuseppe Feroldi."
+          }
+        ]
+      },
+      {
+        "tag": "246",
+        "ind1": "1",
+        "ind2": "0",
+        "subfields": [
+          {
+            "code": "a",
+            "value": "Italiaa aikuisille ja lukioon : corsi 1-3"
+          }
+        ]
+      },
+      {
+        "tag": "250",
+        "ind1": " ",
+        "ind2": " ",
+        "subfields": [
+          {
+            "code": "a",
+            "value": "1.-2. painos - 3. painos 2013. - 4. painos 2014. - 1.-5. painos 2015. - 6. painos 2016. - 7. painos 2017. -8.painos 2018."
+          }
+        ]
+      },
+      {
+        "tag": "264",
+        "ind1": " ",
+        "ind2": "1",
+        "subfields": [
+          {
+            "code": "a",
+            "value": "Helsinki : "
+          },
+          {
+            "code": "b",
+            "value": "Sanoma Pro,"
+          },
+          {
+            "code": "c",
+            "value": "2018."
+          }
+        ]
+      },
+      {
+        "tag": "300",
+        "ind1": " ",
+        "ind2": " ",
+        "subfields": [
+          {
+            "code": "a",
+            "value": "321 sivua :"
+          },
+          {
+            "code": "b",
+            "value": "kuvitettu ;"
+          },
+          {
+            "code": "c",
+            "value": "24 cm"
+          }
+        ]
+      },
+      {
+        "tag": "336",
+        "ind1": " ",
+        "ind2": " ",
+        "subfields": [
+          {
+            "code": "a",
+            "value": "teksti"
+          },
+          {
+            "code": "b",
+            "value": "txt"
+          },
+          {
+            "code": "2",
+            "value": "rdacontent"
+          }
+        ]
+      },
+      {
+        "tag": "337",
+        "ind1": " ",
+        "ind2": " ",
+        "subfields": [
+          {
+            "code": "a",
+            "value": "käytettävissä ilman laitetta"
+          },
+          {
+            "code": "b",
+            "value": "n"
+          },
+          {
+            "code": "2",
+            "value": "rdamedia"
+          }
+        ]
+      },
+      {
+        "tag": "338",
+        "ind1": " ",
+        "ind2": " ",
+        "subfields": [
+          {
+            "code": "a",
+            "value": "nide"
+          },
+          {
+            "code": "b",
+            "value": "nc"
+          },
+          {
+            "code": "2",
+            "value": "rdacarrier"
+          }
+        ]
+      },
+      {
+        "tag": "500",
+        "ind1": " ",
+        "ind2": " ",
+        "subfields": [
+          {
+            "code": "a",
+            "value": "Opetuskieli suomi."
+          }
+        ]
+      },
+      {
+        "tag": "500",
+        "ind1": " ",
+        "ind2": " ",
+        "subfields": [
+          {
+            "code": "a",
+            "value": "Italiaa aikuisille ja lukion B3-kieleen."
+          }
+        ]
+      },
+      {
+        "tag": "546",
+        "ind1": " ",
+        "ind2": " ",
+        "subfields": [
+          {
+            "code": "a",
+            "value": "Opetettava kieli: italia, opetuskieli: suomi."
+          }
+        ]
+      },
+      {
+        "tag": "650",
+        "ind1": " ",
+        "ind2": "7",
+        "subfields": [
+          {
+            "code": "a",
+            "value": "aikuisopiskelu"
+          },
+          {
+            "code": "2",
+            "value": "yso/fin"
+          },
+          {
+            "code": "0",
+            "value": "http://www.yso.fi/onto/yso/p10753"
+          }
+        ]
+      },
+      {
+        "tag": "655",
+        "ind1": " ",
+        "ind2": "7",
+        "subfields": [
+          {
+            "code": "a",
+            "value": "oppikirjat"
+          },
+          {
+            "code": "2",
+            "value": "slm/fin"
+          },
+          {
+            "code": "0",
+            "value": "http://urn.fi/URN:NBN:fi:au:slm:s633"
+          }
+        ]
+      },
+      {
+        "tag": "655",
+        "ind1": " ",
+        "ind2": "7",
+        "subfields": [
+          {
+            "code": "a",
+            "value": "kielikurssit"
+          },
+          {
+            "code": "2",
+            "value": "slm/fin"
+          },
+          {
+            "code": "0",
+            "value": "http://urn.fi/URN:NBN:fi:au:slm:s1365"
+          }
+        ]
+      },
+      {
+        "tag": "700",
+        "ind1": "1",
+        "ind2": " ",
+        "subfields": [
+          {
+            "code": "a",
+            "value": "Imperato, Ciro,"
+          },
+          {
+            "code": "e",
+            "value": "kirjoittaja."
+          }
+        ]
+      },
+      {
+        "tag": "700",
+        "ind1": "1",
+        "ind2": " ",
+        "subfields": [
+          {
+            "code": "a",
+            "value": "Kuusela, Katri,"
+          },
+          {
+            "code": "e",
+            "value": "kirjoittaja."
+          }
+        ]
+      },
+      {
+        "tag": "700",
+        "ind1": "1",
+        "ind2": " ",
+        "subfields": [
+          {
+            "code": "a",
+            "value": "Meurman, Sari,"
+          },
+            {
+                "code": "e",
+                "value": "kirjoittaja."
+              }
+        ]
+      },
+      {
+        "tag": "700",
+        "ind1": "1",
+        "ind2": " ",
+        "subfields": [
+          {
+            "code": "a",
+            "value": "Feroldi, Giuseppe,"
+          },
+          {
+            "code": "e",
+            "value": "kirjoittaja."
+          }
+        ]
+      }
+    ]
+  }
