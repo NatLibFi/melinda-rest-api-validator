@@ -15,7 +15,8 @@ export default async function ({
   const collection = pollRequest ? 'prio' : 'bulk';
   const prio = pollRequest;
   const mongoOperator = await mongoFactory(mongoUri, collection);
-  const amqpOperator = await amqpFactory(amqpUrl);
+  // secord parameter is true for running amqpHealthCheck, which errors if channel and/or connection gets closed
+  const amqpOperator = await amqpFactory(amqpUrl, true);
   const validator = await validatorFactory({...validatorOptions, mongoUri});
   const toMarcRecords = await toMarcRecordFactory({amqpOperator, mongoOperator, splitterOptions, mongoUri});
 
