@@ -229,7 +229,7 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
       const updateMergeNeeded = operationSettings.merge && updateOperation !== 'updateAfterMerge';
       const {mergedRecord: updatedRecordAfterMerge, headers: newHeaders} = updateMergeNeeded ? await mergeRecordForUpdates({record: updateRecord, existingRecord, id: updateId, headers}) : {mergedRecord: updateRecord, headers};
 
-      runValidateOwnChanges({cataloger, record: updatedRecordAfterMerge, recordMetadata, runValidations});
+      runValidateOwnChanges({cataloger, incomingRecord: updatedRecordAfterMerge, existingRecord, recordMetadata, runValidations});
 
       logger.verbose('Checking CAT field history');
       validateRecordState({incomingRecord: updatedRecordAfterMerge, existingRecord, existingId: updateId, recordMetadata, validate: runValidations});
@@ -277,7 +277,7 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
 
     logger.verbose(`Validations for CREATE operation. Unique: ${operationSettings.unique}, merge: ${operationSettings.merge}`);
 
-    runValidateOwnChanges({cataloger, record, recordMetadata, runValidations});
+    runValidateOwnChanges({cataloger, incomingRecord: record, recordMetadata, runValidations});
 
     if (operationSettings.unique || operationSettings.merge) {
       logger.verbose('Attempting to find matching records in the SRU');
@@ -376,13 +376,13 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
     }
   }
 
-  function runValidateOwnChanges({cataloger, record, recordMetadata, runValidations}) {
+  function runValidateOwnChanges({cataloger, incomingRecord, existingRecord, recordMetadata, runValidations}) {
     logger.debug(`cataloger: ${JSON.stringify(cataloger)}`);
     // bulks do not currently have cataloger.id AND cataloger.authorization
     // what if we have empty authorization?
     if (cataloger.id && cataloger.authorization) {
       logger.verbose('Checking LOW-tag authorization');
-      validateOwnChanges({ownTags: cataloger.authorization, incomingRecord: record, recordMetadata, validate: runValidations});
+      validateOwnChanges({ownTags: cataloger.authorization, incomingRecord, existingRecord, recordMetadata, validate: runValidations});
       return;
     }
     logger.verbose(`No cataloger.authorization available for checking LOW-tags`);
