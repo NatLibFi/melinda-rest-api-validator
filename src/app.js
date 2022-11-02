@@ -188,7 +188,7 @@ export default async function ({
     // If not-noop and validator.process fails, it errors
     // for noop failing marc-record-validate return result.failed: true
     logger.silly(`app/checkAmqp: Validation process results: ${inspect(processResult, {colors: true, maxArrayLength: 3, depth: 1})}`);
-    logger.debug(`app/checkAmqp: Validation process results: ${JSON.stringify(processResult)}`);
+    logger.debug(`app/checkAmqp: Validation process results: ${JSON.stringify(processResult.headers)}`);
 
     await amqpOperator.ackMessages([message]);
     return processValidated({headers, correlationId, processResult, mongoOperator, prio});
