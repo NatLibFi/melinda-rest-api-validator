@@ -4,6 +4,7 @@ import {expect} from 'chai';
 import {MarcRecord} from '@natlibfi/marc-record';
 import validateOwnChanges from './own-authorization';
 import {Error as ValidationError} from '@natlibfi/melinda-commons';
+import {OPERATIONS} from '@natlibfi/melinda-rest-api-commons/dist/constants';
 
 MarcRecord.setValidationOptions({subfieldValues: false});
 
@@ -27,7 +28,7 @@ describe('own-authorization', () => {
       const record = new MarcRecord(JSON.parse(record1));
 
       expect(() => {
-        validateOwnChanges({ownTags: tags, incomingRecord: record});
+        validateOwnChanges({ownTags: tags, incomingRecord: record, operation: OPERATIONS.CREATE});
       }).to.not.throw();
     });
 
@@ -46,9 +47,19 @@ describe('own-authorization', () => {
       const record = new MarcRecord(JSON.parse(record3));
 
       expect(() => {
-        validateOwnChanges({ownTags: tags, incomingRecord: record});
+        validateOwnChanges({ownTags: tags, incomingRecord: record, operation: OPERATIONS.CREATE});
       }).to.throw(ValidationError);
     });
+
+    it('Should throw (operation UPDATE, no existingRecord)', () => {
+      const tags = JSON.parse(tags1);
+      const record = new MarcRecord(JSON.parse(record1));
+
+      expect(() => {
+        validateOwnChanges({ownTags: tags, incomingRecord: record, operation: OPERATIONS.UPDATE});
+      }).to.throw(ValidationError);
+    });
+
 
     it('Should throw (Record comparison)', () => {
       const tags = JSON.parse(tags4);
