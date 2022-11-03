@@ -31,6 +31,12 @@ export default function ({base, source, recordType}) {
 
   // We would need to test for errors here
 
+  //debug(`Base is: ${base.constructor.name}`);
+  //debugData(base.toString());
+
+  //debug(`Source is: ${source.constructor.name}`);
+  //debugData(source.toString());
+
   // Send records to merge/merge-reducers as MarcRecords
   // NOTE: currently validationOptions {"subfieldValues": false} is hardcoded in merge/mergeReducers
   const result = merger({base, source, reducers});

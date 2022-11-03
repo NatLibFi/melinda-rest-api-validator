@@ -30,7 +30,7 @@ import generateTests from '@natlibfi/fixugen';
 import {READERS} from '@natlibfi/fixura';
 import {expect} from 'chai';
 import {MarcRecord} from '@natlibfi/marc-record';
-import merger from './merge';
+import mergeFromValidator from './merge';
 import createDebugLogger from 'debug';
 
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator:merge:test');
@@ -56,6 +56,9 @@ describe('merge', () => {
 
       const record1 = new MarcRecord(getFixture('record1.json'));
       const record2 = new MarcRecord(getFixture('record2.json'));
+      //const record1 = getFixture('record1.json');
+      //const record2 = getFixture('record2.json');
+
 
       debug(`We have records`);
 
@@ -63,7 +66,7 @@ describe('merge', () => {
         debugData(`Expecting error: ${expectedToThrow}, ${expectedStatus}, ${expectedError}`);
         try {
           debug(`Trying to run merge`);
-          const result = merger({base: record1, source: record2, recordType});
+          const result = mergeFromValidator({base: record1, source: record2, recordType});
           debugData(result);
           throw new Error('Expected an error');
         } catch (err) {
@@ -79,7 +82,7 @@ describe('merge', () => {
       }
 
       const expectedMergedRecord = new MarcRecord(getFixture('mergedRecord.json'), {subfieldValues: false});
-      const result = merger({base: record1, source: record2, recordType});
+      const result = mergeFromValidator({base: record1, source: record2, recordType});
       //debugData(result.status);
       //debug('Did not get an error.');
       expect(result.status).to.equal(expectedResultStatus);

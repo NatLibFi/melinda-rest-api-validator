@@ -1,0 +1,3852 @@
+{
+    "_validationOptions": {
+        "subfieldValues": false
+    },
+    "leader": "13254cam a22023654i 4500",
+    "fields": [
+        {
+            "tag": "001",
+            "value": "006621048"
+        },
+        {
+            "tag": "003",
+            "value": "FI-MELINDA"
+        },
+        {
+            "tag": "005",
+            "value": "20200319153257.0"
+        },
+        {
+            "tag": "008",
+            "value": "140220t20142014fi a     b    001 0 fin  "
+        },
+        {
+            "tag": "020",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "978-951-29-5661-6"
+                },
+                {
+                    "code": "q",
+                    "value": "nidottu"
+                }
+            ]
+        },
+        {
+            "tag": "024",
+            "ind1": "3",
+            "ind2": "1",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "9789512956616>"
+                }
+            ]
+        },
+        {
+            "tag": "035",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "(FI-MELINDA)006621048"
+                }
+            ]
+        },
+        {
+            "tag": "040",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "FI-NL"
+                },
+                {
+                    "code": "b",
+                    "value": "fin"
+                },
+                {
+                    "code": "d",
+                    "value": "FI-Hul"
+                },
+                {
+                    "code": "e",
+                    "value": "rda"
+                }
+            ]
+        },
+        {
+            "tag": "041",
+            "ind1": "0",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "fin"
+                }
+            ]
+        },
+        {
+            "tag": "042",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "finb"
+                }
+            ]
+        },
+        {
+            "tag": "050",
+            "ind1": "1",
+            "ind2": "4",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "NX280"
+                },
+                {
+                    "code": "b",
+                    "value": ".T+"
+                }
+            ]
+        },
+        {
+            "tag": "072",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "90"
+                },
+                {
+                    "code": "2",
+                    "value": "kkaa"
+                }
+            ]
+        },
+        {
+            "tag": "072",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "NX"
+                },
+                {
+                    "code": "2",
+                    "value": "lcco"
+                }
+            ]
+        },
+        {
+            "tag": "080",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "7.0"
+                },
+                {
+                    "code": "2",
+                    "value": "1974/fin/fennica"
+                },
+                {
+                    "code": "9",
+                    "value": "FENNI<KEEP>"
+                }
+            ]
+        },
+        {
+            "tag": "080",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "001"
+                },
+                {
+                    "code": "2",
+                    "value": "1974/fin/fennica"
+                },
+                {
+                    "code": "9",
+                    "value": "FENNI<KEEP>"
+                }
+            ]
+        },
+        {
+            "tag": "080",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "001"
+                }
+            ]
+        },
+        {
+            "tag": "080",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "7.0"
+                }
+            ]
+        },
+        {
+            "tag": "084",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "70.01"
+                },
+                {
+                    "code": "2",
+                    "value": "ykl"
+                },
+                {
+                    "code": "9",
+                    "value": "FENNI<KEEP>"
+                }
+            ]
+        },
+        {
+            "tag": "084",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "70"
+                },
+                {
+                    "code": "2",
+                    "value": "ykl"
+                }
+            ]
+        },
+        {
+            "tag": "084",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "73"
+                },
+                {
+                    "code": "2",
+                    "value": "uef"
+                }
+            ]
+        },
+        {
+            "tag": "245",
+            "ind1": "0",
+            "ind2": "0",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "Taide, kokemus ja maailma :"
+                },
+                {
+                    "code": "b",
+                    "value": "risteyksiä tieteidenväliseen taiteiden tutkimukseen /"
+                },
+                {
+                    "code": "c",
+                    "value": "toimittanut Yrjö Heinonen."
+                }
+            ]
+        },
+        {
+            "tag": "246",
+            "ind1": "3",
+            "ind2": "0",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "Risteyksiä tieteidenväliseen taiteiden tutkimukseen"
+                }
+            ]
+        },
+        {
+            "tag": "264",
+            "ind1": " ",
+            "ind2": "1",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "Turku :"
+                },
+                {
+                    "code": "b",
+                    "value": "UTU,"
+                },
+                {
+                    "code": "c",
+                    "value": "[2014]"
+                }
+            ]
+        },
+        {
+            "tag": "264",
+            "ind1": " ",
+            "ind2": "3",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "Turku :"
+                },
+                {
+                    "code": "b",
+                    "value": "Painosalama oy"
+                }
+            ]
+        },
+        {
+            "tag": "264",
+            "ind1": " ",
+            "ind2": "4",
+            "subfields": [
+                {
+                    "code": "c",
+                    "value": "©2014"
+                }
+            ]
+        },
+        {
+            "tag": "300",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "288 sivua :"
+                },
+                {
+                    "code": "b",
+                    "value": "kuvitettu ;"
+                },
+                {
+                    "code": "c",
+                    "value": "21 cm"
+                }
+            ]
+        },
+        {
+            "tag": "336",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "teksti"
+                },
+                {
+                    "code": "b",
+                    "value": "txt"
+                },
+                {
+                    "code": "2",
+                    "value": "rdacontent"
+                }
+            ]
+        },
+        {
+            "tag": "337",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "käytettävissä ilman laitetta"
+                },
+                {
+                    "code": "b",
+                    "value": "n"
+                },
+                {
+                    "code": "2",
+                    "value": "rdamedia"
+                }
+            ]
+        },
+        {
+            "tag": "338",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "nide"
+                },
+                {
+                    "code": "b",
+                    "value": "nc"
+                },
+                {
+                    "code": "2",
+                    "value": "rdacarrier"
+                }
+            ]
+        },
+        {
+            "tag": "490",
+            "ind1": "1",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "Utukirjat,"
+                },
+                {
+                    "code": "x",
+                    "value": "2341-9326 ;"
+                },
+                {
+                    "code": "v",
+                    "value": "6"
+                }
+            ]
+        },
+        {
+            "tag": "500",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "Lisäpainokset: Kolmas painos 2017."
+                }
+            ]
+        },
+        {
+            "tag": "504",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "Sisältää bibliografisia lähdeviitteitä ja hakemiston."
+                }
+            ]
+        },
+        {
+            "tag": "520",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "Taide, kokemus ja maailma on tieteellinen mutta yleistajuisuuteen pyrkivä johdatus 2010-luvun alun taiteiden tutkimuksen lähtökohtiin, kysymyksenasetteluihin, suuntauksiin ja käsitteistöön. Taiteiden tutkimuksen oppiaineet eroavat toisistaan ensisijaisen tutkimuskohteensa puolesta, mutta samalla monet kysymyksenasettelut, lähtökohdat ja lähestysmistavat yhdistävät niitä toisiinsa."
+                },
+                {
+                    "code": "b",
+                    "value": "Taiteiden tutkimusta tarkastellaan kirjassa viiden taiteenalan eri tavoin leikkaavan käsitteen tai ilmiön kautta: ääni, kuva, kieli, väline ja sukupuoli. Kirja on tarkoitettu taiteiden tutkimuksen johdanto- ja oppikirjaksi, ja se on rakennettu siten, että jokaisesa luvussa tulee esiin sekä oppiaineen erityisyys että niiden välisiä yhtymäkohtia."
+                }
+            ]
+        },
+        {
+            "tag": "526",
+            "ind1": "8",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "i",
+                    "value": "Kurssikirja"
+                },
+                {
+                    "code": "a",
+                    "value": "MUSI2150"
+                },
+                {
+                    "code": "x",
+                    "value": "2014"
+                },
+                {
+                    "code": "z",
+                    "value": "tai mus."
+                },
+                {
+                    "code": "5",
+                    "value": "FI-T"
+                }
+            ]
+        },
+        {
+            "tag": "526",
+            "ind1": "8",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "i",
+                    "value": "Kurssikirja:"
+                },
+                {
+                    "code": "x",
+                    "value": "2014"
+                },
+                {
+                    "code": "z",
+                    "value": "kul kan."
+                },
+                {
+                    "code": "5",
+                    "value": "FI-T"
+                }
+            ]
+        },
+        {
+            "tag": "579",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "XLUETTELOITU"
+                },
+                {
+                    "code": "b",
+                    "value": "volte"
+                }
+            ]
+        },
+        {
+            "tag": "505",
+            "ind1": "0",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "8",
+                    "value": "1.1\\x"
+                },
+                {
+                    "code": "a",
+                    "value": "Johdanto -- Taide, kokemus ja maailma ; Viisi risteystä tieteidenväliseen taiteiden tutkimukseen / Yrjö Heinonen, Veijo Hietala, Altti Kuusamo, Päivi Lappalainen, Taru Leppänen, John Richardson, Liisa Steinby ja Susanna Välimäki -- Ääni -- Ääni ilmiönä ; Äänellinen minuus ja soiva maailma ; Lauluääni ; Soitinäänet ; Ääni elokuvassa, audiovisuaalisessa mediassa ja ympäristössä ; Ääni ja kirjallisuus ; Kuulokulmia elämään, kulttuuriin, maailmaan / John Richardson ja Susanna Välimäki, Yrjö Heinonen, Riitta Jytilä, Hanna Meretoja ja Juha Torvinen --"
+                }
+            ]
+        },
+        {
+            "tag": "505",
+            "ind1": "0",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "8",
+                    "value": "1.2\\x"
+                },
+                {
+                    "code": "a",
+                    "value": "Kuva -- Kuvan käsitteen muutoksia ; Kuva ja mimesis ; Kuva, funktio, konteksti ; Kuva ja muistijärjestelmät ; Kuvan muuttuvat historiat ; Kuvan tulkinnan peruskäsitteistöä ; Ikonografiasta merkkijärjestelmäverrantoihin ; Kuva ja media ; Kirjallisuuden kuvakielestä ; Feministinen kuvantutkimus ; Loppukatsaus: \\'kuvat kulkevat\\' / Altti Kuusamo, Katve-Kaisa Kontturi, Marjaana Markkula ja Jukka Sihvonen -- Kieli -- Arkikieli, tieteen kieli, taiteen kieli ; Kielikäsitykset ja kirjallisuus ; Kaunokirjallinen tyyli ja kirjallisuuden tyylikaudet ; Kaunokirjallisen kielen erityisiä voimavaroja ; Onko elokuva kieltä? ; Kielen ja kuvataiteen suhteesta ; Musiikki ja kieli ; Kieli sanallisena ilmaisuvälineenä ja vastaavuusmallina / Päivi Lappalainen ja Liisa Steinby, Yrjö Heinonen, Veijo Hietala, Siru Kainulainen ja Altti Kuusamo --"
+                }
+            ]
+        },
+        {
+            "tag": "505",
+            "ind1": "0",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "8",
+                    "value": "1.3\\x"
+                },
+                {
+                    "code": "a",
+                    "value": "Väline -- Johdanto ; Välineen mediatutkimuksellista käsitehistoriaa ; Väline teknologiana ja kokemuksen muotona ; Välineen mediafilosofiaa ; Teatterin monet välineet ; Kuva, väline, katsoja ; Kirjallisuus minän ja maailman ymmärtämisen välineenä ; Muutoksen välineet / Veijo Hietala, Kaisa Ilmonen, Aino Mäkikalli, Riikka Niemelä, Susanna Paasonen, Jukka-Pekka Puro, Jukka Sihvonen ja Jasmine Westerlund -- Sukupuoli -- Moninainen sukupuoli ; Feministisiä ymmärryksiä sukupuolesta ; Materiaalisuus, ruumiillisuus ja seksuaalisuus ; Ero, toiseus ja kulttuuriset tekstit ; Elävä kuva - elämän kuva? ; Sukupuoli taiteen tutkimuksessa / Taru Leppänen, Marja-Leena Hakkarainen, Yrjö Heinonen, Veijo Hietala, Katve-Kaisa Kontturi, Lotta Kähkönen, Marianne Liljeström, Kukku Melkas ja Susanna Paasonen."
+                }
+            ]
+        },
+        {
+            "tag": "520",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "Taide, kokemus ja maailma on tieteellinen mutta yleistajuisuuteen pyrkivä johdatus 2010-luvun alun taiteiden tutkimuksen lähtökohtiin, kysymyksenasetteluihin, suuntauksiin ja käsitteistöön. Taiteiden tutkimusta tarkastellaan kirjassa viiden taiteenalan eri tavoin leikkaavan käsitteen tai ilmiön kautta: ääni, kuva, kieli, väline ja sukupuoli. Kirja on tarkoitettu taiteiden tutkimuksen johdanto- ja oppikirjaksi."
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": "1",
+            "ind2": "0",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "Arts"
+                },
+                {
+                    "code": "x",
+                    "value": "Research."
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "4",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "ääni"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "taiteidenvälisyys"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/fin"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p4100"
+                },
+                {
+                    "code": "9",
+                    "value": "FENNI<KEEP>"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "taiteentutkimus"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/fin"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p3746"
+                },
+                {
+                    "code": "9",
+                    "value": "FENNI<KEEP>"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "tieteidenvälisyys"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/fin"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p11915"
+                },
+                {
+                    "code": "9",
+                    "value": "FENNI<KEEP>"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "taiteet"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/fin"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p20653"
+                },
+                {
+                    "code": "9",
+                    "value": "FENNI<KEEP>"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "taide"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/fin"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p2851"
+                },
+                {
+                    "code": "9",
+                    "value": "FENNI<KEEP>"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "tutkimus"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/fin"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p183"
+                },
+                {
+                    "code": "9",
+                    "value": "FENNI<KEEP>"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "suuntaukset"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/fin"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p10138"
+                },
+                {
+                    "code": "9",
+                    "value": "FENNI<KEEP>"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "käsitteet"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/fin"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p2267"
+                },
+                {
+                    "code": "9",
+                    "value": "FENNI<KEEP>"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "seksuaalisuus"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/fin"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p1826"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "monitieteisyys"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/fin"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p11916"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "poikkitieteisyys"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/fin"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p11917"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "musiikintutkimus"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/fin"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p21685"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "taidehistoria"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/fin"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p19845"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "kirjallisuudentutkimus"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/fin"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p1066"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "sukupuolentutkimus"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/fin"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p26448"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "feministinen tutkimus"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/fin"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p21065"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "mediatutkimus"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/fin"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p14168"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "kieli ja kielet"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/fin"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p556"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "kirjallisuus"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/fin"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p8113"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "kuvataide"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/fin"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p2739"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "taidefilosofia"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/fin"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p5597"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "taideteoriat"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/fin"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p18218"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "tvärkonstnärlighet"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/swe"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p4100"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "konstforskning"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/swe"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p3746"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "tvärvetenskap"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/swe"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p11915"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "konstarter"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/swe"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p20653"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "konst"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/swe"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p2851"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "forskning"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/swe"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p183"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "inriktningar"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/swe"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p10138"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "begrepp"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/swe"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p2267"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "sexualitet"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/swe"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p1826"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "multidisciplinaritet"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/swe"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p11916"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "interdisciplinaritet"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/swe"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p11917"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "musikforskning"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/swe"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p21685"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "konsthistoria"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/swe"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p19845"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "litteraturvetenskap"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/swe"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p1066"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "genusforskning"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/swe"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p26448"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "feministisk forskning"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/swe"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p21065"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "medieforskning"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/swe"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p14168"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "språk"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/swe"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p556"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "litteratur"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/swe"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p8113"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "bildkonst"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/swe"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p2739"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "konstfilosofi"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/swe"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p5597"
+                }
+            ]
+        },
+        {
+            "tag": "650",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "konstteorier"
+                },
+                {
+                    "code": "2",
+                    "value": "yso/swe"
+                },
+                {
+                    "code": "0",
+                    "value": "http://www.yso.fi/onto/yso/p18218"
+                }
+            ]
+        },
+        {
+            "tag": "655",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "kokoomateokset"
+                },
+                {
+                    "code": "2",
+                    "value": "slm/fin"
+                },
+                {
+                    "code": "0",
+                    "value": "http://urn.fi/URN:NBN:fi:au:slm:s963"
+                }
+            ]
+        },
+        {
+            "tag": "655",
+            "ind1": " ",
+            "ind2": "7",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "samlingsverk"
+                },
+                {
+                    "code": "2",
+                    "value": "slm/swe"
+                },
+                {
+                    "code": "0",
+                    "value": "http://urn.fi/URN:NBN:fi:au:slm:s963"
+                }
+            ]
+        },
+        {
+            "tag": "700",
+            "ind1": "1",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "Heinonen, Yrjö,"
+                },
+                {
+                    "code": "d",
+                    "value": "1951-"
+                },
+                {
+                    "code": "e",
+                    "value": "toimittaja."
+                },
+                {
+                    "code": "0",
+                    "value": "(FI-ASTERI-N)000084309"
+                }
+            ]
+        },
+        {
+            "tag": "700",
+            "ind1": "1",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "Hietala, Veijo."
+                }
+            ]
+        },
+        {
+            "tag": "700",
+            "ind1": "1",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "Kuusamo, Altti."
+                }
+            ]
+        },
+        {
+            "tag": "700",
+            "ind1": "1",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "Lappalainen, Päivi."
+                }
+            ]
+        },
+        {
+            "tag": "830",
+            "ind1": " ",
+            "ind2": "0",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "Utukirjat,"
+                },
+                {
+                    "code": "x",
+                    "value": "2341-9326 ;"
+                },
+                {
+                    "code": "v",
+                    "value": "6."
+                }
+            ]
+        },
+        {
+            "tag": "SID",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "c",
+                    "value": "2667805"
+                },
+                {
+                    "code": "b",
+                    "value": "helka"
+                }
+            ]
+        },
+        {
+            "tag": "SID",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "c",
+                    "value": "(ANDL100008)3574971"
+                },
+                {
+                    "code": "b",
+                    "value": "piki"
+                }
+            ]
+        },
+        {
+            "tag": "SID",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "c",
+                    "value": "(ANDL100013)1399279"
+                },
+                {
+                    "code": "b",
+                    "value": "ander"
+                }
+            ]
+        },
+        {
+            "tag": "SID",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "c",
+                    "value": "(ANDL100001)2966096"
+                },
+                {
+                    "code": "b",
+                    "value": "vaski"
+                }
+            ]
+        },
+        {
+            "tag": "SID",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "c",
+                    "value": "(ANDL100026)1161589"
+                },
+                {
+                    "code": "b",
+                    "value": "kuopi"
+                }
+            ]
+        },
+        {
+            "tag": "SID",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "c",
+                    "value": "(ANDL100007)1160819"
+                },
+                {
+                    "code": "b",
+                    "value": "eepos"
+                }
+            ]
+        },
+        {
+            "tag": "SID",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "c",
+                    "value": "(ANDL100020)390834"
+                },
+                {
+                    "code": "b",
+                    "value": "sata"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "FENNI4009"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20141210"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1056"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "TK4060"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20140722"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "0940"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "UEF4013"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20140812"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1505"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "UEF4013"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20140812"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1517"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "UEF4013"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20140812"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1521"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "UEF4013"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20140812"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1523"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "UEF4013"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20140812"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1525"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "UEF7043"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20140813"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1307"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "LAMK4001"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20140815"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1730"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "DIAK4101"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20140902"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1401"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "DIAK4101"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20140902"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1431"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "SAVON4002"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20141022"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "0842"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "ABO4007"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20141110"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "0944"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "SAVON4002"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20141111"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1318"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "SAVON4002"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20141111"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1319"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "SAVON4002"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20141111"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1320"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "LOAD-HELKA"
+                },
+                {
+                    "code": "b"
+                },
+                {
+                    "code": "c",
+                    "value": "20141127"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "2314"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "FENNI5009"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20140722"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1150"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "TK4060"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20140508"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1023"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "ARSCA4028"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20140507"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "0921"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "FENNI5004"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20140502"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1650"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "FENNI5004"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20140502"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1648"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "AURA4003"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20140502"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1254"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "AURA4003"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20140502"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1246"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "FENNI5007"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20140425"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1050"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "FENNI5007"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20140425"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1046"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "R4012"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20140404"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1001"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "R4004"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20140328"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1250"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "Y4050"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20140326"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1211"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "Y4027"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20140320"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "0910"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "ARSCA4029"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20140311"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "0832"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "Y4021"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20140310"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1043"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "TK4045"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20140225"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1719"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "TK4050"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20140220"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1505"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "TK4054"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20140224"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1651"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "LOAD-FIX"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20150124"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "2119"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "LOAD-PIKI"
+                },
+                {
+                    "code": "b"
+                },
+                {
+                    "code": "c",
+                    "value": "20151002"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "0451"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "L1005"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20151105"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1026"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "LOAD-ANDER"
+                },
+                {
+                    "code": "b"
+                },
+                {
+                    "code": "c",
+                    "value": "20160206"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "0058"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "CONV-RDA"
+                },
+                {
+                    "code": "b"
+                },
+                {
+                    "code": "c",
+                    "value": "20160319"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "0839"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "LOAD-VASKI"
+                },
+                {
+                    "code": "b"
+                },
+                {
+                    "code": "c",
+                    "value": "20170127"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "0226"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "HELKA4410"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20170706"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1306"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "HELKA4410"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20170706"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1307"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "HELKA4201"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20170901"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1208"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "HELKA4201"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20170905"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1550"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "LOAD-ALINK"
+                },
+                {
+                    "code": "b"
+                },
+                {
+                    "code": "c",
+                    "value": "20170908"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "0741"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "LOAD-METRO"
+                },
+                {
+                    "code": "b"
+                },
+                {
+                    "code": "c",
+                    "value": "20171003"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1617"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "LOAD-KUOPI"
+                },
+                {
+                    "code": "b",
+                    "value": "20"
+                },
+                {
+                    "code": "c",
+                    "value": "20171126"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "0048"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "LOAD-FIX"
+                },
+                {
+                    "code": "b"
+                },
+                {
+                    "code": "c",
+                    "value": "20180115"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "0150"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "LOAD-HELKA"
+                },
+                {
+                    "code": "b"
+                },
+                {
+                    "code": "c",
+                    "value": "20180506"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "2320"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "Y4021"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20180521"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1137"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "LOAD-EEPOS"
+                },
+                {
+                    "code": "b",
+                    "value": "20"
+                },
+                {
+                    "code": "c",
+                    "value": "20181030"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "0030"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "TK4042"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20190307"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1059"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "LOAD-FIX"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20190515"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "0950"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "LOAD-FIX"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20190515"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "0951"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "LOAD-ID"
+                },
+                {
+                    "code": "b",
+                    "value": "00"
+                },
+                {
+                    "code": "c",
+                    "value": "20190516"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "2337"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "LOAD-FIX"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20190520"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1841"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "FENNI40032"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20190626"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1058"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "LOAD-ALINK"
+                },
+                {
+                    "code": "b",
+                    "value": "00"
+                },
+                {
+                    "code": "c",
+                    "value": "20190702"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1237"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "LOAD-YSO"
+                },
+                {
+                    "code": "b",
+                    "value": "00"
+                },
+                {
+                    "code": "c",
+                    "value": "20190704"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1300"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "LOAD-YSO"
+                },
+                {
+                    "code": "b",
+                    "value": "00"
+                },
+                {
+                    "code": "c",
+                    "value": "20190705"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1927"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "LOAD-ID"
+                },
+                {
+                    "code": "b",
+                    "value": "00"
+                },
+                {
+                    "code": "c",
+                    "value": "20190712"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "2026"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "LOAD-FIX"
+                },
+                {
+                    "code": "b",
+                    "value": "30"
+                },
+                {
+                    "code": "c",
+                    "value": "20190828"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1258"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "LOAD-ID"
+                },
+                {
+                    "code": "b",
+                    "value": "00"
+                },
+                {
+                    "code": "c",
+                    "value": "20190830"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "0320"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "LOAD-SATA"
+                },
+                {
+                    "code": "b",
+                    "value": "20"
+                },
+                {
+                    "code": "c",
+                    "value": "20200319"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1532"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "LOAD-ELAID"
+                },
+                {
+                    "code": "b",
+                    "value": "00"
+                },
+                {
+                    "code": "c",
+                    "value": "20200705"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1033"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "LOAD-ELAID"
+                },
+                {
+                    "code": "b",
+                    "value": "00"
+                },
+                {
+                    "code": "c",
+                    "value": "20200705"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1819"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "LOAD-ELAID"
+                },
+                {
+                    "code": "b",
+                    "value": "00"
+                },
+                {
+                    "code": "c",
+                    "value": "20201204"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "0918"
+                }
+            ]
+        },
+        {
+            "tag": "CAT",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "LOAD-ELAID"
+                },
+                {
+                    "code": "b",
+                    "value": "00"
+                },
+                {
+                    "code": "c",
+                    "value": "20201204"
+                },
+                {
+                    "code": "l",
+                    "value": "FIN01"
+                },
+                {
+                    "code": "h",
+                    "value": "1518"
+                }
+            ]
+        },
+        {
+            "tag": "LOW",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "OULA"
+                }
+            ]
+        },
+        {
+            "tag": "LOW",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "HELKA"
+                }
+            ]
+        },
+        {
+            "tag": "LOW",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "ALMA"
+                }
+            ]
+        },
+        {
+            "tag": "LOW",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "SAMK"
+                }
+            ]
+        },
+        {
+            "tag": "LOW",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "LAMK"
+                }
+            ]
+        },
+        {
+            "tag": "LOW",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "DIAK"
+                }
+            ]
+        },
+        {
+            "tag": "LOW",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "JOSKU"
+                }
+            ]
+        },
+        {
+            "tag": "LOW",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "SEAMK"
+                }
+            ]
+        },
+        {
+            "tag": "LOW",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "FENNI"
+                }
+            ]
+        },
+        {
+            "tag": "LOW",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "AURA"
+                }
+            ]
+        },
+        {
+            "tag": "LOW",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "HURMA"
+                }
+            ]
+        },
+        {
+            "tag": "LOW",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "ARSCA"
+                }
+            ]
+        },
+        {
+            "tag": "LOW",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "VOLTE"
+                }
+            ]
+        },
+        {
+            "tag": "LOW",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "JYKDO"
+                }
+            ]
+        },
+        {
+            "tag": "LOW",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "PIKI"
+                }
+            ]
+        },
+        {
+            "tag": "LOW",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "WILMA"
+                }
+            ]
+        },
+        {
+            "tag": "LOW",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "ANDER"
+                }
+            ]
+        },
+        {
+            "tag": "LOW",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "TAMK"
+                }
+            ]
+        },
+        {
+            "tag": "LOW",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "VASKI"
+                }
+            ]
+        },
+        {
+            "tag": "LOW",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "KUOPI"
+                }
+            ]
+        },
+        {
+            "tag": "LOW",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "EEPOS"
+                }
+            ]
+        },
+        {
+            "tag": "LOW",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "KOAMK"
+                }
+            ]
+        },
+        {
+            "tag": "LOW",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "FIKKA"
+                }
+            ]
+        },
+        {
+            "tag": "LOW",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "SATA"
+                }
+            ]
+        },
+        {
+            "tag": "901",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "MU20140502"
+                },
+                {
+                    "code": "5",
+                    "value": "FENNI"
+                }
+            ]
+        },
+        {
+            "tag": "901",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "b",
+                    "value": "LDR,008,LUOK,SISKUV,901"
+                },
+                {
+                    "code": "5",
+                    "value": "FENNI"
+                },
+                {
+                    "code": "c",
+                    "value": "20190626105825.0"
+                }
+            ]
+        }
+    ]
+}
