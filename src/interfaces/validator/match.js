@@ -49,7 +49,11 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
 
       // Note: candidate.record is in external format (as it is fetched from SRU) - we keep also the incoming record in external format to avoid problems
 
-      const matchResults = await matcher(record);
+      //const matchResults = await matcher(record);
+
+      // We could have also some kind of id for the incomingRecord here (blobSequence?)
+      const recordExternal = {recordSource: 'incomingRecord', label: 'ic'};
+      const matchResults = await matcher({record, recordExternal});
 
       const {matches, matchStatus, conversionFailures} = matchResults;
 

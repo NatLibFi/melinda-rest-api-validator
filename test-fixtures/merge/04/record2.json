@@ -1,0 +1,339 @@
+{
+    "_validationOptions": {
+        "subfieldValues": false
+    },
+    "leader": "00000nam a22000008i 4500",
+    "fields": [
+        {
+            "tag": "008",
+            "value": "221103s2014    fi |||||||||||||||0|fin||"
+        },
+        {
+            "tag": "020",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "978-951-29-5661-6"
+                },
+                {
+                    "code": "q",
+                    "value": "pehmeäkantinen"
+                }
+            ]
+        },
+        {
+            "tag": "040",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "FI-KV"
+                },
+                {
+                    "code": "b",
+                    "value": "fin"
+                },
+                {
+                    "code": "e",
+                    "value": "rda"
+                },
+                {
+                    "code": "d",
+                    "value": "FI-NL"
+                }
+            ],
+            "ind1": " ",
+            "ind2": " "
+        },
+        {
+            "tag": "041",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "fin"
+                }
+            ],
+            "ind1": " ",
+            "ind2": " "
+        },
+        {
+            "tag": "042",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "finb"
+                }
+            ],
+            "ind1": " ",
+            "ind2": " "
+        },
+        {
+            "tag": "084",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "70"
+                },
+                {
+                    "code": "2",
+                    "value": "ykl"
+                }
+            ],
+            "ind1": " ",
+            "ind2": " "
+        },
+        {
+            "tag": "245",
+            "ind1": "1",
+            "ind2": "0",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "Taide, kokemus ja maailma :"
+                },
+                {
+                    "code": "b",
+                    "value": "risteyksiä tieteidenväliseen taiteiden tutkimukseen."
+                }
+            ]
+        },
+        {
+            "tag": "264",
+            "ind2": "1",
+            "subfields": [
+                {
+                    "code": "b",
+                    "value": "Turun yliopisto,"
+                },
+                {
+                    "code": "c",
+                    "value": "2014."
+                }
+            ],
+            "ind1": " "
+        },
+        {
+            "tag": "300",
+            "ind1": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "288 sivua ;"
+                },
+                {
+                    "code": "c",
+                    "value": "21 cm"
+                }
+            ],
+            "ind2": " "
+        },
+        {
+            "tag": "336",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "teksti"
+                },
+                {
+                    "code": "b",
+                    "value": "txt"
+                },
+                {
+                    "code": "2",
+                    "value": "rdacontent"
+                }
+            ],
+            "ind1": " ",
+            "ind2": " "
+        },
+        {
+            "tag": "337",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "käytettävissä ilman laitetta"
+                },
+                {
+                    "code": "b",
+                    "value": "n"
+                },
+                {
+                    "code": "2",
+                    "value": "rdamedia"
+                }
+            ],
+            "ind1": " ",
+            "ind2": " "
+        },
+        {
+            "tag": "338",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "nide"
+                },
+                {
+                    "code": "b",
+                    "value": "nc"
+                },
+                {
+                    "code": "2",
+                    "value": "rdacarrier"
+                }
+            ],
+            "ind1": " ",
+            "ind2": " "
+        },
+        {
+            "tag": "490",
+            "ind1": "0",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "Utukirjat"
+                }
+            ],
+            "ind2": " "
+        },
+        {
+            "tag": "500",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "TARKISTETTU ENNAKKOTIETO / KIRJAVÄLITYS."
+                }
+            ]
+        },
+        {
+            "tag": "594",
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "TARKISTETTU ENNAKKOTIETO / KIRJAVÄLITYS"
+                },
+                {
+                    "code": "5",
+                    "value": "FENNI"
+                }
+            ]
+        },
+        {
+            "tag": "700",
+            "ind1": "1",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "Heinonen, Yrjö,"
+                },
+                {
+                    "code": "e",
+                    "value": "toimittaja."
+                }
+            ]
+        },
+        {
+            "tag": "700",
+            "ind1": "1",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "Hietala, Veijo,"
+                },
+                {
+                    "code": "e",
+                    "value": "kirjoittaja."
+                }
+            ]
+        },
+        {
+            "tag": "700",
+            "ind1": "1",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "Kuusamo, Altti,"
+                },
+                {
+                    "code": "e",
+                    "value": "kirjoittaja."
+                }
+            ]
+        },
+        {
+            "tag": "700",
+            "ind1": "1",
+            "ind2": " ",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "Lappalainen, Päivi ym.,"
+                },
+                {
+                    "code": "e",
+                    "value": "kirjoittaja."
+                }
+            ]
+        },
+        {
+            "tag": "884",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "ONIX3 to MARC transformation"
+                },
+                {
+                    "code": "g",
+                    "value": "20221103"
+                },
+                {
+                    "code": "k",
+                    "value": "MELINDA_RECORD_IMPORT_SOURCE_4"
+                },
+                {
+                    "code": "q",
+                    "value": "FI-NL"
+                },
+                {
+                    "code": "5",
+                    "value": "MELINDA"
+                }
+            ],
+            "ind1": " ",
+            "ind2": " "
+        },
+        {
+            "tag": "SID",
+            "subfields": [
+                {
+                    "code": "c",
+                    "value": "HPM1393834007065"
+                },
+                {
+                    "code": "b",
+                    "value": "FI-KV"
+                }
+            ],
+            "ind1": " ",
+            "ind2": " "
+        },
+        {
+            "tag": "LOW",
+            "subfields": [
+                {
+                    "code": "a",
+                    "value": "FIKKA"
+                }
+            ],
+            "ind1": " ",
+            "ind2": " "
+        }
+    ]
+}

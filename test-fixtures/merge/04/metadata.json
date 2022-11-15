@@ -1,0 +1,9 @@
+{
+    "description": "GENERIC Merge test - records should succeed.",
+    "comment": "NOTE! Use this test to test merging of any two records. Currently mergedRecord is not the actual merge result!",
+    "recordType": "bib",
+    "expectedToThrow": false,
+    "expectedResultStatus": true,
+    "skip": true,
+    "only": false
+}
