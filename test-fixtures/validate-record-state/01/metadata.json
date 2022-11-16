@@ -1,0 +1,4 @@
+{
+    "description": "Should not throw error if records have deeply equal CAT-fields",
+    "expectedToThrow": false
+  }

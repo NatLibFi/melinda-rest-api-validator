@@ -31,3 +31,5 @@ node_modules/
 coverage
 
 temp-test-data
+
+.DS_Store

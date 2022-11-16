@@ -1,0 +1,5 @@
+{
+    "description": "It should not throw error subfields.filter is not a function",
+    "expectedToThrow": false,
+    "enabled": true
+  }
