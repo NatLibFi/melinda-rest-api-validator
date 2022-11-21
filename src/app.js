@@ -296,7 +296,6 @@ export default async function ({
     return initCheck();
   }
 
-
   async function setNoopResult({correlationId, processResult, mongoOperator, prio}) {
 
     logger.debug(`Setting noop result`);
@@ -315,7 +314,6 @@ export default async function ({
 
     const recordResponseItem = createRecordResponseItem({responseStatus: status, responsePayload, recordMetadata: processResult.headers.recordMetadata, id});
     await addRecordResponseItem({recordResponseItem, correlationId, mongoOperator});
-
 
     if (prio) {
       await mongoOperator.checkAndSetState({correlationId, state: QUEUE_ITEM_STATE.DONE});
