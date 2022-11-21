@@ -5,13 +5,13 @@ import {updateField001ToParamId, getIdFromRecord, getRecordMetadata, isValidAlep
 import httpStatus from 'http-status';
 import {promisify, inspect} from 'util';
 import {MarcRecordError} from '@natlibfi/marc-record';
-import {OPERATIONS, logError, QUEUE_ITEM_STATE, LOG_ITEM_TYPE, createRecordResponseItem, addRecordResponseItem, mongoLogFactory} from '@natlibfi/melinda-rest-api-commons';
+import {OPERATIONS, logError, QUEUE_ITEM_STATE, LOG_ITEM_TYPE, createRecordResponseItem, addRecordResponseItem} from '@natlibfi/melinda-rest-api-commons';
 
-export default async function ({amqpOperator, mongoOperator, splitterOptions, mongoUri}) {
+export default function ({amqpOperator, mongoOperator, splitterOptions, mongoLogOperator}) {
   const {failBulkOnError, keepSplitterReport} = splitterOptions;
   const setTimeoutPromise = promisify(setTimeout);
   const logger = createLogger();
-  const mongoLogOperator = await mongoLogFactory(mongoUri);
+  //const mongoLogOperator = await mongoLogFactory(mongoUri);
 
   return {streamToRecords};
 

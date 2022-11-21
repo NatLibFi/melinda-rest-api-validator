@@ -1,7 +1,7 @@
 import {promisify, inspect} from 'util';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
-import {mongoFactory, amqpFactory, logError, QUEUE_ITEM_STATE, IMPORT_JOB_STATE, OPERATIONS, createRecordResponseItem, addRecordResponseItem} from '@natlibfi/melinda-rest-api-commons';
+import {mongoFactory, amqpFactory, logError, QUEUE_ITEM_STATE, IMPORT_JOB_STATE, OPERATIONS, createRecordResponseItem, addRecordResponseItem, mongoLogFactory} from '@natlibfi/melinda-rest-api-commons';
 import validatorFactory from './interfaces/validator';
 import toMarcRecordFactory from './interfaces/toMarcRecords';
 import httpStatus from 'http-status';
@@ -17,8 +17,9 @@ export default async function ({
   const mongoOperator = await mongoFactory(mongoUri, collection);
   // secord parameter is true for running amqpHealthCheck, which errors if channel and/or connection gets closed
   const amqpOperator = await amqpFactory(amqpUrl, true);
-  const validator = await validatorFactory({...validatorOptions, mongoUri});
-  const toMarcRecords = await toMarcRecordFactory({amqpOperator, mongoOperator, splitterOptions, mongoUri});
+  const mongoLogOperator = await mongoLogFactory(mongoUri);
+  const validator = await validatorFactory({...validatorOptions, mongoLogOperator});
+  const toMarcRecords = await toMarcRecordFactory({amqpOperator, mongoOperator, mongoLogOperator, splitterOptions});
 
   logger.info(`Started Melinda-rest-api-validator: ${pollRequest ? 'PRIORITY' : 'BULK'} for ${recordType} records`);
 
@@ -282,6 +283,11 @@ export default async function ({
     const recordResponseItem = createRecordResponseItem({responseStatus: status, responsePayload, recordMetadata: processResult.headers.recordMetadata, id});
     await addRecordResponseItem({recordResponseItem, correlationId, mongoOperator});
 
+    // Remove logItems for SKIPPED records to save space in Mongo
+    // (Move to an independent function)
+    const {blobSequence} = processResult.headers.recordMetadata;
+    mongoLogOperator.removeBySequences(correlationId, [blobSequence]);
+
     if (prio) {
       await mongoOperator.checkAndSetState({correlationId, state: QUEUE_ITEM_STATE.DONE});
       return initCheck();
@@ -309,6 +315,7 @@ export default async function ({
 
     const recordResponseItem = createRecordResponseItem({responseStatus: status, responsePayload, recordMetadata: processResult.headers.recordMetadata, id});
     await addRecordResponseItem({recordResponseItem, correlationId, mongoOperator});
+
 
     if (prio) {
       await mongoOperator.checkAndSetState({correlationId, state: QUEUE_ITEM_STATE.DONE});

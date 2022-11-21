@@ -2,7 +2,7 @@ import HttpStatus from 'http-status';
 import {MARCXML} from '@natlibfi/marc-record-serializers';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ValidationError, toAlephId} from '@natlibfi/melinda-commons';
-import {mongoLogFactory, validations, conversions, fixes, OPERATIONS, logError} from '@natlibfi/melinda-rest-api-commons';
+import {validations, conversions, fixes, OPERATIONS, logError} from '@natlibfi/melinda-rest-api-commons';
 import createSruClient from '@natlibfi/sru-client';
 import validateOwnChanges from './own-authorization';
 import {updateField001ToParamId, getRecordMetadata, getIdFromRecord, isValidAlephId} from '../../utils';
@@ -22,7 +22,7 @@ import {LOG_ITEM_TYPE} from '@natlibfi/melinda-rest-api-commons/dist/constants';
 //const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator');
 //const debugData = debug.extend('data');
 
-export default async function ({preValidationFixOptions, postMergeFixOptions, preImportFixOptions, sruUrl, matchOptionsList, mongoUri, recordType, stopWhenFound}) {
+export default async function ({preValidationFixOptions, postMergeFixOptions, preImportFixOptions, sruUrl, matchOptionsList, mongoLogOperator, recordType, stopWhenFound}) {
   const logger = createLogger();
   logger.debug(`preValidationFixOptions: ${JSON.stringify(preValidationFixOptions)}`);
   logger.debug(`postMergeFixOptions: ${JSON.stringify(postMergeFixOptions)}`);
@@ -47,8 +47,8 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
   const matchers = matchOptionsList.map(matchOptions => createMatchInterface(matchOptions));
   logger.debug(`We created ${matchers.length} matchers`);
   const sruClient = createSruClient({url: sruUrl, recordSchema: 'marcxml', retrieveAll: false, maximumRecordsPerRequest: 1});
-  logger.debug(`Creating mongoLogOperator in ${mongoUri}`);
-  const mongoLogOperator = await mongoLogFactory(mongoUri);
+  //logger.debug(`Creating mongoLogOperator in ${mongoUri}`);
+  //const mongoLogOperator = await mongoLogFactory(mongoUri);
 
   return {process};
 
@@ -259,6 +259,7 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
           notes: newHeaders.notes ? newHeaders.notes.concat(`${newNote}`) : [newNote]
         };
         const finalHeaders = {...headers, ...updatedHeaders};
+
         return {result: validationResults, recordMetadata, headers: finalHeaders};
       }
 
