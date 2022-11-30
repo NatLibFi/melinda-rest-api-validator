@@ -9,7 +9,7 @@ const logger = createLogger();
 // stopWhenFound = stop iterating matchers when the first match is found
 
 // eslint-disable-next-line max-statements
-export async function iterateMatchers({matchers, matchOptionsList, record, stopWhenFound = true, matcherCount = 0, matcherNoRunCount = 0, matcherFalseZeroCountMaxedQueries = 0, matcherFalseZeroCountConversionFailures = 0, matcherReports = {}, allConversionFailures = [], allMatches = [], allStatus = true}) {
+export async function iterateMatchers({matchers, matchOptionsList, record, stopWhenFound = true, matcherCount = 0, matcherNoRunCount = 0, matcherFalseZeroCounts = {maxCandidates: 0, maxedQueries: 0, conversionFailures: 0}, matcherReports = {}, allConversionFailures = [], allMatches = [], allStatus = true}) {
 
   logger.debug(`Matchers left: ${matchers.length}`);
 
@@ -87,24 +87,9 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
         return {matches: uniqMatches};
       }
 
-      if (matchAmount === 0) {
-        logger.debug(`No matching record(s) from matcher ${matcherCount} (${matcherName})`);
-        // eslint-disable-next-line functional/no-conditional-statement
-        if (matchStatus.status === false && matchStatus.stopReason === 'maxedQueries') {
-          logger.verbose(`Matcher ${matcherName} resulted in ${matchStatus.status}, stopReason ${matchStatus.stopReason}`);
-          // eslint-disable-next-line no-param-reassign
-          matcherFalseZeroCountMaxedQueries += 1;
-        }
+      const {matcherFalseZeroCounts: newMatcherFalseZeroCounts} = checkStopReasonForZeroMatches({matchAmount, matchStatus, matcherFalseZeroCounts, matcherCount, matcherName});
 
-        // eslint-disable-next-line functional/no-conditional-statement
-        if (matchStatus.status === false && matchStatus.stopReason === 'conversionFailures') {
-          logger.verbose(`Matcher ${matcherName} resulted in ${matchStatus.status}, stopReason ${matchStatus.stopReason}`);
-          // eslint-disable-next-line no-param-reassign
-          matcherFalseZeroCountConversionFailures += 1;
-        }
-      }
-
-      return iterateMatchers({matchers: matchers.slice(1), matchOptionsList: matchOptionsList.slice(1), stopWhenFound, record, matcherCount, matcherNoRunCount, matcherFalseZeroCountMaxedQueries, matcherFalseZeroCountConversionFailures, matcherReports, allConversionFailures: newConversionFailures, allMatches: newMatches, allStatus: newAllStatus});
+      return iterateMatchers({matchers: matchers.slice(1), matchOptionsList: matchOptionsList.slice(1), stopWhenFound, record, matcherCount, matcherNoRunCount, matcherFalseZeroCounts: newMatcherFalseZeroCounts, matcherReports, allConversionFailures: newConversionFailures, allMatches: newMatches, allStatus: newAllStatus});
 
     } catch (err) {
 
@@ -121,7 +106,7 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
           throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: err.message});
         }
 
-        return iterateMatchers({matchers: matchers.slice(1), matchOptionsList: matchOptionsList.slice(1), stopWhenFound, record, matcherCount, matcherNoRunCount, matcherFalseZeroCountMaxedQueries, matcherFalseZeroCountConversionFailures, matcherReports, allMatches, allStatus});
+        return iterateMatchers({matchers: matchers.slice(1), matchOptionsList: matchOptionsList.slice(1), stopWhenFound, record, matcherCount, matcherNoRunCount, matcherFalseZeroCounts, matcherReports, allMatches, allStatus});
       }
 
       // SRU SruSearchErrors are 200-responses that include diagnostics from SRU server
@@ -148,6 +133,7 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
   // eslint-disable-next-line functional/no-conditional-statement
   if (allMatches.length < 1) {
     logger.debug(`We did not find any matches. Checking if this is a trustworthy result.`);
+    logger.debug(`-- False zeroes from matchers: ${JSON.stringify(matcherFalseZeroCounts)}`);
 
     // Fail if we could not create any search queries from the record
     if (matcherNoRunCount === matcherCount) {
@@ -156,14 +142,21 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
     }
 
     // Fail if we got too many search candidates and no matches
-    if (matcherFalseZeroCountMaxedQueries > 0) {
-      logger.debug(`${matcherFalseZeroCountMaxedQueries} matchers returned no matches, but did not check all possible candidates`);
-      throw new ValidationError(HttpStatus.CONFLICT, {message: `Matcher found too many candidates to check`});
+    if (matcherFalseZeroCounts.maxCandidates > 0) {
+      logger.debug(`${matcherFalseZeroCounts.maxCandidates} matchers returned no matches, but did not check all possible candidates (maxCandidates)`);
+      throw new ValidationError(HttpStatus.CONFLICT, {message: `Matcher found too many candidates to check (maxCandidates)`});
+    }
+
+
+    // Fail if we got too many search candidates and no matches
+    if (matcherFalseZeroCounts.maxedQueries > 0) {
+      logger.debug(`${matcherFalseZeroCounts.maxedQueries} matchers returned no matches, but did not check all possible candidates (maxedQueries)`);
+      throw new ValidationError(HttpStatus.CONFLICT, {message: `Matcher found too many candidates to check (maxedQueries)`});
     }
 
     // Fail if we got conversionFailures and no matches
-    if (matcherFalseZeroCountConversionFailures > 0) {
-      logger.debug(`${matcherFalseZeroCountConversionFailures} matchers returned no matches, but had non-convertable candidates.`);
+    if (matcherFalseZeroCounts.conversionFailures > 0) {
+      logger.debug(`${matcherFalseZeroCounts.conversionFailures} matchers returned no matches, but had non-convertable candidates.`);
 
       // Matcher does not curently find ids for conversionFailures, but might do that later
       const nonZeroConversionFailureIds = allConversionFailures.map(f => f.payload.id).filter(id => id !== '000000000');
@@ -189,4 +182,35 @@ function uniqueMatches(matches) {
   return uniqueMatches;
 }
 
+function checkStopReasonForZeroMatches({matchAmount, matcherCount, matcherName, matchStatus, matcherFalseZeroCounts}) {
+  if (matchAmount === 0) {
+    logger.debug(`No matching record(s) from matcher ${matcherCount} (${matcherName})`);
 
+    // matchStatus.status: boolean, true if matcher retrieved and handled all found candidate records, false if it did not
+    // matchStatus.stopReason: string ('maxMatches','maxCandidates','maxedQueries','conversionFailures', empty string/undefined), reason for stopping retrieving or handling the candidate records
+    // - only one stopReason is returned (if there would be several possible stopReasons, stopReason is picked in the above order)
+    // - currently stopReason can be non-empty also in cases where status is true, if matcher hit the stop reason when handling the last available candidate record
+
+    // eslint-disable-next-line functional/no-conditional-statement
+    if (matchStatus.status === false && matchStatus.stopReason === 'maxCandidates') {
+      logger.verbose(`Matcher ${matcherName} resulted in ${matchStatus.status}, stopReason ${matchStatus.stopReason}`);
+      // eslint-disable-next-line no-param-reassign, functional/immutable-data
+      matcherFalseZeroCounts.maxCandidates += 1;
+    }
+
+    // eslint-disable-next-line functional/no-conditional-statement
+    if (matchStatus.status === false && matchStatus.stopReason === 'maxedQueries') {
+      logger.verbose(`Matcher ${matcherName} resulted in ${matchStatus.status}, stopReason ${matchStatus.stopReason}`);
+      // eslint-disable-next-line no-param-reassign, functional/immutable-data
+      matcherFalseZeroCounts.maxedQueries += 1;
+    }
+
+    // eslint-disable-next-line functional/no-conditional-statement
+    if (matchStatus.status === false && matchStatus.stopReason === 'conversionFailures') {
+      logger.verbose(`Matcher ${matcherName} resulted in ${matchStatus.status}, stopReason ${matchStatus.stopReason}`);
+      // eslint-disable-next-line no-param-reassign, functional/immutable-data
+      matcherFalseZeroCounts.cnversionFailures += 1;
+    }
+  }
+  return {matcherFalseZeroCounts};
+}
