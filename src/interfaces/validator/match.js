@@ -134,6 +134,7 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
   if (allMatches.length < 1) {
     logger.debug(`We did not find any matches. Checking if this is a trustworthy result.`);
     logger.debug(`-- False zeroes from matchers: ${JSON.stringify(matcherFalseZeroCounts)}`);
+    logger.debug(`-- We will accept a false zero with maxCandidates: ${acceptZeroWithMaxCandidates}`);
 
     // Fail if we could not create any search queries from the record
     if (matcherNoRunCount === matcherCount) {
