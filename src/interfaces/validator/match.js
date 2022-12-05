@@ -7,10 +7,10 @@ import {inspect} from 'util';
 const logger = createLogger();
 
 // stopWhenFound = stop iterating matchers when the first match is found
+// acceptZeroWithMaxCandidates = do not error if we get a zero match result with matchStatus: false and stopReason: maxCandidates
 
 // eslint-disable-next-line max-statements
-export async function iterateMatchers({matchers, matchOptionsList, record, stopWhenFound = true, matcherCount = 0, matcherNoRunCount = 0, matcherFalseZeroCounts = {maxCandidates: 0, maxedQueries: 0, conversionFailures: 0}, matcherReports = {}, allConversionFailures = [], allMatches = [], allStatus = true}) {
-
+export async function iterateMatchers({matchers, matchOptionsList, record, stopWhenFound = true, acceptZeroWithMaxCandidates = false, matcherCount = 0, matcherNoRunCount = 0, matcherFalseZeroCounts = {maxCandidates: 0, maxedQueries: 0, conversionFailures: 0}, matcherReports = {}, allConversionFailures = [], allMatches = [], allStatus = true}) {
   logger.debug(`Matchers left: ${matchers.length}`);
 
   const [matcher] = matchers;
@@ -89,7 +89,7 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
 
       const {matcherFalseZeroCounts: newMatcherFalseZeroCounts} = checkStopReasonForZeroMatches({matchAmount, matchStatus, matcherFalseZeroCounts, matcherCount, matcherName});
 
-      return iterateMatchers({matchers: matchers.slice(1), matchOptionsList: matchOptionsList.slice(1), stopWhenFound, record, matcherCount, matcherNoRunCount, matcherFalseZeroCounts: newMatcherFalseZeroCounts, matcherReports, allConversionFailures: newConversionFailures, allMatches: newMatches, allStatus: newAllStatus});
+      return iterateMatchers({matchers: matchers.slice(1), matchOptionsList: matchOptionsList.slice(1), stopWhenFound, acceptZeroWithMaxCandidates, record, matcherCount, matcherNoRunCount, matcherFalseZeroCounts: newMatcherFalseZeroCounts, matcherReports, allConversionFailures: newConversionFailures, allMatches: newMatches, allStatus: newAllStatus});
 
     } catch (err) {
 
@@ -106,7 +106,7 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
           throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: err.message});
         }
 
-        return iterateMatchers({matchers: matchers.slice(1), matchOptionsList: matchOptionsList.slice(1), stopWhenFound, record, matcherCount, matcherNoRunCount, matcherFalseZeroCounts, matcherReports, allMatches, allStatus});
+        return iterateMatchers({matchers: matchers.slice(1), matchOptionsList: matchOptionsList.slice(1), stopWhenFound, acceptZeroWithMaxCandidates, record, matcherCount, matcherNoRunCount, matcherFalseZeroCounts, matcherReports, allMatches, allStatus});
       }
 
       // SRU SruSearchErrors are 200-responses that include diagnostics from SRU server
@@ -134,6 +134,7 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
   if (allMatches.length < 1) {
     logger.debug(`We did not find any matches. Checking if this is a trustworthy result.`);
     logger.debug(`-- False zeroes from matchers: ${JSON.stringify(matcherFalseZeroCounts)}`);
+    logger.debug(`-- We will accept a false zero with maxCandidates: ${acceptZeroWithMaxCandidates}`);
 
     // Fail if we could not create any search queries from the record
     if (matcherNoRunCount === matcherCount) {
@@ -142,11 +143,10 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
     }
 
     // Fail if we got too many search candidates and no matches
-    if (matcherFalseZeroCounts.maxCandidates > 0) {
+    if (matcherFalseZeroCounts.maxCandidates > 0 && !acceptZeroWithMaxCandidates) {
       logger.debug(`${matcherFalseZeroCounts.maxCandidates} matchers returned no matches, but did not check all possible candidates (maxCandidates)`);
       throw new ValidationError(HttpStatus.CONFLICT, {message: `Matcher found too many candidates to check (maxCandidates)`});
     }
-
 
     // Fail if we got too many search candidates and no matches
     if (matcherFalseZeroCounts.maxedQueries > 0) {
