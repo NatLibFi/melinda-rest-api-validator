@@ -21,6 +21,11 @@ While service is in operation:
 | FAIL_BULK_ON_ERROR   | No        | A numeric presentation of boolean option to fail whole bulk, if reading payload to records errors. Defaults to `true`. |
 | KEEP_SPLITTER_REPORT | No        | When to keep information about bulk payload splitting process in the queueItem. Options `ALL/NONE/ERROR`. Defaults to `ERROR`. | 
 | LOG_LEVEL            | No        | Log information level                                                                                              |
+| RECORD_TYPE          | Yes       | `bib` |
+| DEBUG                | No        | Debug setting |
+| VALIDATOR_MATCH_PACKAGES | No    | Defaults to `IDS,STANDARD_IDS,CONTENT`.'
+| STOP_WHEN_FOUND      | No        | Defaults to `true`.  |
+| ACCEPT_ZERO_WITH_MAX_CANDIDATES | No | Defaults to `false`. |
 
 
 ### Mongo
