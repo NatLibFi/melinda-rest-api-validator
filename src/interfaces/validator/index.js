@@ -22,7 +22,7 @@ import {LOG_ITEM_TYPE} from '@natlibfi/melinda-rest-api-commons/dist/constants';
 //const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator');
 //const debugData = debug.extend('data');
 
-export default async function ({preValidationFixOptions, postMergeFixOptions, preImportFixOptions, sruUrl, matchOptionsList, mongoLogOperator, recordType, stopWhenFound}) {
+export default async function ({preValidationFixOptions, postMergeFixOptions, preImportFixOptions, sruUrl, matchOptionsList, mongoLogOperator, recordType, stopWhenFound, acceptZeroWithMaxCandidates}) {
   const logger = createLogger();
   logger.debug(`preValidationFixOptions: ${JSON.stringify(preValidationFixOptions)}`);
   logger.debug(`postMergeFixOptions: ${JSON.stringify(postMergeFixOptions)}`);
@@ -291,7 +291,9 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
       // This should use different matchOptions for merge and non-merge cases
       // stopWhenFound stops iterating matchers when a match is found
       // stopWhenFound defaults to true but it is configurable in env variable STOP_WHEN_FOUND
-      const matchResult = await matcherService.iterateMatchers({matchers, matchOptionsList, record, stopWhenFound});
+      // acceptZeroWithMaxCandidates: do not error case with zero matches, matchStatus: false and stopReason: maxCandidates
+      // acceptZeroWithMaxCandidates defaults to true but it is configurable in env variable ACCEPT_ZERO_WITH_MAX_CANDIDATES
+      const matchResult = await matcherService.iterateMatchers({matchers, matchOptionsList, record, stopWhenFound, acceptZeroWithMaxCandidates});
       const {matches} = matchResult;
 
       logger.debug(`Matches: ${JSON.stringify(matches.map(({candidate: {id}, probability}) => ({id, probability})))}`);
