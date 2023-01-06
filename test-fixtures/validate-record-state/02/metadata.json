@@ -1,0 +1,6 @@
+{
+    "description": "Should throw error for records with non-equal CAT fields",
+    "expectedToThrow": true,
+    "expectedStatus": 409,
+    "expectedError": "Modification history mismatch \\(CAT\\)"
+  }

@@ -44,18 +44,28 @@ describe('validateExistingRecord', () => {
     fixura: {
       reader: READERS.JSON
     },
-    callback: ({getFixture, expectedToThrow, expectedStatus, expectedError, enabled = true}) => {
+    // eslint-disable-next-line max-statements
+    callback: ({getFixture, expectedToThrow, expectedStatus, expectedError, skipValidation, enabled = true}) => {
 
       if (!enabled) {
         return;
       }
 
       const record = new MarcRecord(getFixture('record.json'));
+
+      if (skipValidation) {
+        debug(`Running validation with (3rd param) validate: false`);
+        const result = validateExistingRecord(record, 'recordMetadata', false);
+        debug(`Result: ${result}`);
+        expect(result).to.equal('skipped');
+        return;
+      }
+
       debugData(`Expecting error: ${expectedToThrow}, ${expectedStatus}, ${expectedError}`);
 
       if (expectedToThrow) { // eslint-disable-line functional/no-conditional-statement
         try {
-          validateExistingRecord(record);
+          validateExistingRecord(record, 'recordMetadata', true);
           throw new Error('Expected an error');
         } catch (err) {
 
@@ -63,7 +73,7 @@ describe('validateExistingRecord', () => {
 
           expect(err).to.be.an('error');
           expect(err.status).to.equal(404);
-          expect(err.payload).to.match(new RegExp(expectedError, 'u'));
+          expect(err.payload.message).to.match(new RegExp(expectedError, 'u'));
           return;
         }
       }

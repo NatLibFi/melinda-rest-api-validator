@@ -5,9 +5,14 @@ import createDebugLogger from 'debug';
 
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator:validate-existing-record');
 const debugData = debug.extend('data');
+const logger = createLogger();
 
-export function validateExistingRecord(existingRecord) {
-  const logger = createLogger();
+export function validateExistingRecord(existingRecord, recordMetadata, validate) {
+
+  if (validate === false) {
+    logger.debug(`Skipping validateExistingRecord, validate: ${validate}`);
+    return 'skipped';
+  }
 
   debugData(`Existing record:\n ${existingRecord}`);
 
@@ -17,7 +22,7 @@ export function validateExistingRecord(existingRecord) {
   if (isDeleted) {
     logger.verbose('Existing record is deleted!');
     debug('Existing record is deleted!');
-    throw new ValidationError(httpStatus.NOT_FOUND, 'Existing record is deleted');
+    throw new ValidationError(httpStatus.NOT_FOUND, {message: `Existing record is deleted`, recordMetadata});
   }
 
   logger.debug('Existing record is not deleted.');

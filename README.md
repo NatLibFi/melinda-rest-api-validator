@@ -13,14 +13,19 @@ While service is in operation:
 | Name                 | Mandatory | Description                                                                                                        |
 |----------------------|-----------|--------------------------------------------------------------------------------------------------------------------|
 | AMQP_URL             | Yes       | A serialized object of AMQP connection config                                                                      |
-| SRU_URL_BIB          | Yes       | A serialized URL addres to SRU                                                                                     |
+| SRU_URL              | Yes       | A serialized URL address to SRU                                                                                     |
 | MONGO_URI            | No        | A serialized URL address of Melinda-rest-api's import queue database. Defaults to `'mongodb://localhost:27017/db'` |
 | OFFLINE_PERIOD       | No        | Starting hour and length of offline period. e.g `'11,1'`                                                           |
 | POLL_REQUEST         | No        | A numeric presentation of boolean option to start polling AMQP `'REQUEST'` queue when process is started e.g. `1`  |
 | POLL_WAIT_TIME       | No        | A number value presenting time in ms between polling. Defaults to `'1000'`                                         |
 | FAIL_BULK_ON_ERROR   | No        | A numeric presentation of boolean option to fail whole bulk, if reading payload to records errors. Defaults to `true`. |
-| KEEP_SPLITTER_REPORT | No        | When to keep information about bulk payload splitting process in the queueItem. Options `ALL/NONE/ERROR`. Defaults to `ERROR`. | 
+| KEEP_SPLITTER_REPORT | No        | When to keep information about bulk payload splitting process in the queueItem. Options `ALL/NONE/ERROR`. Defaults to `ERROR`. |
 | LOG_LEVEL            | No        | Log information level                                                                                              |
+| RECORD_TYPE          | Yes       | `bib` |
+| DEBUG                | No        | Debug setting |
+| VALIDATOR_MATCH_PACKAGES | No    | Defaults to `IDS,STANDARD_IDS,CONTENT`. |
+| STOP_WHEN_FOUND      | No        | A numeric presentation of boolean option to stop iterating matchers when a match is found. Defaults to `true`.  |
+| ACCEPT_ZERO_WITH_MAX_CANDIDATES | No | A numeric presentation of boolean option to accept zero matches result without erroring when matchStatus is false and stopReason is maxCandidates. Defaults to `false`. |
 
 
 ### Mongo
@@ -107,6 +112,6 @@ Queue-item schema examle for a bulk job queueItem:
 
 ## License and copyright
 
-Copyright (c) 2020-2021 **University Of Helsinki (The National Library Of Finland)**
+Copyright (c) 2020-2023 **University Of Helsinki (The National Library Of Finland)**
 
 This project's source code is licensed under the terms of **GNU Affero General Public License Version 3** or any later version.

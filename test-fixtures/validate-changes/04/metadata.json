@@ -1,0 +1,6 @@
+{
+    "description": "Should return true if there's a change in field order",
+    "expectedResult": true,
+    "expectedToThrow": false,
+    "enabled": true
+  }

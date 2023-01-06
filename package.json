@@ -14,10 +14,10 @@
 		"url": "git@github.com:NatLibFi/melinda-rest-api-validator.git"
 	},
 	"license": "AGPL-3.0+",
-	"version": "2.2.5",
+	"version": "3.0.3-alpha.1",
 	"main": "./dist/index.js",
 	"engines": {
-		"node": ">=14"
+		"node": ">=18"
 	},
 	"private": true,
 	"scripts": {
@@ -34,36 +34,42 @@
 		"dev": "NODE_ENV=development cross-env nodemon"
 	},
 	"dependencies": {
-		"@babel/runtime": "^7.17.2",
-		"@natlibfi/marc-record": "^7.0.0",
-		"@natlibfi/marc-record-serializers": "^8.1.0",
-		"@natlibfi/melinda-backend-commons": "^2.0.5",
-		"@natlibfi/melinda-commons": "^12.0.3",
-		"@natlibfi/melinda-record-matching": "2.1.0",
-		"@natlibfi/melinda-rest-api-commons": "^2.2.0-alpha.3",
-		"@natlibfi/sru-client": "^5.0.1",
-		"deep-eql": "^4.0.1",
-		"http-status": "^1.5.0",
+		"@babel/runtime": "^7.20.1",
+		"@natlibfi/marc-record": "7.2.2",
+		"@natlibfi/marc-record-merge": "6.0.0-beta.12",
+		"@natlibfi/marc-record-serializers": "^9.0.3",
+		"@natlibfi/marc-record-validate": "^7.0.2",
+		"@natlibfi/marc-record-validators-melinda": "^9.1.1",
+		"@natlibfi/melinda-backend-commons": "^2.1.0",
+		"@natlibfi/melinda-commons": "^12.0.6",
+		"@natlibfi/melinda-marc-record-merge-reducers": "^1.0.0-alpha.33",
+		"@natlibfi/melinda-record-match-validator": "^1.2.1",
+		"@natlibfi/melinda-record-matching": "^3.0.3",
+		"@natlibfi/melinda-rest-api-commons": "^3.0.0",
+		"@natlibfi/sru-client": "^5.0.3",
+		"deep-eql": "^4.1.2",
+		"deep-object-diff": "^1.1.9",
+		"http-status": "^1.5.3",
 		"moment": "^2.29.4"
 	},
 	"devDependencies": {
-		"@babel/cli": "^7.17.6",
-		"@babel/core": "^7.17.5",
-		"@babel/node": "^7.16.8",
-		"@babel/preset-env": "^7.16.11",
-		"@babel/register": "^7.17.0",
-		"@babel/eslint-parser": "^7.17.0",
-		"@natlibfi/eslint-config-melinda-backend": "^2.0.0",
-		"@natlibfi/fixugen-http-server": "^1.0.4",
-		"@natlibfi/fixura": "^2.2.1",
+		"@babel/cli": "^7.19.3",
+		"@babel/core": "^7.20.2",
+		"@babel/eslint-parser": "^7.19.1",
+		"@babel/node": "^7.20.2",
+		"@babel/preset-env": "^7.20.2",
+		"@babel/register": "^7.18.9",
+		"@natlibfi/eslint-config-melinda-backend": "^2.0.2",
+		"@natlibfi/fixugen-http-server": "^1.0.5",
+		"@natlibfi/fixura": "^2.2.5",
 		"babel-plugin-istanbul": "^6.1.1",
 		"babel-plugin-rewire": "^1.2.0",
-		"chai": "^4.3.6",
+		"chai": "^4.3.7",
 		"chai-http": "^4.3.0",
 		"cross-env": "^7.0.3",
-		"eslint": "^8.10.0",
-		"mocha": "^9.2.2",
-		"mock-fs": "^5.1.2",
+		"eslint": "^8.28.0",
+		"mocha": "^10.1.0",
+		"mock-fs": "^5.2.0",
 		"nodemon": "^2.0.20",
 		"nyc": "^15.1.0"
 	},
@@ -90,7 +96,8 @@
 	},
 	"nyc": {
 		"exclude": [
-			"*/*.spec.js"
+			"**/*.spec.js",
+			"src/utils.js"
 		],
 		"reporter": [
 			"lcov",

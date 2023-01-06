@@ -1,0 +1,392 @@
+{
+  "leader": "00000nim a22000008i 4500",
+  "fields": [
+    {
+      "tag": "006",
+      "value": "m|||||o||h||||||||"
+    },
+    {
+      "tag": "007",
+      "value": "sr|uunnnnnuneu"
+    },
+    {
+      "tag": "007",
+      "value": "cr|nnannnuuuuu"
+    },
+    {
+      "tag": "008",
+      "value": "221130s2020    dk |||||o|||||||||||swe||"
+    },
+    {
+      "tag": "020",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "978-91-86023-23-2"
+        },
+        {
+          "code": "q",
+          "value": "MP3"
+        }
+      ]
+    },
+    {
+      "tag": "040",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "FI-KV"
+        },
+        {
+          "code": "b",
+          "value": "fin"
+        },
+        {
+          "code": "e",
+          "value": "rda"
+        },
+        {
+          "code": "d",
+          "value": "FI-NL"
+        }
+      ],
+      "ind1": " ",
+      "ind2": " "
+    },
+    {
+      "tag": "041",
+      "ind1": "0",
+      "subfields": [
+        {
+          "code": "d",
+          "value": "swe"
+        }
+      ],
+      "ind2": " "
+    },
+    {
+      "tag": "042",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "finb"
+        }
+      ],
+      "ind1": " ",
+      "ind2": " "
+    },
+    {
+      "tag": "084",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "84.31"
+        },
+        {
+          "code": "2",
+          "value": "ykl"
+        }
+      ],
+      "ind1": " ",
+      "ind2": " "
+    },
+    {
+      "tag": "100",
+      "ind1": "1",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "Orwell, George,"
+        },
+        {
+          "code": "e",
+          "value": "kirjoittaja."
+        }
+      ]
+    },
+    {
+      "tag": "240",
+      "ind1": "1",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "Nineteen Eighty-Four,"
+        },
+        {
+          "code": "l",
+          "value": "ruotsi"
+        }
+      ]
+    },
+    {
+      "tag": "245",
+      "ind1": "1",
+      "ind2": "0",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "1984."
+        }
+      ]
+    },
+    {
+      "tag": "264",
+      "ind2": "1",
+      "subfields": [
+        {
+          "code": "b",
+          "value": "SAGA Egmont,"
+        },
+        {
+          "code": "c",
+          "value": "2020."
+        }
+      ],
+      "ind1": " "
+    },
+    {
+      "tag": "300",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "1 verkkoaineisto (13 h 15 min)"
+        }
+      ],
+      "ind1": " ",
+      "ind2": " "
+    },
+    {
+      "tag": "336",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "puhe"
+        },
+        {
+          "code": "b",
+          "value": "spw"
+        },
+        {
+          "code": "2",
+          "value": "rdacontent"
+        }
+      ],
+      "ind1": " ",
+      "ind2": " "
+    },
+    {
+      "tag": "337",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "tietokonekäyttöinen"
+        },
+        {
+          "code": "b",
+          "value": "c"
+        },
+        {
+          "code": "2",
+          "value": "rdamedia"
+        }
+      ],
+      "ind1": " ",
+      "ind2": " "
+    },
+    {
+      "tag": "338",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "verkkoaineisto"
+        },
+        {
+          "code": "b",
+          "value": "cr"
+        },
+        {
+          "code": "2",
+          "value": "rdacarrier"
+        }
+      ],
+      "ind1": " ",
+      "ind2": " "
+    },
+    {
+      "tag": "341",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "kuuloon perustuva"
+        }
+      ],
+      "ind1": " ",
+      "ind2": " "
+    },
+    {
+      "tag": "344",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "digitaalinen"
+        }
+      ],
+      "ind1": " ",
+      "ind2": " "
+    },
+    {
+      "tag": "347",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "äänitiedosto"
+        },
+        {
+          "code": "b",
+          "value": "MP3"
+        }
+      ],
+      "ind1": " ",
+      "ind2": " "
+    },
+    {
+      "tag": "490",
+      "ind1": "0",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "Svenska Ljud Classica"
+        }
+      ],
+      "ind2": " "
+    },
+    {
+      "tag": "500",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "TARKISTETTU ENNAKKOTIETO / KIRJAVÄLITYS."
+        }
+      ]
+    },
+    {
+      "tag": "511",
+      "ind1": "0",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "Lukija: Björn Granath."
+        },
+        {
+          "code": "9",
+          "value": "FENNI<KEEP>"
+        }
+      ],
+      "ind2": " "
+    },
+    {
+      "tag": "594",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "TARKISTETTU ENNAKKOTIETO / KIRJAVÄLITYS"
+        },
+        {
+          "code": "5",
+          "value": "FENNI"
+        }
+      ]
+    },
+    {
+      "tag": "700",
+      "ind1": "1",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "Warburton, Thomas,"
+        },
+        {
+          "code": "e",
+          "value": "kääntäjä."
+        }
+      ]
+    },
+    {
+      "tag": "700",
+      "ind1": "1",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "Granath, Björn,"
+        },
+        {
+          "code": "e",
+          "value": "lukija."
+        }
+      ]
+    },
+    {
+      "tag": "884",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "ONIX3 to MARC transformation"
+        },
+        {
+          "code": "g",
+          "value": "20221130"
+        },
+        {
+          "code": "k",
+          "value": "MELINDA_RECORD_IMPORT_SOURCE_4"
+        },
+        {
+          "code": "q",
+          "value": "FI-NL"
+        },
+        {
+          "code": "5",
+          "value": "MELINDA"
+        }
+      ],
+      "ind1": " ",
+      "ind2": " "
+    },
+    {
+      "tag": "SID",
+      "subfields": [
+        {
+          "code": "c",
+          "value": "VER2787826"
+        },
+        {
+          "code": "b",
+          "value": "FI-KV"
+        }
+      ],
+      "ind1": " ",
+      "ind2": " "
+    },
+    {
+      "tag": "LOW",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "FIKKA"
+        }
+      ],
+      "ind1": " ",
+      "ind2": " "
+    }
+  ]
+}

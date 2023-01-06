@@ -1,0 +1,7 @@
+{
+    "description": "It should keep LOWs when merging",
+    "recordType": "bib",
+    "expectedToThrow": false,
+    "enabled": true,
+    "expectedResultStatus": true
+  }
