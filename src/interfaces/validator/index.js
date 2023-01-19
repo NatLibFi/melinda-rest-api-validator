@@ -198,7 +198,7 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
   async function updateValidations({updateId, updateRecord, updateOperation, mergeValidationResult = undefined, headers}) {
     logger.verbose(`Validations for UPDATE operation (${updateOperation}) (${updateId}) for ${headers.correlationId}`);
     logger.debug(`updateValidation, headers (${JSON.stringify(headers)})`);
-    logger.debug(`MergeValidationResult: ${mergeValidationResult}`);
+    logger.debug(`MergeValidationResult: ${JSON.stringify(mergeValidationResult)}`);
     logger.debug(`UpdateId: ${JSON.stringify(updateId)}`);
 
     const {recordMetadata, operationSettings, cataloger} = headers;
@@ -421,8 +421,8 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
       // mergeResult.status: true
 
       const mergeResult = await merger(mergeRequest);
-      logger.debug(`Got mergeResult: ${JSON.stringify(mergeResult)}`);
       const mergeValidationResult = {merged: mergeResult.status, mergedId: candidate.id, preference: preference.value};
+      logger.debug(`Got mergeResult, created mergeValidationResult: ${JSON.stringify(mergeValidationResult)}`);
 
       // Should we write merge-note here?
 
