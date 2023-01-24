@@ -34,7 +34,7 @@
 		"dev": "NODE_ENV=development cross-env nodemon"
 	},
 	"dependencies": {
-		"@babel/runtime": "^7.20.7",
+		"@babel/runtime": "^7.20.13",
 		"@natlibfi/marc-record": "7.2.2",
 		"@natlibfi/marc-record-merge": "6.0.0-beta.12",
 		"@natlibfi/marc-record-serializers": "^9.0.4",
@@ -45,7 +45,7 @@
 		"@natlibfi/melinda-marc-record-merge-reducers": "^1.0.0",
 		"@natlibfi/melinda-record-match-validator": "^1.2.5",
 		"@natlibfi/melinda-record-matching": "^3.0.3",
-		"@natlibfi/melinda-rest-api-commons": "^3.0.4",
+		"@natlibfi/melinda-rest-api-commons": "^3.0.6",
 		"@natlibfi/sru-client": "^5.0.4",
 		"deep-eql": "^4.1.3",
 		"deep-object-diff": "^1.1.9",
