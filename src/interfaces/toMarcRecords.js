@@ -124,7 +124,7 @@ export default function ({amqpOperator, mongoOperator, splitterOptions, mongoLog
 
             logger.debug(`validateRecords: ${validateRecords}`);
             logger.debug(`queue: ${queue}, newHeaders ${JSON.stringify(newHeaders)}`);
-            logger.debug(`recordtoQueue: ${recordToQueue}`);
+            logger.silly(`recordtoQueue: ${recordToQueue}`);
 
             // Noops with no validation do not need to go to the queue
             if (validateRecords || !noop) {
