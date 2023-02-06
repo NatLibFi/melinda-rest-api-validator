@@ -167,7 +167,27 @@ function generateStrategy(validatorMatchPackage) {
       ];
     }
 
-    if (validatorMatchPackage === 'CONTENT' || validatorMatchPackage === 'STANDARD_IDS') {
+    // We could have differing strategy for STANDARD_IDS
+    // Let's not run title in strategy when we found the candidates through standard_ids search
+
+    if (validatorMatchPackage === 'STANDARD_IDS') {
+      return [
+        matchDetection.features.bib.hostComponent(),
+        matchDetection.features.bib.isbn(),
+        matchDetection.features.bib.issn(),
+        matchDetection.features.bib.otherStandardIdentifier(),
+        // Let's not use the same title matchDetection here
+        //matchDetection.features.bib.title(),
+        matchDetection.features.bib.authors(),
+        matchDetection.features.bib.recordType(),
+        // SHould we have less rigid publication time matchDetection here too?
+        matchDetection.features.bib.publicationTime(),
+        matchDetection.features.bib.language(),
+        matchDetection.features.bib.bibliographicLevel()
+      ];
+    }
+
+    if (validatorMatchPackage === 'CONTENT') {
       return [
         matchDetection.features.bib.hostComponent(),
         matchDetection.features.bib.isbn(),
