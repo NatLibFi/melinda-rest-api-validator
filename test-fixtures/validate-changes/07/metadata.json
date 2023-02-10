@@ -1,0 +1,8 @@
+{
+    "description": "Should return false if the only change is in f008/00-05",
+    "comment": "In non-MARC21 imports f008 'Date entered on file' gets always the current date",
+    "expectedResult": false,
+    "expectedToThrow": false,
+    "enabled": true,
+    "only": false
+  }
