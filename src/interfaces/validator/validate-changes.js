@@ -29,7 +29,7 @@
 import deepEqual from 'deep-eql';
 import {detailedDiff} from 'deep-object-diff';
 import createDebugLogger from 'debug';
-import {normalizeEmptySubfieldsRecord} from '../../utils';
+import {normalizeEmptySubfields} from '../../utils';
 import {MarcRecord} from '@natlibfi/marc-record';
 
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator:validate-changes');
@@ -45,10 +45,12 @@ export function validateChanges({incomingRecord, existingRecord, validate = true
   }
 
   // Optimize the check by first counting the fields
-  if (incomingRecord.fields.length !== existingRecord.fields.length) {
+  if (incomingRecord.fields.filter(isActualContentField).length !== existingRecord.fields.filter(isActualContentField).length) {
     debug(`validateChanges: OK - there are changes between incomingRecord and existingRecord`);
     debugData(`IncomingRecord field count: ${incomingRecord.fields.length}`);
+    debugData(`IncomingRecord field tags: ${incomingRecord.fields.map(field => field.tag)}`);
     debugData(`ExistingRecord field count: ${existingRecord.fields.length}`);
+    debugData(`ExistingRecord field tags: ${existingRecord.fields.map(field => field.tag)}`);
     return {changeValidationResult: true};
   }
 
@@ -74,34 +76,80 @@ export function validateChanges({incomingRecord, existingRecord, validate = true
   return {changeValidationResult: true};
 }
 
-function normalizeRecord(record) {
-
-  debug(`Normalizing record: empty subfields`);
-  //debugData(record);
-  // normalizeEmptySubfieldsRecord is an utility function which normalizes all all cases of empty subfield value {code: x, value: ""}, {code: x}, {code: x, value: undefined}  to {value: ""}
-  // this is needed, because there are CAT-fields that have empty value in subfield $b
-  // we could optimize this step out, if we could be sure that empty subfield values are normalized somewhere else
-
-  const normRecord1 = normalizeEmptySubfieldsRecord(record);
-  debug(`Normalizing record: f008/00-05`);
-  // Normalize f008/00-05 - In non-MARC21 imports f008 'Date entered on file' gets always the current date
-  // This propably should be configurable
-  //debugData(normRecord1);
-  const normRecord = emptyf008CreationDate(normRecord1);
-
-  return normRecord;
+function isActualContentField(field) {
+  return field.tag !== '001' && field.tag !== '003';
 }
 
-function emptyf008CreationDate(record) {
+function normalizeRecord(record) {
   debugData(record);
-  const controlFields = record.getControlfields();
-  const normControlFields = controlFields.map(emptyf008);
+  const normLeader = emptyLeader(record.leader);
+
+  const normControlFields = record.getControlfields().filter(isActualContentField).map(emptyf008);
+  //const normControlFields = controlFields.map(emptyf008).filter(isActualContentField);
   //debugData(JSON.stringify(controlFields));
 
-  const dataFields = record.getDatafields();
-  const fields = normControlFields.concat(dataFields);
+  // normalizeEmptySubfields is an utility function which normalizes all all cases of empty subfield value {code: x, value: ""}, {code: x}, {code: x, value: undefined}  to {value: ""}
+  // this is needed, because there are CAT-fields that have empty value in subfield $b
+  // we could optimize this step out, if we could be sure that empty subfield values are normalized somewhere else
+  const normDataFields = record.getDatafields().filter(isActualContentField).map(normalizeEmptySubfields);
+
+  const normFields = normControlFields.concat(normDataFields);
+  // Differences in the (tag) order in Aleph-internal fields are ignored
+  // Note that this does not ignore differences in field order inside same tag
+  debug(`Sort Aleph internal fields`);
+  const sortedNormFields = sortAlephInternalFields(normFields);
+  debugData(`OrigTags: ${normFields.map(field => field.tag)}`);
+  debugData(`SortTags: ${sortedNormFields.map(field => field.tag)}`);
+
   //debugData(fields);
-  return new MarcRecord({leader: record.leader, fields}, {subfieldValues: false});
+  return new MarcRecord({leader: normLeader, fields: sortedNormFields}, {subfieldValues: false});
+
+  function emptyLeader(leader) {
+    if (!ldrIsValid(leader)) {
+      return leader;
+    }
+    // emptyLeader:
+    // - Normalize away LDR values that are 00-04 and 12-16 which are relevant only in binary MARC 21
+    // - Normalize away n/c difference in LDR/05
+    const normLeader1 = normalizeLdr05(leader);
+    const normLeader2 = emptyLdrBinaryValues(normLeader1);
+    return normLeader2;
+  }
+
+  function ldrIsValid(leader) {
+    if (!typeof leader === 'string' && !(leader instanceof String)) {
+      debug(`Non-string LDR, cannot normalize.`);
+      return false;
+    }
+    if (leader.length !== 24) {
+      debug(`Weird LDR length, cannot normalize`);
+      return false;
+    }
+    return true;
+  }
+
+  function normalizeLdr05(leader) {
+    debug(`Normalize LDR/05`);
+    const newLeader = `${leader.substring(0, 5)}${normLdr05Value(leader.substring(5, 6))}${leader.substring(6)}`;
+    debugData(`LdrOrig: ${leader}`);
+    debugData(`LdrNorm: ${newLeader}`);
+    return newLeader;
+  }
+
+  function normLdr05Value(value) {
+    if (value === 'n') {
+      return 'c';
+    }
+    return value;
+  }
+
+  function emptyLdrBinaryValues(leader) {
+    debug(`Empty LDR binary values`);
+    const newLeader = `00000${leader.substring(5, 12)}00000${leader.substring(17)}`;
+    debugData(`LdrOrig: ${leader}`);
+    debugData(`LdrNorm: ${newLeader}`);
+    return newLeader;
+  }
 
   function emptyf008(controlfield) {
     if (controlfield.tag !== '008' || controlfield.value.length < 6) {
@@ -111,9 +159,32 @@ function emptyf008CreationDate(record) {
   }
 
   function emptyCreationDate(f008value) {
+  // emptyCreationDate:
+  // Normalize f008/00-05 - In non-MARC21 imports f008 'Date entered on file' gets always the current date
+  // This propably should be configurable
+    debug(`Empty 008 creationDate.`);
     const newValue = `000000${f008value.substring(6)}`;
-    debug(`Emptied creationDate from ${f008value} to ${newValue}`);
+    debugData(`f008Orig: ${f008value}`);
+    debugData(`f008Norm: ${newValue}`);
     return newValue;
+  }
+
+  function sortAlephInternalFields(fields) {
+    const alephInternalPattern = /^[A-Z][A-Z][A-Z]$/u;
+    return [...fields].sort((a, b) => {
+      // If either of fields is and internal field do sort
+      if (alephInternalPattern.test(a.tag) || alephInternalPattern.test(b.tag)) {
+        if (a.tag > b.tag) {
+          return 1;
+        }
+        if (b.tag > a.tag) {
+          return -1;
+        }
+        return 0;
+      }
+      // if neither field is an internal field do not sort
+      return 0;
+    });
   }
 
 }

@@ -1,6 +1,8 @@
 {
-    "description": "Should return true if there's a change in field order",
+    "description": "Should return true if there's a change in field order for non-Aleph-internal fields",
+    "comment": "true: we do have (valid) changes in record",
     "expectedResult": true,
     "expectedToThrow": false,
-    "enabled": true
-  }
+    "skip": false,
+    "only": false
+}

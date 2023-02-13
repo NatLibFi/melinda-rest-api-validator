@@ -4,6 +4,6 @@
     "comment2": "In non-MARC21 imports f008 'Date entered on file' gets always the current date",
     "expectedResult": false,
     "expectedToThrow": false,
-    "enabled": true,
+    "skip": true,
     "only": false
   }

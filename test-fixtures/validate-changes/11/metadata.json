@@ -1,0 +1,8 @@
+{
+    "description": "Should return false if there's a change in field (tag) order for Aleph-internal fields",
+    "comment": "false: we do not have (valid) changes in record",
+    "expectedResult": false,
+    "expectedToThrow": false,
+    "skip": false,
+    "only": false
+  }
