@@ -94,9 +94,15 @@ function normalizeRecord(record) {
   const normDataFields = record.getDatafields().filter(isActualContentField).map(normalizeEmptySubfields);
 
   const normFields = normControlFields.concat(normDataFields);
+  // Differences in the (tag) order in Aleph-internal fields are ignored
+  // Note that this does not ignore differences in field order inside same tag
+  debug(`Sort Aleph internal fields`);
+  const sortedNormFields = sortAlephInternalFields(normFields);
+  debugData(`OrigTags: ${normFields.map(field => field.tag)}`);
+  debugData(`SortTags: ${sortedNormFields.map(field => field.tag)}`);
 
   //debugData(fields);
-  return new MarcRecord({leader: normLeader, fields: normFields}, {subfieldValues: false});
+  return new MarcRecord({leader: normLeader, fields: sortedNormFields}, {subfieldValues: false});
 
   function emptyLeader(leader) {
     if (!ldrIsValid(leader)) {
@@ -161,6 +167,24 @@ function normalizeRecord(record) {
     debugData(`f008Orig: ${f008value}`);
     debugData(`f008Norm: ${newValue}`);
     return newValue;
+  }
+
+  function sortAlephInternalFields(fields) {
+    const alephInternalPattern = /^[A-Z][A-Z][A-Z]$/u;
+    return [...fields].sort((a, b) => {
+      // If either of fields is and internal field do sort
+      if (alephInternalPattern.test(a.tag) || alephInternalPattern.test(b.tag)) {
+        if (a.tag > b.tag) {
+          return 1;
+        }
+        if (b.tag > a.tag) {
+          return -1;
+        }
+        return 0;
+      }
+      // if neither field is an internal field do not sort
+      return 0;
+    });
   }
 
 }
