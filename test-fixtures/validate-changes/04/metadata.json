@@ -1,5 +1,6 @@
 {
     "description": "Should return true if there's a change in field order",
+    "comment": "true: we do have (valid) changes in record",
     "expectedResult": true,
     "expectedToThrow": false,
     "enabled": true
