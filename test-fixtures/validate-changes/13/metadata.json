@@ -1,0 +1,8 @@
+{
+    "description": "Should return false if the only change is f001",
+    "comment1":  "false: we do NOT have (valid) changes in record",
+    "expectedResult": false,
+    "expectedToThrow": false,
+    "skip": false,
+    "only": false
+  }

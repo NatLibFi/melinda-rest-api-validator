@@ -4,7 +4,7 @@
 *
 * RESTful API for Melinda - record validation services
 *
-* Copyright (C) 2022 University Of Helsinki (The National Library Of Finland)
+* Copyright (C) 2022-2023 University Of Helsinki (The National Library Of Finland)
 *
 * This file is part of melinda-rest-api-validator
 *
@@ -77,7 +77,7 @@ export function validateChanges({incomingRecord, existingRecord, validate = true
 }
 
 function isActualContentField(field) {
-  return field.tag !== '001' && field.tag !== '003';
+  return field.tag !== '001' && field.tag !== '003' && field.tag !== '005';
 }
 
 function normalizeRecord(record) {
@@ -168,6 +168,12 @@ function normalizeRecord(record) {
     debugData(`f008Norm: ${newValue}`);
     return newValue;
   }
+
+  // Sort Aleph internal fields (tags consisting letters) to alphabetical tag order
+  // We should have also tag-internal sort for - these are sane order in (almost) all cases for handling LOW/SID/CAT:
+  // LOW: $a contents
+  // SID: $b contents
+  // CAT: $c+$h contents
 
   function sortAlephInternalFields(fields) {
     const alephInternalPattern = /^[A-Z][A-Z][A-Z]$/u;
