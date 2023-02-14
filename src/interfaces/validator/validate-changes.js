@@ -4,7 +4,7 @@
 *
 * RESTful API for Melinda - record validation services
 *
-* Copyright (C) 2022 University Of Helsinki (The National Library Of Finland)
+* Copyright (C) 2022-2023 University Of Helsinki (The National Library Of Finland)
 *
 * This file is part of melinda-rest-api-validator
 *
