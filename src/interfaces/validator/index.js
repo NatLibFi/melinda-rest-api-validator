@@ -26,7 +26,7 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
   const logger = createLogger();
   logger.debug(`preValidationFixOptions: ${JSON.stringify(preValidationFixOptions)}`);
   logger.debug(`postMergeFixOptions: ${JSON.stringify(postMergeFixOptions)}`);
-  logger.debug(`postImportFixOptions: ${JSON.stringify(preImportFixOptions)}`);
+  logger.debug(`preImportFixOptions: ${JSON.stringify(preImportFixOptions)}`);
 
   // fixRecord: record fixes from melinda-rest-api-commons
   // for pre-, mid- and postValidation fixing the record
