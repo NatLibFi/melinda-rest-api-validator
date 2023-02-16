@@ -1,5 +1,6 @@
 {
-    "description": "It should not throw error if the records are not similar",
+    "description": "It should return true if the records are not similar",
+    "comment": "true: we do have (valid) changes in record",
     "expectedResult": true,
     "expectedToThrow": false,
     "enabled": true

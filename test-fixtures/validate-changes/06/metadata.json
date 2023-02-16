@@ -1,5 +1,6 @@
 {
     "description": "Should return false if the change in subfields is a mismatching empty subfield",
+    "comment": "false: we do NOT have (valid) changes in record",
     "expectedResult": false,
     "expectedToThrow": false,
     "enabled": true
