@@ -179,9 +179,10 @@ function generateStrategy(validatorMatchPackage) {
         // Let's not use the same title matchDetection here
         //matchDetection.features.bib.title(),
         matchDetection.features.bib.authors(),
+        // We probably should have some leeway here for notated music as BK etc.
         matchDetection.features.bib.recordType(),
-        // SHould we have less rigid publication time matchDetection here too?
-        matchDetection.features.bib.publicationTime(),
+        // Use publicationTimeAllowConsYears to ignore one year differences in publicationTime
+        matchDetection.features.bib.publicationTimeAllowConsYears(),
         matchDetection.features.bib.language(),
         matchDetection.features.bib.bibliographicLevel()
       ];
