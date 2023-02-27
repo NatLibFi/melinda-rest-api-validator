@@ -181,8 +181,12 @@ function generateStrategy(validatorMatchPackage) {
         matchDetection.features.bib.authors(),
         // We probably should have some leeway here for notated music as BK etc.
         matchDetection.features.bib.recordType(),
-        // Use publicationTimeAllowConsYears to ignore one year differences in publicationTime
-        matchDetection.features.bib.publicationTimeAllowConsYears(),
+        // Use publicationTimeAllowConsYearsMulti to
+        //  - ignore one year differences in publicationTime
+        //  - extract publicationTimes from f008, f26x and reprint notes in f500
+        //  - do not substract points for mismatching (normal) publicationTime, if there's a match between
+        //       normal publicationTime and a reprintPublication time
+        matchDetection.features.bib.publicationTimeAllowConsYearsMulti(),
         matchDetection.features.bib.language(),
         matchDetection.features.bib.bibliographicLevel()
       ];
