@@ -451,11 +451,15 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
     logger.debug(`Logging the matchAction to mongoLogs here`);
     logger.silly(inspect(headers));
 
+    const catalogerForLog = headers.cataloger.id || headers.cataloger;
+    logger.debug(`Picked ${catalogerForLog} from ${JSON.stringify(headers.cataloger)}`);
+
     // matchResultsForLog is an array of matchResult objects:
     // {action, preference: {name, value}, message, candidate: {id, record}, probability, matchSequence}
 
     const matchLogItem = {
       logItemType: LOG_ITEM_TYPE.MATCH_LOG,
+      cataloger: catalogerForLog,
       correlationId: headers.correlationId,
       blobSequence: headers.recordMetadata.blobSequence,
       ...headers.recordMetadata,
@@ -473,11 +477,15 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
     logger.silly(inspect(headers));
     logger.debug(`Logging the mergeAction to mongoLogs here`);
 
+    const catalogerForLog = headers.cataloger.id || headers.cataloger;
+    logger.debug(`Picked ${catalogerForLog} from ${JSON.stringify(headers.cataloger)}`);
+
     // note: there's no correlationId in headers?
     // we want also a timestamp here - mongoLogOperator could create that?
 
     const mergeLogItem = {
       logItemType: LOG_ITEM_TYPE.MERGE_LOG,
+      cataloger: catalogerForLog,
       correlationId: headers.correlationId,
       blobSequence: headers.recordMetadata.blobSequence,
       ...headers.recordMetadata,
