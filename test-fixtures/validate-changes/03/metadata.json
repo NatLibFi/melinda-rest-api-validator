@@ -3,5 +3,6 @@
     "comment": "true: we do have (valid) changes in record",
     "expectedResult": true,
     "expectedToThrow": false,
-    "enabled": true
+    "skip": false,
+    "only": false
   }

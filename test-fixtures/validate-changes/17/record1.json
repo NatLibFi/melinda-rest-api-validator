@@ -34,6 +34,28 @@
             "value": "bar"
           }
         ]
+      },
+      {
+        "tag": "LOW",
+        "ind1": " ",
+        "ind2": " ",
+        "subfields": [
+          {
+            "code": "a",
+            "value": "PIKI"
+          }
+        ]
+      },
+      {
+        "tag": "LOW",
+        "ind1": " ",
+        "ind2": " ",
+        "subfields": [
+          {
+            "code": "a",
+            "value": "SATA"
+          }
+        ]
       }
     ]
   }

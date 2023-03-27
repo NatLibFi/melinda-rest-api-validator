@@ -110,16 +110,16 @@ export function getSidsFromRecord(record) {
     return countC === 1 && countB === 1;
   }
 
-  function getSubfieldValues(field, subfieldCode) {
-    debugData(`Get subfield(s) $${subfieldCode} from ${JSON.stringify(field)}`);
-    return field.subfields.filter(({code}) => code === subfieldCode).map(({value}) => value);
-  }
-
   function countSubfields(field, subfieldCode) {
   // debug(`Counting subfields ${subfieldCode}`);
     return field.subfields.filter(({code}) => code === subfieldCode).length;
   }
 
+}
+
+export function getSubfieldValues(field, subfieldCode) {
+  debugData(`Get subfield(s) $${subfieldCode} from ${JSON.stringify(field)}`);
+  return field.subfields.filter(({code}) => code === subfieldCode).map(({value}) => value);
 }
 
 export function getF035IdsFromRecord(record) {
