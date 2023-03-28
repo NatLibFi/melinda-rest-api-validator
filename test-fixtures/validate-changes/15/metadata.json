@@ -1,0 +1,8 @@
+{
+    "description": "Should return false if the only changes are in CAT fields",
+    "comment1":  "false: we do NOT have (valid) changes in record",
+    "expectedResult": false,
+    "expectedToThrow": false,
+    "skip": false,
+    "only": false
+  }

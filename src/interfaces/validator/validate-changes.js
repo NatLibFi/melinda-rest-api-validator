@@ -29,7 +29,7 @@
 import deepEqual from 'deep-eql';
 import {detailedDiff} from 'deep-object-diff';
 import createDebugLogger from 'debug';
-import {normalizeEmptySubfields} from '../../utils';
+import {normalizeEmptySubfields, getSubfieldValues} from '../../utils';
 import {MarcRecord} from '@natlibfi/marc-record';
 
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator:validate-changes');
@@ -45,12 +45,16 @@ export function validateChanges({incomingRecord, existingRecord, validate = true
   }
 
   // Optimize the check by first counting the fields
-  if (incomingRecord.fields.filter(isActualContentField).length !== existingRecord.fields.filter(isActualContentField).length) {
+  const incomingActualFieldTags = incomingRecord.fields.filter(isActualContentField).map(field => field.tag);
+  const existingActualFieldTags = existingRecord.fields.filter(isActualContentField).map(field => field.tag);
+
+  if (incomingActualFieldTags.length !== existingActualFieldTags.length) {
     debug(`validateChanges: OK - there are changes between incomingRecord and existingRecord`);
-    debugData(`IncomingRecord field count: ${incomingRecord.fields.length}`);
-    debugData(`IncomingRecord field tags: ${incomingRecord.fields.map(field => field.tag)}`);
-    debugData(`ExistingRecord field count: ${existingRecord.fields.length}`);
-    debugData(`ExistingRecord field tags: ${existingRecord.fields.map(field => field.tag)}`);
+    debugData(`IncomingRecord field count: ${incomingActualFieldTags.length}`);
+    debugData(`IncomingRecord field tags: ${incomingActualFieldTags}`);
+    debugData(`ExistingRecord field count: ${existingActualFieldTags.length}`);
+    debugData(`ExistingRecord field tags: ${existingActualFieldTags}`);
+    debugData(`Difference in tags: ${JSON.stringify(detailedDiff(incomingActualFieldTags, existingActualFieldTags))}`);
     return {changeValidationResult: true};
   }
 
@@ -65,6 +69,7 @@ export function validateChanges({incomingRecord, existingRecord, validate = true
     debugData(`Differences in records (detailed): ${JSON.stringify(detailedDiff(normExistingRecord, normIncomingRecord), {colors: true, depth: 4})}`);
     debugData(`Incoming record: ${JSON.stringify(incomingRecord)}`);
     debugData(`Existing record: ${JSON.stringify(existingRecord)}`);
+
     // should we error here or return a result?
     return {changeValidationResult: false};
   }
@@ -77,7 +82,7 @@ export function validateChanges({incomingRecord, existingRecord, validate = true
 }
 
 function isActualContentField(field) {
-  return field.tag !== '001' && field.tag !== '003' && field.tag !== '005';
+  return field.tag !== '001' && field.tag !== '003' && field.tag !== '005' && field.tag !== 'CAT';
 }
 
 function normalizeRecord(record) {
@@ -170,10 +175,10 @@ function normalizeRecord(record) {
   }
 
   // Sort Aleph internal fields (tags consisting letters) to alphabetical tag order
-  // We should have also tag-internal sort for - these are sane order in (almost) all cases for handling LOW/SID/CAT:
+  // We have also tag-internal sort for:
   // LOW: $a contents
   // SID: $b contents
-  // CAT: $c+$h contents
+  // CAT: could be sorted by $c+$h contents - but we do not compare CATs, so sorting CATs are not needed
 
   function sortAlephInternalFields(fields) {
     const alephInternalPattern = /^[A-Z][A-Z][A-Z]$/u;
@@ -186,11 +191,57 @@ function normalizeRecord(record) {
         if (b.tag > a.tag) {
           return -1;
         }
+        if (a.tag === b.tag && a.tag === 'LOW') {
+          return sortLow(a, b);
+        }
+
+        if (a.tag === b.tag && a.tag === 'SID') {
+          return sortSID(a, b);
+        }
+
         return 0;
       }
       // if neither field is an internal field do not sort
       return 0;
     });
+  }
+
+  function sortLow(a, b) {
+    if (a.tag !== 'LOW' || b.tag !== 'LOW') {
+      return 0;
+    }
+    if (!a.subfields || !b.subfields) {
+      return 0;
+    }
+    const [aFirstA] = getSubfieldValues(a, 'a');
+    const [bFirstA] = getSubfieldValues(b, 'a');
+
+    if (aFirstA > bFirstA) {
+      return 1;
+    }
+    if (bFirstA > aFirstA) {
+      return -1;
+    }
+    return 0;
+  }
+
+  function sortSID(a, b) {
+    if (a.tag !== 'SID' || b.tag !== 'SID') {
+      return 0;
+    }
+    if (!a.subfields || !b.subfields) {
+      return 0;
+    }
+    const [aFirstB] = getSubfieldValues(a, 'b');
+    const [bFirstB] = getSubfieldValues(b, 'b');
+
+    if (aFirstB > bFirstB) {
+      return 1;
+    }
+    if (bFirstB > aFirstB) {
+      return -1;
+    }
+    return 0;
   }
 
 }

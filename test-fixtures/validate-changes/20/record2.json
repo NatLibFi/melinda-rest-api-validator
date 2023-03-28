@@ -6,7 +6,7 @@
       "value": "000019640"
     },
     {
-      "tag": "020",
+      "tag": "028",
       "ind1": " ",
       "ind2": " ",
       "subfields": [
@@ -27,7 +27,7 @@
       "subfields": [
         {
           "code": "a",
-          "value": "foo-baz-foo :"
+          "value": "foo."
         },
         {
           "code": "b",

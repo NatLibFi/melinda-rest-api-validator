@@ -2,6 +2,7 @@
     "description": "It should run merge for recordType 'bib'",
     "recordType": "bib",
     "expectedToThrow": false,
-    "enabled": true,
-    "expectedResultStatus": true
+    "expectedResultStatus": true,
+    "skip": false,
+    "only": false
   }

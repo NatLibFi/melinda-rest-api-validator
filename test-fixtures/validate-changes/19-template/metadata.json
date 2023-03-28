@@ -1,0 +1,8 @@
+{
+    "description": "SKIP: Test template for testing changes",
+    "comment": "false: we do not have (valid) changes in record",
+    "expectedResult": true,
+    "expectedToThrow": false,
+    "skip": true,
+    "only": false
+  }

@@ -45,11 +45,7 @@ describe('validateExistingRecord', () => {
       reader: READERS.JSON
     },
     // eslint-disable-next-line max-statements
-    callback: ({getFixture, expectedToThrow, expectedStatus, expectedError, skipValidation, enabled = true}) => {
-
-      if (!enabled) {
-        return;
-      }
+    callback: ({getFixture, expectedToThrow, expectedStatus, expectedError, skipValidation}) => {
 
       const record = new MarcRecord(getFixture('record.json'));
 

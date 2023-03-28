@@ -45,14 +45,9 @@ describe('merge', () => {
       reader: READERS.JSON
     },
     // eslint-disable-next-line max-statements
-    callback: ({getFixture, expectedResultStatus, expectedToThrow, expectedStatus, expectedError, recordType = 'bib', enabled = true}) => {
+    callback: ({getFixture, expectedResultStatus, expectedToThrow, expectedStatus, expectedError, recordType = 'bib'}) => {
 
       debug(`Running test`);
-
-      if (!enabled) {
-        debug(`This test is disabled in metadata.json`);
-        return;
-      }
 
       const record1 = new MarcRecord(getFixture('record1.json'));
       const record2 = new MarcRecord(getFixture('record2.json'));

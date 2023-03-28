@@ -3,6 +3,7 @@
     "expectedToThrow": true,
     "expectedStatus": 409,
     "expectedError": "Possible modification history mismatch \\(CAT\\)",
-    "enabled": true,
-    "updateCats": true
+    "updateCats": true,
+    "skip": false,
+    "only": false
   }
