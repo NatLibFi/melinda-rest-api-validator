@@ -14,7 +14,7 @@
 		"url": "git@github.com:NatLibFi/melinda-rest-api-validator.git"
 	},
 	"license": "AGPL-3.0+",
-	"version": "3.2.12-alpha.1",
+	"version": "3.2.12-alpha.2",
 	"main": "./dist/index.js",
 	"engines": {
 		"node": ">=18"
@@ -29,7 +29,7 @@
 		"test": "npm run lint && npm run test:base -- src/**/*.spec.js && npm run coverage",
 		"test:dev": "npm run lint:dev && npm run test:base -- src/**/*.spec.js",
 		"_test:dev": "npm run lint:dev && npm run test:base -- src/**/*.spec.js && npm run coverage",
-		"coverage": "nyc check-coverage --per-file",
+		"coverage": "nyc check-coverage --per-file --reporter=text",
 		"build": "babel src --source-maps --copy-files --delete-dir-on-start --out-dir=dist --minified",
 		"dev": "NODE_ENV=development cross-env nodemon"
 	},
@@ -95,13 +95,13 @@
 		}
 	},
 	"nyc": {
+		"include": [
+			"src/**/*.js",
+			"src/*.js"
+		],
 		"exclude": [
 			"**/*.spec.js",
 			"src/utils.js"
-		],
-		"reporter": [
-			"lcov",
-			"html"
 		],
 		"require": [
 			"@babel/register"

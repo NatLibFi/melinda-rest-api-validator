@@ -100,11 +100,7 @@ describe('validateRecordState', () => {
       reader: READERS.JSON
     },
     // eslint-disable-next-line max-statements
-    callback: ({getFixture, expectedToThrow, expectedStatus, expectedError, skipValidation, updateCats, enabled = true}) => {
-
-      if (!enabled) {
-        return;
-      }
+    callback: ({getFixture, expectedToThrow, expectedStatus, expectedError, skipValidation, updateCats}) => {
 
       const record1 = updateCatsInRecord(new MarcRecord(getFixture('record1.json')), updateCats);
       const record2 = updateCatsInRecord(new MarcRecord(getFixture('record2.json')), updateCats);

@@ -1,5 +1,5 @@
 {
-    "description": "Should return true if there's a change in subfields",
+    "description": "It should return true if the records are not similar (same amount, differing tags of fields)",
     "comment": "true: we do have (valid) changes in record",
     "expectedResult": true,
     "expectedToThrow": false,

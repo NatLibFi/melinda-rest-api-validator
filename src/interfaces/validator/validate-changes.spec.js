@@ -46,11 +46,7 @@ describe('validateChanges', () => {
       reader: READERS.JSON
     },
     // eslint-disable-next-line max-statements
-    callback: ({getFixture, expectedResult, skipValidation, enabled = true}) => {
-
-      if (!enabled) {
-        return;
-      }
+    callback: ({getFixture, expectedResult, skipValidation}) => {
 
       const record1 = new MarcRecord(getFixture('record1.json'));
       const record2 = new MarcRecord(getFixture('record2.json'));
