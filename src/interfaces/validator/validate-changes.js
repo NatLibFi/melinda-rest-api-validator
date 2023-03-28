@@ -45,12 +45,16 @@ export function validateChanges({incomingRecord, existingRecord, validate = true
   }
 
   // Optimize the check by first counting the fields
-  if (incomingRecord.fields.filter(isActualContentField).length !== existingRecord.fields.filter(isActualContentField).length) {
+  const incomingActualFieldTags = incomingRecord.fields.filter(isActualContentField).map(field => field.tag);
+  const existingActualFieldTags = existingRecord.fields.filter(isActualContentField).map(field => field.tag);
+
+  if (incomingActualFieldTags.length !== existingActualFieldTags.length) {
     debug(`validateChanges: OK - there are changes between incomingRecord and existingRecord`);
-    debugData(`IncomingRecord field count: ${incomingRecord.fields.length}`);
-    debugData(`IncomingRecord field tags: ${incomingRecord.fields.map(field => field.tag)}`);
-    debugData(`ExistingRecord field count: ${existingRecord.fields.length}`);
-    debugData(`ExistingRecord field tags: ${existingRecord.fields.map(field => field.tag)}`);
+    debugData(`IncomingRecord field count: ${incomingActualFieldTags.length}`);
+    debugData(`IncomingRecord field tags: ${incomingActualFieldTags}`);
+    debugData(`ExistingRecord field count: ${existingActualFieldTags.length}`);
+    debugData(`ExistingRecord field tags: ${existingActualFieldTags}`);
+    debugData(`Difference in tags: ${JSON.stringify(detailedDiff(incomingActualFieldTags, existingActualFieldTags))}`);
     return {changeValidationResult: true};
   }
 
