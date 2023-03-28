@@ -54,6 +54,8 @@ describe('validateChanges', () => {
 
       const record1 = new MarcRecord(getFixture('record1.json'));
       const record2 = new MarcRecord(getFixture('record2.json'));
+      debugData(`Record1:\n${record1}`);
+      debugData(`Record2:\n${record2}`);
 
       if (skipValidation) {
         debug(`Running validation with (4th param) validate: false`);
