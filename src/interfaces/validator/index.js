@@ -374,13 +374,24 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
       // Validate update: ie. if the update is coming from certain recordImport sources and the databaseRecord has already been updated with the incoming version of
       // the source record, we skip the update
 
-      //result: {candidate: {id, record}, probability, matchSequence, action, preference: {value, name}}}
-      const updateValidationResult = validateUpdate({incomingRecord: record, existingRecord: firstResult.candidate.record, cataloger});
+      //Matchresult: {candidate: {id, record}, probability, matchSequence, action, preference: {value, name}}}
+      const {updateValidationResult} = validateUpdate({incomingRecord: record, existingRecord: firstResult.candidate.record, cataloger});
       logger.debug(`UpdateValidationResult: ${JSON.stringify(updateValidationResult)}`);
 
       if (updateValidationResult === false) {
         // we do not actually want to CONFLICT this, we want to SKIPPED to this...
-        throw new ValidationError(HttpStatus.CONFLICT, {message: `UpdateValidation with ${firstResult.candidate.id} failed. ${firstResult.message}`, ids: [firstResult.candidate.id], recordMetadata});
+        logger.debug(`Update validation failed, updates from ${cataloger} are already included in the database record`);
+
+        /*
+        const newNote = `No changes detected while trying to update existing record ${updateId}, update skipped.`;
+        const updatedHeaders = {
+          operation: 'SKIPPED',
+          notes: headers.notes ? headers.notes.concat(`${newNote}`) : [newNote]
+        };
+        const finalHeaders = {...headers, ...updatedHeaders};
+        */
+        //return {result: validationResults, recordMetadata, headers: finalHeaders};
+        throw new ValidationError(HttpStatus.CONFLICT, {message: `UpdateValidation with ${firstResult.candidate.id} failed. This is actually not an error!`, ids: [firstResult.candidate.id], recordMetadata});
       }
 
       // run merge for record with the best valid match
