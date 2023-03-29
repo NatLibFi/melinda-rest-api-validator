@@ -15,6 +15,7 @@ import * as matcherService from './match';
 import createMatchInterface from '@natlibfi/melinda-record-matching';
 import {validateRecordState} from './validate-record-state';
 import {validateChanges} from './validate-changes';
+import {validateUpdate} from './validate-update';
 //import {detailedDiff} from 'deep-object-diff';
 import {LOG_ITEM_TYPE} from '@natlibfi/melinda-rest-api-commons/dist/constants';
 
@@ -332,8 +333,9 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
     return {result: validationResults, recordMetadata, headers};
   }
 
+  // eslint-disable-next-line max-statements
   async function validateAndMergeMatchResults({record, matchResults, headers}) {
-    const {recordMetadata} = headers;
+    const {recordMetadata, cataloger} = headers;
     try {
       logger.debug(`We have matchResults (${matchResults.length}) here: ${JSON.stringify(matchResults.map(({candidate: {id}, probability}) => ({id, probability})))}`);
       logger.silly(`matchResults: ${inspect(matchResults, {colors: true, maxArrayLength: 3, depth: 2})}`);
@@ -367,8 +369,19 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
       }
 
       // We don't have a matchValidationNote, because the preference information is available in the mergeNote
-
       logger.debug(`Action from matchValidation: ${firstResult.action}`);
+
+      // Validate update: ie. if the update is coming from certain recordImport sources and the databaseRecord has already been updated with the incoming version of
+      // the source record, we skip the update
+
+      //result: {candidate: {id, record}, probability, matchSequence, action, preference: {value, name}}}
+      const updateValidationResult = validateUpdate({incomingRecord: record, existingRecord: firstResult.candidate.record, cataloger});
+      logger.debug(`UpdateValidationResult: ${JSON.stringify(updateValidationResult)}`);
+
+      if (updateValidationResult === false) {
+        // we do not actually want to CONFLICT this, we want to SKIPPED to this...
+        throw new ValidationError(HttpStatus.CONFLICT, {message: `UpdateValidation with ${firstResult.candidate.id} failed. ${firstResult.message}`, ids: [firstResult.candidate.id], recordMetadata});
+      }
 
       // run merge for record with the best valid match
       return mergeValidatedMatchResults({record, validatedMatchResult: firstResult, headers});
@@ -378,6 +391,7 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
       throw err;
     }
   }
+
 
   function runValidateOwnChanges({cataloger, incomingRecord, existingRecord, operation, recordMetadata, runValidations}) {
     logger.debug(`cataloger: ${JSON.stringify(cataloger)}`);
