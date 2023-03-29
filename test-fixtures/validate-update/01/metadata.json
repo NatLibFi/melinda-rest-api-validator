@@ -1,0 +1,8 @@
+{
+    "description": "It should skip the validation if validate param is false",
+    "expectedToThrow": false,
+    "cataloger": "FOOBAR",
+    "skipValidation": true,
+    "skip": false,
+    "only": false
+  }
