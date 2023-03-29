@@ -40,6 +40,7 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
       // - treshold (if returnStrategy option is true)
       // - matchQuery (if returnQuery option is true)
       // conversionFailures: array of errors contents ({status, payload: {message, id, data}}) (if returnFailures is true)
+      // candidateCount: amount of matchCandidates that matcher retrieved from the database for matchDetection before stopping
 
       // we could have here also returnRecords/returnMatchRecords/returnNonMatchRecord options that could be turned false for not to return actual record data
 
@@ -50,19 +51,19 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
 
       // Note: candidate.record is in external format (as it is fetched from SRU) - we keep also the incoming record in external format to avoid problems
 
-      //const matchResults = await matcher(record);
-
       // We could have also some kind of id for the incomingRecord here (blobSequence?)
       const recordExternal = {recordSource: 'incomingRecord', label: 'ic'};
       const matchResults = await matcher({record, recordExternal});
 
-      const {matches, matchStatus, conversionFailures} = matchResults;
+      const {matches, matchStatus, conversionFailures, candidateCount} = matchResults;
 
       logger.debug(`MatchStatus: ${JSON.stringify(matchStatus)})`);
       logger.silly(`MatchResult: ${inspect(matchResults, {colors: true, maxArrayLength: 10, depth: 3})}`);
 
       logger.debug(`Conversion failures: ${conversionFailures.length}`);
       logger.silly(`Conversion failures: ${JSON.stringify(conversionFailures.map(f => f.payload.id))}`);
+
+      logger.debug(`CandidateCount: ${JSON.stringify(candidateCount)})`);
 
       // We probably want to log conversionFailures somewhere here - currently conversionFailures are logged only when matching fails due to them
       const newConversionFailures = allConversionFailures.concat(...conversionFailures);
@@ -73,6 +74,7 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
 
       // How we should handle cases, where matchResult is false, but we did get match(es)?
       // Should we return also information about the matcher that hit the match (to recognize matches by recordIDs vs other matches?)
+      // What should we do with candidateCount? We'd like to pass it on, in case of recordID or standardNumber matchCandidates that were not detected as matches
 
       if (stopWhenFound && matchAmount > 0) {
 
