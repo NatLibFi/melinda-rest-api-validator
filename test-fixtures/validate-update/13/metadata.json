@@ -1,0 +1,8 @@
+{
+    "description": "It should return true if existing has no relevant f884 $k",
+    "cataloger": "IMP_HELMET",
+    "expectedToThrow": false,
+    "expectedResult": true,
+    "skip": false,
+    "only": false
+  }

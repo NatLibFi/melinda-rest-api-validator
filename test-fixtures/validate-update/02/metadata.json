@@ -1,0 +1,8 @@
+{
+    "description": "It should return true, if cataloger is not included in the configuration",
+    "expectedToThrow": false,
+    "cataloger": "FOOBAR",
+    "expectedResult": true,
+    "skip": false,
+    "only": false
+  }

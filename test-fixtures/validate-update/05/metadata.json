@@ -1,0 +1,8 @@
+{
+    "description": "It should return true, if a configured cataloger is found from cataloger.id but there are no f884s",
+    "cataloger": {"id": "IMP_HELMET", "authorization": "FOOBAR"},
+    "expectedToThrow": false,
+    "expectedResult": true,
+    "skip": false,
+    "only": false
+  }

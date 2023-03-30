@@ -1,0 +1,8 @@
+{
+    "description": "It should return true if both records have a relevant f884 with but there is no match (several existing f884s)",
+    "cataloger": "IMP_HELMET",
+    "expectedToThrow": false,
+    "expectedResult": true,
+    "skip": false,
+    "only": false
+  }
