@@ -35,7 +35,7 @@ const debugData = debug.extend('data');
 // Note: when we get new recordImport catalogers or imported conversions, these need to be updated
 // These could also exist as env-configs
 const catalogerToConversionNameMapping = {
-  'IMP_HELMET': 'HELMET to Melinda MARC transformation',
+  'IMP_HELMET': 'Helmet to Melinda MARC transformation',
   'IMP_TATI': 'TATI to Melinda MARC transformation',
   'IMP_ENNAKK': 'ONIX3 to MARC transformation',
   'IMP_VPKPL': 'ONIX3 to MARC transformation',
