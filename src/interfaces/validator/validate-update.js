@@ -38,9 +38,7 @@ const catalogerToConversionNameMapping = {
   'IMP_HELMET': 'Helmet to Melinda MARC transformation',
   'IMP_TATI': 'TATI to Melinda MARC transformation',
   'IMP_ENNAKK': 'ONIX3 to MARC transformation',
-  'IMP_VPKPL': 'ONIX3 to MARC transformation',
-  // testing mapping, remove later
-  'MINTTU': 'MINTTU 884 test'
+  'IMP_VPKPL': 'ONIX3 to MARC transformation'
 };
 
 // eslint-disable-next-line max-statements
