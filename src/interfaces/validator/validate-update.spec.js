@@ -61,24 +61,6 @@ describe('validateUpdate', () => {
         return;
       }
 
-      /*
-      if (expectedToThrow) { // eslint-disable-line functional/no-conditional-statement
-        debugData(`Expecting error: ${expectedToThrow}, ${expectedStatus}, ${expectedError}`);
-        try {
-          validateChanges({incomingRecord: record1, existingRecord: record2, validate: true});
-          throw new Error('Expected an error');
-        } catch (err) {
-
-          debug(`Got error: ${err.status}, ${JSON.stringify(err.payload)}`);
-
-          expect(err).to.be.an('error');
-          expect(err.status).to.equal(expectedStatus);
-          expect(err.payload.message).to.match(new RegExp(expectedError, 'u'));
-          return;
-        }
-      }
-      */
-
       try {
         const result = validateUpdate({incomingRecord: record1, existingRecord: record2, cataloger, validate: true});
         debug('Did not get an error.');
