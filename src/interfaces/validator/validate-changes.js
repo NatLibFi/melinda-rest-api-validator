@@ -82,7 +82,7 @@ export function validateChanges({incomingRecord, existingRecord, validate = true
 }
 
 function isActualContentField(field) {
-  return field.tag !== '001' && field.tag !== '003' && field.tag !== '005' && field.tag !== 'CAT';
+  return field.tag !== '001' && field.tag !== '003' && field.tag !== '005' && field.tag !== '884' && field.tag !== 'CAT';
 }
 
 function normalizeRecord(record) {

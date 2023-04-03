@@ -1,0 +1,8 @@
+{
+    "description": "It should return true if both records have f884s but only incoming matches the cataloger",
+    "cataloger": "IMP_HELMET",
+    "expectedToThrow": false,
+    "expectedResult": true,
+    "skip": false,
+    "only": false
+  }

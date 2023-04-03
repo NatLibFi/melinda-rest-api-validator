@@ -14,7 +14,7 @@
 		"url": "git@github.com:NatLibFi/melinda-rest-api-validator.git"
 	},
 	"license": "AGPL-3.0+",
-	"version": "3.2.12",
+	"version": "3.3.0-alpha.1",
 	"main": "./dist/index.js",
 	"engines": {
 		"node": ">=18"
@@ -45,7 +45,7 @@
 		"@natlibfi/melinda-marc-record-merge-reducers": "^2.0.0",
 		"@natlibfi/melinda-record-match-validator": "^2.0.3",
 		"@natlibfi/melinda-record-matching": "^4.1.1",
-		"@natlibfi/melinda-rest-api-commons": "^4.0.1",
+		"@natlibfi/melinda-rest-api-commons": "^4.0.2",
 		"@natlibfi/sru-client": "^6.0.1",
 		"deep-eql": "^4.1.3",
 		"deep-object-diff": "^1.1.9",

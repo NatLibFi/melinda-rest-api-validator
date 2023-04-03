@@ -1,0 +1,8 @@
+{
+    "description": "It should return false if both records have a relevant f884 with matching sourceHash in $k (several f884s in both)",
+    "cataloger": "IMP_HELMET",
+    "expectedToThrow": false,
+    "expectedResult": false,
+    "skip": false,
+    "only": false
+  }

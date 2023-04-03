@@ -1,0 +1,8 @@
+{
+    "description": "It should return true if id relevant f884 $k has no sourceHash (is shorter than 64)",
+    "cataloger": "IMP_HELMET",
+    "expectedToThrow": false,
+    "expectedResult": true,
+    "skip": false,
+    "only": false
+  }
