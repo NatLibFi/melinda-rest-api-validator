@@ -113,7 +113,8 @@ describe('validateRecordState', () => {
         return;
       }
 
-      if (expectedToThrow) { // eslint-disable-line functional/no-conditional-statement
+      // eslint-disable-next-line functional/no-conditional-statements
+      if (expectedToThrow) {
         debugData(`Expecting error: ${expectedToThrow}, ${expectedStatus}, ${expectedError}`);
         try {
           validateRecordState({incomingRecord: record1, existingRecord: record2, existingId: '000123456', recordMetadata: 'recordMetadata', validate: true});

@@ -59,7 +59,8 @@ describe('validateExistingRecord', () => {
 
       debugData(`Expecting error: ${expectedToThrow}, ${expectedStatus}, ${expectedError}`);
 
-      if (expectedToThrow) { // eslint-disable-line functional/no-conditional-statement
+      // eslint-disable-next-line functional/no-conditional-statements
+      if (expectedToThrow) {
         try {
           validateExistingRecord(record, 'recordMetadata', true);
           throw new Error('Expected an error');
