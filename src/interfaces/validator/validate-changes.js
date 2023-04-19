@@ -63,7 +63,7 @@ export function validateChanges({incomingRecord, existingRecord, validate = true
   //debug(`db`);
   const normExistingRecord = normalizeRecord(existingRecord);
 
-  if (deepEqual(normIncomingRecord, normExistingRecord) === true) { // eslint-disable-line functional/no-conditional-statement
+  if (deepEqual(normIncomingRecord, normExistingRecord) === true) {
 
     debug(`validateChanges: failure - there are no changes between incomingRecord and existingRecord`);
     debugData(`Differences in records (detailed): ${JSON.stringify(detailedDiff(normExistingRecord, normIncomingRecord), {colors: true, depth: 4})}`);

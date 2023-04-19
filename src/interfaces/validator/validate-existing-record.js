@@ -18,7 +18,7 @@ export function validateExistingRecord(existingRecord, recordMetadata, validate)
 
   const isDeleted = isDeletedRecord(existingRecord);
 
-  // eslint-disable-next-line functional/no-conditional-statement
+
   if (isDeleted) {
     logger.verbose('Existing record is deleted!');
     debug('Existing record is deleted!');

@@ -121,7 +121,7 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
       logger.silly(`validator/index/process: Validation result: ${inspect(result, {colors: true, maxArrayLength: 3, depth: 4})}`);
 
       // throw ValidationError for failed validationService
-      if (result.failed) { // eslint-disable-line functional/no-conditional-statement
+      if (result.failed) {
         logger.debug('Validation failed');
         throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: result.messages, recordMetadata});
       }
@@ -301,7 +301,7 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
 
       const newHeaders = updateHeadersAfterMatch({matches, headers});
 
-      // eslint-disable-next-line functional/no-conditional-statement
+
       if (matches.length > 0 && !operationSettings.merge) {
         // we log the matches here before erroring
         // Should we also validate the matches before erroring? Now we error also those cases, where the match would fail matchValidation

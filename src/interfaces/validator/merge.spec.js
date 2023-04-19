@@ -57,7 +57,8 @@ describe('merge', () => {
 
       debug(`We have records`);
 
-      if (expectedToThrow) { // eslint-disable-line functional/no-conditional-statement
+      // eslint-disable-next-line functional/no-conditional-statements
+      if (expectedToThrow) {
         debugData(`Expecting error: ${expectedToThrow}, ${expectedStatus}, ${expectedError}`);
         try {
           debug(`Trying to run merge`);

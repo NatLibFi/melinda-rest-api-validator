@@ -16,7 +16,8 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
   const [matcher] = matchers;
   const [matchOptions] = matchOptionsList;
 
-  // eslint-disable-next-line functional/no-conditional-statement
+
+  // eslint-disable-next-line functional/no-conditional-statements
   if (matcher) {
 
     // eslint-disable-next-line no-param-reassign
@@ -73,7 +74,7 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
       // How we should handle cases, where matchResult is false, but we did get match(es)?
       // Should we return also information about the matcher that hit the match (to recognize matches by recordIDs vs other matches?)
 
-      if (stopWhenFound && matchAmount > 0) { // eslint-disable-line functional/no-conditional-statement
+      if (stopWhenFound && matchAmount > 0) {
 
         logger.verbose(`Matching record(s) (${matchAmount}) has been found in matcher ${matcherCount} (${matcherName}) - stopWhenFound active.`);
 
@@ -130,7 +131,7 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
   logger.debug(`-- We had ${allConversionFailures.length} conversion failures from the matchers`);
   logger.debug(`-- All matchers returned true status: ${allStatus}`);
 
-  // eslint-disable-next-line functional/no-conditional-statement
+
   if (allMatches.length < 1) {
     logger.debug(`We did not find any matches. Checking if this is a trustworthy result.`);
     logger.debug(`-- False zeroes from matchers: ${JSON.stringify(matcherFalseZeroCounts)}`);
@@ -191,21 +192,24 @@ function checkStopReasonForZeroMatches({matchAmount, matcherCount, matcherName, 
     // - only one stopReason is returned (if there would be several possible stopReasons, stopReason is picked in the above order)
     // - currently stopReason can be non-empty also in cases where status is true, if matcher hit the stop reason when handling the last available candidate record
 
-    // eslint-disable-next-line functional/no-conditional-statement
+
+    // eslint-disable-next-line functional/no-conditional-statements
     if (matchStatus.status === false && matchStatus.stopReason === 'maxCandidates') {
       logger.verbose(`Matcher ${matcherName} resulted in ${matchStatus.status}, stopReason ${matchStatus.stopReason}`);
       // eslint-disable-next-line no-param-reassign, functional/immutable-data
       matcherFalseZeroCounts.maxCandidates += 1;
     }
 
-    // eslint-disable-next-line functional/no-conditional-statement
+
+    // eslint-disable-next-line functional/no-conditional-statements
     if (matchStatus.status === false && matchStatus.stopReason === 'maxedQueries') {
       logger.verbose(`Matcher ${matcherName} resulted in ${matchStatus.status}, stopReason ${matchStatus.stopReason}`);
       // eslint-disable-next-line no-param-reassign, functional/immutable-data
       matcherFalseZeroCounts.maxedQueries += 1;
     }
 
-    // eslint-disable-next-line functional/no-conditional-statement
+
+    // eslint-disable-next-line functional/no-conditional-statements
     if (matchStatus.status === false && matchStatus.stopReason === 'conversionFailures') {
       logger.verbose(`Matcher ${matcherName} resulted in ${matchStatus.status}, stopReason ${matchStatus.stopReason}`);
       // eslint-disable-next-line no-param-reassign, functional/immutable-data
