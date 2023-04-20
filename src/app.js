@@ -237,7 +237,8 @@ export default async function ({
 
     const operationQueue = `${newOperation}.${correlationId}`;
 
-    // eslint-disable-next-line functional/no-conditional-statement
+
+    // eslint-disable-next-line functional/no-conditional-statements
     if (prio) {
       await amqpOperator.checkQueue({queue: operationQueue, style: 'messages', purge: true});
     }
@@ -253,15 +254,15 @@ export default async function ({
     logger.silly(`app/checkAmqp: sending to queue ${inspect(toQueue, {colors: true, maxArrayLength: 3, depth: 4})}`);
     await amqpOperator.sendToQueue(toQueue);
 
-    // eslint-disable-next-line functional/no-conditional-statement
     if (prio) {
       await mongoOperator.checkAndSetImportJobState({correlationId, operation: newOperation, importJobState: IMPORT_JOB_STATE.IN_QUEUE});
       await mongoOperator.checkAndSetState({correlationId, state: QUEUE_ITEM_STATE.IMPORTER.IN_QUEUE});
+      return initCheck();
     }
 
-    // eslint-disable-next-line functional/no-conditional-statement
     if (!prio) {
       await mongoOperator.setImportJobState({correlationId, operation: newOperation, importJobState: IMPORT_JOB_STATE.IN_QUEUE});
+      return initCheck();
     }
 
     return initCheck();
@@ -328,7 +329,7 @@ export default async function ({
 
     logger.debug(`Headers from original message: ${JSON.stringify(headers)}`);
 
-    // eslint-disable-next-line functional/no-conditional-statement
+
     logger.silly(`error.status: ${error.status}`);
     const responseStatus = error.status || httpStatus.INTERNAL_SERVER_ERROR;
     logger.debug(`responseStatus: ${responseStatus}`);

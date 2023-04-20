@@ -62,7 +62,7 @@ describe('validateChanges', () => {
       }
 
       /*
-      if (expectedToThrow) { // eslint-disable-line functional/no-conditional-statement
+      if (expectedToThrow) {
         debugData(`Expecting error: ${expectedToThrow}, ${expectedStatus}, ${expectedError}`);
         try {
           validateChanges({incomingRecord: record1, existingRecord: record2, validate: true});

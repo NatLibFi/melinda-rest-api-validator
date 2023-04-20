@@ -59,7 +59,8 @@ export default function ({amqpOperator, mongoOperator, splitterOptions, mongoLog
           const recordResponseItem = createRecordResponseItem({responseStatus: httpStatus.UNPROCESSABLE_ENTITY, responsePayload: cleanErrorMessage, recordMetadata: getRecordMetadata({record: undefined, number: sequenceNumber}), id: undefined});
           addRecordResponseItem({recordResponseItem, correlationId, mongoOperator});
 
-          // eslint-disable-next-line functional/no-conditional-statement
+
+          // eslint-disable-next-line functional/no-conditional-statements
           if (failOnError || !recordError) {
             createSplitterReportAndLogs();
             reject(new ApiError(httpStatus.UNPROCESSABLE_ENTITY, `Invalid payload! (${sequenceNumber}) ${cleanErrorMessage}`));
@@ -103,9 +104,10 @@ export default function ({amqpOperator, mongoOperator, splitterOptions, mongoLog
 
               readerErrors.push({sequenceNumber, error: responsePayload}); // eslint-disable-line functional/immutable-data
               transformerErrored = true;
-              // eslint-disable-next-line functional/no-conditional-statement
+
               if (failOnError) {
                 reject(new ApiError(httpStatus.UNPROCESSABLE_ENTITY, responsePayload));
+                return;
               }
               return;
             }
@@ -150,7 +152,8 @@ export default function ({amqpOperator, mongoOperator, splitterOptions, mongoLog
           // Add blobSize, just for completeness sake
           mongoOperator.setBlobSize({correlationId, blobSize: sequenceNumber});
 
-          // eslint-disable-next-line functional/no-conditional-statement
+
+          // eslint-disable-next-line functional/no-conditional-statements
           if (promises.length === 0) {
             logger.debug(`Got no record promises from reader stream`);
             createSplitterReportAndLogs();
