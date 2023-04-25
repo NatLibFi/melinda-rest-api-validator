@@ -10,7 +10,7 @@ const logger = createLogger();
 // acceptZeroWithMaxCandidates = do not error if we get a zero match result with matchStatus: false and stopReason: maxCandidates
 
 // eslint-disable-next-line max-statements
-export async function iterateMatchers({matchers, matchOptionsList, record, stopWhenFound = true, acceptZeroWithMaxCandidates = false, matcherCount = 0, matcherNoRunCount = 0, matcherFalseZeroCounts = {maxCandidates: 0, maxedQueries: 0, conversionFailures: 0}, matcherReports = {}, allConversionFailures = [], allMatches = [], allStatus = true}) {
+export async function iterateMatchers({matchers, matchOptionsList, record, stopWhenFound = true, acceptZeroWithMaxCandidates = false, matcherCount = 0, matcherNoRunCount = 0, matcherFalseZeroCounts = {maxCandidates: 0, maxedQueries: 0, conversionFailures: 0}, matcherReports = [], allConversionFailures = [], allMatches = [], allStatus = true}) {
   logger.debug(`Matchers left: ${matchers.length}`);
 
   const [matcher] = matchers;
@@ -75,7 +75,8 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
         matcherName,
         matchAmount,
         candidateCount,
-        conversionFailureCount: conversionFailures.length
+        conversionFailureCount: conversionFailures.length,
+        matchStatus
       };
 
       const newMatcherReports = matcherReports.concat(matcherReport);
@@ -100,7 +101,7 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
 
       const {matcherFalseZeroCounts: newMatcherFalseZeroCounts} = checkStopReasonForZeroMatches({matchAmount, matchStatus, matcherFalseZeroCounts, matcherCount: newMatcherCount, matcherName});
 
-      return iterateMatchers({matchers: matchers.slice(1), matchOptionsList: matchOptionsList.slice(1), stopWhenFound, acceptZeroWithMaxCandidates, record, matcherCount, matcherNoRunCount, matcherFalseZeroCounts: newMatcherFalseZeroCounts, matcherReports: newMatcherReports, allConversionFailures: newConversionFailures, allMatches: newMatches, allStatus: newAllStatus});
+      return iterateMatchers({matchers: matchers.slice(1), matchOptionsList: matchOptionsList.slice(1), stopWhenFound, acceptZeroWithMaxCandidates, record, matcherCount: newMatcherCount, matcherNoRunCount, matcherFalseZeroCounts: newMatcherFalseZeroCounts, matcherReports: newMatcherReports, allConversionFailures: newConversionFailures, allMatches: newMatches, allStatus: newAllStatus});
 
     } catch (err) {
 
@@ -230,7 +231,7 @@ function checkStopReasonForZeroMatches({matchAmount, matcherCount, matcherName, 
     if (matchStatus.status === false && matchStatus.stopReason === 'conversionFailures') {
       logger.verbose(`Matcher ${matcherName} resulted in ${matchStatus.status}, stopReason ${matchStatus.stopReason}`);
       // eslint-disable-next-line no-param-reassign, functional/immutable-data
-      matcherFalseZeroCounts.cnversionFailures += 1;
+      matcherFalseZeroCounts.conversionFailures += 1;
     }
   }
   return {matcherFalseZeroCounts};
