@@ -10,7 +10,7 @@ const logger = createLogger();
 // acceptZeroWithMaxCandidates = do not error if we get a zero match result with matchStatus: false and stopReason: maxCandidates
 
 // eslint-disable-next-line max-statements
-export async function iterateMatchers({matchers, matchOptionsList, record, stopWhenFound = true, acceptZeroWithMaxCandidates = false, matcherCount = 0, matcherNoRunCount = 0, matcherFalseZeroCounts = {maxCandidates: 0, maxedQueries: 0, conversionFailures: 0}, matcherReports = [], allConversionFailures = [], allMatches = [], allStatus = true}) {
+export async function iterateMatchers({matchers, matchOptionsList, record, stopWhenFound = true, acceptZeroWithMaxCandidates = false, matcherSequence = 0, matcherNoRunCount = 0, matcherFalseZeroCounts = {maxCandidates: 0, maxedQueries: 0, conversionFailures: 0}, matcherReports = [], allConversionFailures = [], allMatches = [], allStatus = true}) {
   logger.debug(`Matchers left: ${matchers.length}`);
 
   const [matcher] = matchers;
@@ -19,11 +19,11 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
   // eslint-disable-next-line functional/no-conditional-statements
   if (matcher) {
 
-    const newMatcherCount = matcherCount + 1;
+    const newmatcherSequence = matcherSequence + 1;
 
     const matcherName = matchOptions.matchPackageName;
-    logger.debug(`Running matcher ${newMatcherCount}: ${matcherName}`);
-    logger.silly(`MatchingOptions for matcher ${newMatcherCount}: ${JSON.stringify(matchOptions)}`);
+    logger.debug(`Running matcher ${newmatcherSequence}: ${matcherName}`);
+    logger.silly(`MatchingOptions for matcher ${newmatcherSequence}: ${JSON.stringify(matchOptions)}`);
 
     try {
 
@@ -71,7 +71,7 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
       const matchAmount = matches.length;
 
       const matcherReport = {
-        matcherCount: newMatcherCount,
+        matcherSequence: newmatcherSequence,
         matcherName,
         matchAmount,
         candidateCount,
@@ -87,11 +87,11 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
 
       if (stopWhenFound && matchAmount > 0) {
 
-        logger.verbose(`Matching record(s) (${matchAmount}) has been found in matcher ${newMatcherCount} (${matcherName}) - stopWhenFound active.`);
+        logger.verbose(`Matching record(s) (${matchAmount}) has been found in matcher ${newmatcherSequence} (${matcherName}) - stopWhenFound active.`);
 
         logger.debug(`Matches: ${JSON.stringify(matches.map(({candidate: {id}, probability}) => ({id, probability})))}`);
 
-        logger.debug(`${matcherCount} matchers handled, ${matchers.length - 1} matchers left. ${matcherNoRunCount} did not run.`);
+        logger.debug(`${matcherSequence} matchers handled, ${matchers.length - 1} matchers left. ${matcherNoRunCount} did not run.`);
         logger.debug(`We had ${allConversionFailures.length} conversion failures from matcher`);
 
         const uniqMatches = uniqueMatches(matches);
@@ -99,15 +99,15 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
         return {matches: uniqMatches, matcherReports: newMatcherReports};
       }
 
-      const {matcherFalseZeroCounts: newMatcherFalseZeroCounts} = checkStopReasonForZeroMatches({matchAmount, matchStatus, matcherFalseZeroCounts, matcherCount: newMatcherCount, matcherName});
+      const {matcherFalseZeroCounts: newMatcherFalseZeroCounts} = checkStopReasonForZeroMatches({matchAmount, matchStatus, matcherFalseZeroCounts, matcherSequence: newmatcherSequence, matcherName});
 
-      return iterateMatchers({matchers: matchers.slice(1), matchOptionsList: matchOptionsList.slice(1), stopWhenFound, acceptZeroWithMaxCandidates, record, matcherCount: newMatcherCount, matcherNoRunCount, matcherFalseZeroCounts: newMatcherFalseZeroCounts, matcherReports: newMatcherReports, allConversionFailures: newConversionFailures, allMatches: newMatches, allStatus: newAllStatus});
+      return iterateMatchers({matchers: matchers.slice(1), matchOptionsList: matchOptionsList.slice(1), stopWhenFound, acceptZeroWithMaxCandidates, record, matcherSequence: newmatcherSequence, matcherNoRunCount, matcherFalseZeroCounts: newMatcherFalseZeroCounts, matcherReports: newMatcherReports, allConversionFailures: newConversionFailures, allMatches: newMatches, allStatus: newAllStatus});
 
     } catch (err) {
 
       logger.debug(`Matcher errored: ${JSON.stringify(err)}`);
       const matcherReport = {
-        matcherCount: newMatcherCount,
+        matcherSequence: newmatcherSequence,
         matcherName,
         matcherErrored: true,
         matcherError: err.message
@@ -115,28 +115,28 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
       const newMatcherReports = matcherReports.concat(matcherReport);
 
       if (err.message === 'Generated query list contains no queries') {
-        logger.debug(`Matcher ${matcherCount} (${matcherName}) did not run: ${err.message}`);
+        logger.debug(`Matcher ${matcherSequence} (${matcherName}) did not run: ${err.message}`);
         // eslint-disable-next-line no-param-reassign
         matcherNoRunCount += 1;
 
         // If CONTENT -matcher or last matcher to run did not generate queries, match is not reliable
         if (matcherName === 'CONTENT' || matchers.length <= 1) {
-          logger.verbose(`Matcher ${matcherCount} (${matcherName}) could not generate search queries.`);
+          logger.verbose(`Matcher ${matcherSequence} (${matcherName}) could not generate search queries.`);
           throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: err.message});
         }
 
-        return iterateMatchers({matchers: matchers.slice(1), matchOptionsList: matchOptionsList.slice(1), stopWhenFound, acceptZeroWithMaxCandidates, record, matcherCount, matcherNoRunCount, matcherFalseZeroCounts, matcherReports: newMatcherReports, allMatches, allStatus});
+        return iterateMatchers({matchers: matchers.slice(1), matchOptionsList: matchOptionsList.slice(1), stopWhenFound, acceptZeroWithMaxCandidates, record, matcherSequence, matcherNoRunCount, matcherFalseZeroCounts, matcherReports: newMatcherReports, allMatches, allStatus});
       }
 
       // SRU SruSearchErrors are 200-responses that include diagnostics from SRU server
       if (err.message.startsWith('SRU SruSearchError')) {
-        logger.verbose(`Matcher ${matcherCount} (${matcherName}) resulted in SRU search error: ${err.message}`);
+        logger.verbose(`Matcher ${matcherSequence} (${matcherName}) resulted in SRU search error: ${err.message}`);
         throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: err.message});
       }
 
       // SRU unexpected errors: non-200 responses from SRU server etc.
       if (err.message.startsWith('SRU error')) {
-        logger.verbose(`Matcher ${matcherCount} (${matcherName}) resulted in SRU unexpected error: ${err.message}`);
+        logger.verbose(`Matcher ${matcherSequence} (${matcherName}) resulted in SRU unexpected error: ${err.message}`);
         throw new Error(err);
       }
 
@@ -144,7 +144,7 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
     }
   }
   // if no more matchers
-  logger.debug(`All ${matcherCount} matchers handled, ${matcherNoRunCount} did not run.`);
+  logger.debug(`All ${matcherSequence} matchers handled, ${matcherNoRunCount} did not run.`);
   logger.debug(`-- We had ${allMatches.length} matches from the matchers`);
   logger.debug(`-- We had ${allConversionFailures.length} conversion failures from the matchers`);
   logger.debug(`-- All matchers returned true status: ${allStatus}`);
@@ -156,7 +156,7 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
     logger.debug(`-- We will accept a false zero with maxCandidates: ${acceptZeroWithMaxCandidates}`);
 
     // Fail if we could not create any search queries from the record
-    if (matcherNoRunCount === matcherCount) {
+    if (matcherNoRunCount === matcherSequence) {
       logger.debug(`None of the matchers could generate search query for candidates`);
       throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: 'Generated query list contains no queries'});
     }
@@ -201,9 +201,9 @@ function uniqueMatches(matches) {
   return uniqueMatches;
 }
 
-function checkStopReasonForZeroMatches({matchAmount, matcherCount, matcherName, matchStatus, matcherFalseZeroCounts}) {
+function checkStopReasonForZeroMatches({matchAmount, matcherSequence, matcherName, matchStatus, matcherFalseZeroCounts}) {
   if (matchAmount === 0) {
-    logger.debug(`No matching record(s) from matcher ${matcherCount} (${matcherName})`);
+    logger.debug(`No matching record(s) from matcher ${matcherSequence} (${matcherName})`);
 
     // matchStatus.status: boolean, true if matcher retrieved and handled all found candidate records, false if it did not
     // matchStatus.stopReason: string ('maxMatches','maxCandidates','maxedQueries','conversionFailures', empty string/undefined), reason for stopping retrieving or handling the candidate records
