@@ -16,16 +16,14 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
   const [matcher] = matchers;
   const [matchOptions] = matchOptionsList;
 
-
   // eslint-disable-next-line functional/no-conditional-statements
   if (matcher) {
 
-    // eslint-disable-next-line no-param-reassign
-    matcherCount += 1;
+    const newMatcherCount = matcherCount + 1;
 
     const matcherName = matchOptions.matchPackageName;
-    logger.debug(`Running matcher ${matcherCount}: ${matcherName}`);
-    logger.silly(`MatchingOptions for matcher ${matcherCount}: ${JSON.stringify(matchOptions)}`);
+    logger.debug(`Running matcher ${newMatcherCount}: ${matcherName}`);
+    logger.silly(`MatchingOptions for matcher ${newMatcherCount}: ${JSON.stringify(matchOptions)}`);
 
     try {
 
@@ -72,13 +70,23 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
       const newAllStatus = matchStatus.status === false ? false : allStatus;
       const matchAmount = matches.length;
 
+      const matcherReport = {
+        matcherCount: newMatcherCount,
+        matcherName,
+        matchAmount,
+        candidateCount,
+        conversionFailureCount: conversionFailures.length
+      };
+
+      const newMatcherReports = matcherReports.concat(matcherReport);
+
       // How we should handle cases, where matchResult is false, but we did get match(es)?
       // Should we return also information about the matcher that hit the match (to recognize matches by recordIDs vs other matches?)
       // What should we do with candidateCount? We'd like to pass it on, in case of recordID or standardNumber matchCandidates that were not detected as matches
 
       if (stopWhenFound && matchAmount > 0) {
 
-        logger.verbose(`Matching record(s) (${matchAmount}) has been found in matcher ${matcherCount} (${matcherName}) - stopWhenFound active.`);
+        logger.verbose(`Matching record(s) (${matchAmount}) has been found in matcher ${newMatcherCount} (${matcherName}) - stopWhenFound active.`);
 
         logger.debug(`Matches: ${JSON.stringify(matches.map(({candidate: {id}, probability}) => ({id, probability})))}`);
 
@@ -87,16 +95,23 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
 
         const uniqMatches = uniqueMatches(matches);
 
-        return {matches: uniqMatches};
+        return {matches: uniqMatches, matcherReports: newMatcherReports};
       }
 
-      const {matcherFalseZeroCounts: newMatcherFalseZeroCounts} = checkStopReasonForZeroMatches({matchAmount, matchStatus, matcherFalseZeroCounts, matcherCount, matcherName});
+      const {matcherFalseZeroCounts: newMatcherFalseZeroCounts} = checkStopReasonForZeroMatches({matchAmount, matchStatus, matcherFalseZeroCounts, matcherCount: newMatcherCount, matcherName});
 
-      return iterateMatchers({matchers: matchers.slice(1), matchOptionsList: matchOptionsList.slice(1), stopWhenFound, acceptZeroWithMaxCandidates, record, matcherCount, matcherNoRunCount, matcherFalseZeroCounts: newMatcherFalseZeroCounts, matcherReports, allConversionFailures: newConversionFailures, allMatches: newMatches, allStatus: newAllStatus});
+      return iterateMatchers({matchers: matchers.slice(1), matchOptionsList: matchOptionsList.slice(1), stopWhenFound, acceptZeroWithMaxCandidates, record, matcherCount, matcherNoRunCount, matcherFalseZeroCounts: newMatcherFalseZeroCounts, matcherReports: newMatcherReports, allConversionFailures: newConversionFailures, allMatches: newMatches, allStatus: newAllStatus});
 
     } catch (err) {
 
       logger.debug(`Matcher errored: ${JSON.stringify(err)}`);
+      const matcherReport = {
+        matcherCount: newMatcherCount,
+        matcherName,
+        matcherErrored: true,
+        matcherError: err.message
+      };
+      const newMatcherReports = matcherReports.concat(matcherReport);
 
       if (err.message === 'Generated query list contains no queries') {
         logger.debug(`Matcher ${matcherCount} (${matcherName}) did not run: ${err.message}`);
@@ -109,7 +124,7 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
           throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: err.message});
         }
 
-        return iterateMatchers({matchers: matchers.slice(1), matchOptionsList: matchOptionsList.slice(1), stopWhenFound, acceptZeroWithMaxCandidates, record, matcherCount, matcherNoRunCount, matcherFalseZeroCounts, matcherReports, allMatches, allStatus});
+        return iterateMatchers({matchers: matchers.slice(1), matchOptionsList: matchOptionsList.slice(1), stopWhenFound, acceptZeroWithMaxCandidates, record, matcherCount, matcherNoRunCount, matcherFalseZeroCounts, matcherReports: newMatcherReports, allMatches, allStatus});
       }
 
       // SRU SruSearchErrors are 200-responses that include diagnostics from SRU server
@@ -177,7 +192,7 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
   logger.debug(`All matches (${allMatches.length}): ${JSON.stringify(allMatches.map(match => match.candidate.id))}`);
   logger.debug(`Unique matches (${uniqMatches.length}): ${JSON.stringify(uniqMatches.map(match => match.candidate.id))}`);
 
-  return {matches: uniqMatches};
+  return {matches: uniqMatches, matcherReports};
 }
 
 function uniqueMatches(matches) {
