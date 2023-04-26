@@ -69,6 +69,7 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
       const newMatches = allMatches.concat(matches);
       const newAllStatus = matchStatus.status === false ? false : allStatus;
       const matchAmount = matches.length;
+      const matchIds = matchers.map(({candidate: {id}}) => id);
 
       const matcherReport = {
         matcherSequence: newmatcherSequence,
@@ -76,7 +77,8 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
         matchAmount,
         candidateCount,
         conversionFailureCount: conversionFailures.length,
-        matchStatus
+        matchStatus,
+        matchIds
       };
 
       const newMatcherReports = matcherReports.concat(matcherReport);
