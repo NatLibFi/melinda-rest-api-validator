@@ -483,6 +483,16 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
     // matchResultsForLog is an array of matchResult objects:
     // {action, preference: {name, value}, message, candidate: {id, record}, probability, matchSequence}
 
+    // add information from matcherReports to matchResults
+    const matchResultsWithReports = matchResultsForLog.map((result) => {
+      const matcherReportsForMatch = matcherReports.filter((matcherReport) => matcherReport && matcherReport.matchIds && matcherReport.matchIds.includes(result.candidate.id));
+      logger.debug(`${JSON.stringify(matcherReportsForMatch)}`);
+      return {
+        ...result,
+        matcherReports: matcherReportsForMatch
+      };
+    });
+
     const matchLogItem = {
       logItemType: LOG_ITEM_TYPE.MATCH_LOG,
       cataloger: catalogerForLog,
@@ -490,7 +500,7 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
       blobSequence: headers.recordMetadata.blobSequence,
       ...headers.recordMetadata,
       incomingRecord: record,
-      matchResult: matchResultsForLog,
+      matchResult: matchResultsWithReports,
       matcherReports
     };
 
