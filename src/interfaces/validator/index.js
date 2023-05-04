@@ -23,7 +23,7 @@ import {LOG_ITEM_TYPE} from '@natlibfi/melinda-rest-api-commons/dist/constants';
 //const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator');
 //const debugData = debug.extend('data');
 
-export default async function ({preValidationFixOptions, postMergeFixOptions, preImportFixOptions, sruUrl, matchOptionsList, mongoLogOperator, recordType, stopWhenFound, acceptZeroWithMaxCandidates}) {
+export default async function ({preValidationFixOptions, postMergeFixOptions, preImportFixOptions, sruUrl, matchOptionsList, mongoLogOperator, recordType, stopWhenFound, acceptZeroWithMaxCandidates, logNoMatches}) {
   const logger = createLogger();
   logger.debug(`preValidationFixOptions: ${JSON.stringify(preValidationFixOptions)}`);
   logger.debug(`postMergeFixOptions: ${JSON.stringify(postMergeFixOptions)}`);
@@ -308,7 +308,7 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
         // Should we also validate the matches before erroring? Now we error also those cases, where the match would fail matchValidation
         const matchResultsForLog = matches.map((match, index) => ({action: false, preference: false, message: 'Validation not run', matchSequence: index, ...match}));
 
-        logMatchAction({headers, record, matchResultsForLog, matcherReports});
+        logMatchAction({headers, record, matchResultsForLog, matcherReports, logNoMatches});
         throw new ValidationError(HttpStatus.CONFLICT, {message: 'Duplicates in database', ids: matches.map(({candidate: {id}}) => id), recordMetadata});
       }
 
@@ -318,6 +318,8 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
       }
 
       logger.verbose('No matching records');
+      // MATCH_LOG for no matches
+      logMatchAction({headers, record, matchResultsForLog: [], matcherReports, logNoMatches});
 
       // Note validationService = validation.js from melinda-rest-api-commons
       // which uses marc-record-validate
@@ -473,7 +475,13 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
     }
   }
 
-  function logMatchAction({headers, record, matchResultsForLog, matcherReports}) {
+  function logMatchAction({headers, record, matchResultsForLog = [], matcherReports, logNoMatches = false}) {
+
+    if (logNoMatches && matchResultsForLog.length < 1) {
+      logger.debug(`No matches, logNoMatches: ${logNoMatches} - not logging matchAction to mongoLogs`);
+      return;
+    }
+
     logger.debug(`Logging the matchAction to mongoLogs here`);
     logger.silly(inspect(headers));
 
