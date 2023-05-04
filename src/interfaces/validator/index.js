@@ -477,7 +477,7 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
 
   function logMatchAction({headers, record, matchResultsForLog = [], matcherReports, logNoMatches = false}) {
 
-    if (logNoMatches && matchResultsForLog.length < 1) {
+    if (!logNoMatches && matchResultsForLog.length < 1) {
       logger.debug(`No matches, logNoMatches: ${logNoMatches} - not logging matchAction to mongoLogs`);
       return;
     }
