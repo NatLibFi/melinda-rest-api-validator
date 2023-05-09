@@ -127,7 +127,7 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
           throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: err.message});
         }
 
-        return iterateMatchers({matchers: matchers.slice(1), matchOptionsList: matchOptionsList.slice(1), stopWhenFound, acceptZeroWithMaxCandidates, record, matcherSequence, matcherNoRunCount, matcherFalseZeroCounts, matcherReports: newMatcherReports, allMatches, allStatus});
+        return iterateMatchers({matchers: matchers.slice(1), matchOptionsList: matchOptionsList.slice(1), stopWhenFound, acceptZeroWithMaxCandidates, record, matcherSequence: newmatcherSequence, matcherNoRunCount, matcherFalseZeroCounts, matcherReports: newMatcherReports, allMatches, allStatus});
       }
 
       // SRU SruSearchErrors are 200-responses that include diagnostics from SRU server
