@@ -23,7 +23,7 @@ import {LOG_ITEM_TYPE} from '@natlibfi/melinda-rest-api-commons/dist/constants';
 //const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator');
 //const debugData = debug.extend('data');
 
-export default async function ({preValidationFixOptions, postMergeFixOptions, preImportFixOptions, sruUrl, matchOptionsList, mongoLogOperator, recordType, stopWhenFound, acceptZeroWithMaxCandidates}) {
+export default async function ({preValidationFixOptions, postMergeFixOptions, preImportFixOptions, sruUrl, matchOptionsList, mongoLogOperator, recordType, stopWhenFound, acceptZeroWithMaxCandidates, logNoMatches}) {
   const logger = createLogger();
   logger.debug(`preValidationFixOptions: ${JSON.stringify(preValidationFixOptions)}`);
   logger.debug(`postMergeFixOptions: ${JSON.stringify(postMergeFixOptions)}`);
@@ -295,9 +295,10 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
       // acceptZeroWithMaxCandidates: do not error case with zero matches, matchStatus: false and stopReason: maxCandidates
       // acceptZeroWithMaxCandidates defaults to true but it is configurable in env variable ACCEPT_ZERO_WITH_MAX_CANDIDATES
       const matchResult = await matcherService.iterateMatchers({matchers, matchOptionsList, record, stopWhenFound, acceptZeroWithMaxCandidates});
-      const {matches} = matchResult;
+      const {matches, matcherReports} = matchResult;
 
       logger.debug(`Matches: ${JSON.stringify(matches.map(({candidate: {id}, probability}) => ({id, probability})))}`);
+      logger.debug(`MatchReports: ${JSON.stringify(matcherReports)}`);
 
       const newHeaders = updateHeadersAfterMatch({matches, headers});
 
@@ -307,16 +308,18 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
         // Should we also validate the matches before erroring? Now we error also those cases, where the match would fail matchValidation
         const matchResultsForLog = matches.map((match, index) => ({action: false, preference: false, message: 'Validation not run', matchSequence: index, ...match}));
 
-        logMatchAction({headers, record, matchResultsForLog});
+        logMatchAction({headers, record, matchResultsForLog, matcherReports, logNoMatches});
         throw new ValidationError(HttpStatus.CONFLICT, {message: 'Duplicates in database', ids: matches.map(({candidate: {id}}) => id), recordMetadata});
       }
 
       if (matches.length > 0 && operationSettings.merge) {
         logger.debug(`Found matches (${matches.length}) for merging.`);
-        return validateAndMergeMatchResults({record, matchResults: matches, headers: newHeaders});
+        return validateAndMergeMatchResults({record, matchResults: matches, headers: newHeaders, matcherReports});
       }
 
       logger.verbose('No matching records');
+      // MATCH_LOG for no matches
+      logMatchAction({headers, record, matchResultsForLog: [], matcherReports, logNoMatches});
 
       // Note validationService = validation.js from melinda-rest-api-commons
       // which uses marc-record-validate
@@ -334,7 +337,7 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
   }
 
   // eslint-disable-next-line max-statements
-  async function validateAndMergeMatchResults({record, matchResults, headers}) {
+  async function validateAndMergeMatchResults({record, matchResults, headers, matcherReports}) {
     const {recordMetadata, cataloger} = headers;
     try {
       logger.debug(`We have matchResults (${matchResults.length}) here: ${JSON.stringify(matchResults.map(({candidate: {id}, probability}) => ({id, probability})))}`);
@@ -350,7 +353,7 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
       const {matchValidationResult, sortedValidatedMatchResults} = await matchValidationForMatchResults(record, matchResults);
       logger.silly(`MatchValidationResult: ${inspect(matchValidationResult, {colors: true, maxArrayLength: 3, depth: 3})}}`);
 
-      logMatchAction({headers, record, matchResultsForLog: sortedValidatedMatchResults});
+      logMatchAction({headers, record, matchResultsForLog: sortedValidatedMatchResults, matcherReports});
 
       // Check error cases
       // Note that if we had stopWhenFound active, and did not run all the matchers because a match was found, we'll probably have cases, where we error records, that might
@@ -472,7 +475,13 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
     }
   }
 
-  function logMatchAction({headers, record, matchResultsForLog}) {
+  function logMatchAction({headers, record, matchResultsForLog = [], matcherReports, logNoMatches = false}) {
+
+    if (!logNoMatches && matchResultsForLog.length < 1) {
+      logger.debug(`No matches, logNoMatches: ${logNoMatches} - not logging matchAction to mongoLogs`);
+      return;
+    }
+
     logger.debug(`Logging the matchAction to mongoLogs here`);
     logger.silly(inspect(headers));
 
@@ -482,6 +491,16 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
     // matchResultsForLog is an array of matchResult objects:
     // {action, preference: {name, value}, message, candidate: {id, record}, probability, matchSequence}
 
+    // add information from matcherReports to matchResults
+    const matchResultsWithReports = matchResultsForLog.map((result) => {
+      const matcherReportsForMatch = matcherReports.filter((matcherReport) => matcherReport && matcherReport.matchIds && matcherReport.matchIds.includes(result.candidate.id));
+      logger.debug(`${JSON.stringify(matcherReportsForMatch)}`);
+      return {
+        ...result,
+        matcherReports: matcherReportsForMatch
+      };
+    });
+
     const matchLogItem = {
       logItemType: LOG_ITEM_TYPE.MATCH_LOG,
       cataloger: catalogerForLog,
@@ -489,7 +508,8 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
       blobSequence: headers.recordMetadata.blobSequence,
       ...headers.recordMetadata,
       incomingRecord: record,
-      matchResult: matchResultsForLog
+      matchResult: matchResultsWithReports,
+      matcherReports
     };
 
     logger.silly(`MatchLogItem to add: ${inspect(matchLogItem)}`);
