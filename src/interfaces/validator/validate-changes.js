@@ -32,6 +32,9 @@ import createDebugLogger from 'debug';
 import {normalizeEmptySubfields, getSubfieldValues} from '../../utils';
 import {MarcRecord} from '@natlibfi/marc-record';
 
+//'001', '003', '005', '040', '884', 'CAT'
+const IGNORE_FIELDS = ['001', '003', '005', '040', '884', 'CAT'];
+
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator:validate-changes');
 const debugData = debug.extend('data');
 
@@ -82,7 +85,10 @@ export function validateChanges({incomingRecord, existingRecord, validate = true
 }
 
 function isActualContentField(field) {
-  return field.tag !== '001' && field.tag !== '003' && field.tag !== '005' && field.tag !== '884' && field.tag !== 'CAT';
+  if (IGNORE_FIELDS.includes(field.tag)) {
+    return false;
+  }
+  return true;
 }
 
 function normalizeRecord(record) {
