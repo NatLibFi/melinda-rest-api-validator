@@ -256,7 +256,7 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
       if (changeValidationResult === false) {
         const newNote = `No changes detected while trying to update existing record ${updateId}, update skipped.`;
         const updatedHeaders = {
-          operation: 'SKIPPED',
+          operation: 'SKIPPED_CHANGE',
           notes: newHeaders.notes ? newHeaders.notes.concat(`${newNote}`) : [newNote]
         };
         const finalHeaders = {...headers, ...updatedHeaders};
@@ -380,21 +380,20 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
       //Matchresult: {candidate: {id, record}, probability, matchSequence, action, preference: {value, name}}}
       const {updateValidationResult} = validateUpdate({incomingRecord: record, existingRecord: firstResult.candidate.record, cataloger});
       logger.debug(`UpdateValidationResult: ${JSON.stringify(updateValidationResult)}`);
+      const catalogerForLog = getCatalogerForLog(headers.cataloger);
 
       if (updateValidationResult === false) {
-        // we do not actually want to CONFLICT this, we want to SKIPPED to this...
-        logger.debug(`Update validation failed, updates from ${cataloger} are already included in the database record`);
+        logger.debug(`Update validation failed, updates from ${catalogerForLog} are already included in the database record`);
 
-        /*
-        const newNote = `No changes detected while trying to update existing record ${updateId}, update skipped.`;
+        const newNote = `No new incoming changes from ${catalogerForLog} detected while trying to update existing record ${firstResult.candidate.id}, update skipped.`;
         const updatedHeaders = {
-          operation: 'SKIPPED',
+          operation: 'SKIPPED_UPDATE',
           notes: headers.notes ? headers.notes.concat(`${newNote}`) : [newNote]
         };
         const finalHeaders = {...headers, ...updatedHeaders};
-        */
-        //return {result: validationResults, recordMetadata, headers: finalHeaders};
-        throw new ValidationError(HttpStatus.CONFLICT, {message: `UpdateValidation with ${firstResult.candidate.id} failed. This is actually not an error!`, ids: [firstResult.candidate.id], recordMetadata});
+        // Where are we returning?
+        return {result: {record, validationResult: false}, recordMetadata, headers: finalHeaders};
+        //throw new ValidationError(HttpStatus.CONFLICT, {message: `UpdateValidation with ${firstResult.candidate.id} failed. This is actually not an error!`, ids: [firstResult.candidate.id], recordMetadata});
       }
 
       // run merge for record with the best valid match
@@ -485,8 +484,7 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
     logger.debug(`Logging the matchAction to mongoLogs here`);
     logger.silly(inspect(headers));
 
-    const catalogerForLog = headers.cataloger.id || headers.cataloger;
-    logger.debug(`Picked ${catalogerForLog} from ${JSON.stringify(headers.cataloger)}`);
+    const catalogerForLog = getCatalogerForLog(headers.cataloger);
 
     // matchResultsForLog is an array of matchResult objects:
     // {action, preference: {name, value}, message, candidate: {id, record}, probability, matchSequence}
@@ -522,9 +520,7 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
     logger.silly(inspect(headers));
     logger.debug(`Logging the mergeAction to mongoLogs here`);
 
-    const catalogerForLog = headers.cataloger.id || headers.cataloger;
-    logger.debug(`Picked ${catalogerForLog} from ${JSON.stringify(headers.cataloger)}`);
-
+    const catalogerForLog = getCatalogerForLog(headers.cataloger);
     // note: there's no correlationId in headers?
     // we want also a timestamp here - mongoLogOperator could create that?
 
@@ -627,6 +623,12 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
 
     // Why should we end up here?
     return headers;
+  }
+
+  function getCatalogerForLog(cataloger) {
+    const catalogerForLog = cataloger.id || cataloger || 'unknown';
+    logger.debug(`Picked ${catalogerForLog} from ${JSON.stringify(cataloger)}`);
+    return catalogerForLog;
   }
 
   function getRecord(id) {

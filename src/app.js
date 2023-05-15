@@ -197,9 +197,11 @@ export default async function ({
 
   async function processValidated({headers, correlationId, processResult, mongoOperator, prio}) {
 
-    if (processResult.headers.operation === 'SKIPPED') {
+    logger.debug(`processValidated: operation: ${processResult.headers.operation}`);
+    if (['SKIPPED', 'SKIPPED_CHANGE', 'SKIPPED_UPDATE'].includes(processResult.headers.operation)) {
       return setSkipResult({correlationId, processResult, mongoOperator, prio});
     }
+
 
     // check if validation changed operation
     await setOperationsInQueueItem({correlationId, mongoOperator, prio, addOperation: processResult.headers.operation, removeOperation: headers.operation});
@@ -270,7 +272,8 @@ export default async function ({
 
   async function setSkipResult({correlationId, processResult, mongoOperator, prio}) {
 
-    const status = 'SKIPPED';
+    logger.debug(`setSkipResult`);
+    const status = processResult.headers.operation;
     const {id} = processResult.headers;
     const {noop} = processResult.headers.operationSettings;
 
