@@ -1,11 +1,10 @@
 import HttpStatus from 'http-status';
-import {MARCXML} from '@natlibfi/marc-record-serializers';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ValidationError, toAlephId} from '@natlibfi/melinda-commons';
 import {validations, conversions, fixes, OPERATIONS, logError} from '@natlibfi/melinda-rest-api-commons';
 import createSruClient from '@natlibfi/sru-client';
 import validateOwnChanges from './own-authorization';
-import {updateField001ToParamId, getRecordMetadata, getIdFromRecord, isValidAlephId} from '../../utils';
+import {updateField001ToParamId, getRecordMetadata, getIdFromRecord, isValidAlephId, getRecord} from '../../utils';
 import {validateExistingRecord} from './validate-existing-record';
 import {inspect} from 'util';
 import {MarcRecord} from '@natlibfi/marc-record';
@@ -211,7 +210,7 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
       // -> updating f001 is done later in processNormal, so it gets done to other CREATE operation too
 
       logger.verbose(`Reading record ${updateId} from SRU for ${headers.correlationId}`);
-      const existingRecord = await getRecord(updateId);
+      const existingRecord = await getRecord(sruClient, updateId);
       // let's not fixFormat existing record, we have the incoming record in the externalFormat still
       logger.silly(`Record from SRU: ${JSON.stringify(existingRecord)}`);
 
@@ -629,32 +628,5 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
     const catalogerForLog = cataloger.id || cataloger || 'unknown';
     logger.debug(`Picked ${catalogerForLog} from ${JSON.stringify(cataloger)}`);
     return catalogerForLog;
-  }
-
-  function getRecord(id) {
-    return new Promise((resolve, reject) => {
-      let promise; // eslint-disable-line functional/no-let
-
-      sruClient.searchRetrieve(`rec.id=${id}`)
-        .on('record', xmlString => {
-          promise = MARCXML.from(xmlString, {subfieldValues: false});
-        })
-        .on('end', async () => {
-          if (promise) {
-            try {
-              const record = await promise;
-              resolve(record);
-            } catch (err) {
-              reject(err);
-            }
-
-            //logger.debug('No record promise from sru');
-            return;
-          }
-
-          resolve();
-        })
-        .on('error', err => reject(err));
-    });
   }
 }
