@@ -32,9 +32,6 @@ import createDebugLogger from 'debug';
 import {normalizeEmptySubfields, getSubfieldValues} from '../../utils';
 import {MarcRecord} from '@natlibfi/marc-record';
 
-//'001', '003', '005', '040', '884', 'CAT'
-const IGNORE_FIELDS = ['001', '003', '005', '040', '884', 'CAT'];
-
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator:validate-changes');
 const debugData = debug.extend('data');
 
@@ -85,7 +82,11 @@ export function validateChanges({incomingRecord, existingRecord, validate = true
 }
 
 function isActualContentField(field) {
-  if (IGNORE_FIELDS.includes(field.tag)) {
+  // NonContentFields that are ignored when changes are validated
+  //'001', '003', '005', '040', '884', 'CAT'
+  const nonContentFields = ['001', '003', '005', '040', '884', 'CAT'];
+
+  if (nonContentFields.includes(field.tag)) {
     return false;
   }
   return true;
@@ -189,7 +190,7 @@ function normalizeRecord(record) {
   function sortAlephInternalFields(fields) {
     const alephInternalPattern = /^[A-Z][A-Z][A-Z]$/u;
     return [...fields].sort((a, b) => {
-      // If either of fields is and internal field do sort
+      // If either of fields is an internal field do sort
       if (alephInternalPattern.test(a.tag) || alephInternalPattern.test(b.tag)) {
         if (a.tag > b.tag) {
           return 1;
