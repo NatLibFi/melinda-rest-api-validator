@@ -390,7 +390,6 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
           notes: headers.notes ? headers.notes.concat(`${newNote}`) : [newNote]
         };
         const finalHeaders = {...headers, ...updatedHeaders};
-        // Where are we returning?
         return {result: {record, validationResult: false}, recordMetadata, headers: finalHeaders};
         //throw new ValidationError(HttpStatus.CONFLICT, {message: `UpdateValidation with ${firstResult.candidate.id} failed. This is actually not an error!`, ids: [firstResult.candidate.id], recordMetadata});
       }
