@@ -1,0 +1,691 @@
+{
+  "_validationOptions": {
+    "subfieldValues": false
+  },
+  "leader": "02488cam a22005414i 4500",
+  "fields": [
+    {
+      "tag": "001",
+      "value": "018649533"
+    },
+    {
+      "tag": "003",
+      "value": "FI-MELINDA"
+    },
+    {
+      "tag": "005",
+      "value": "20230317120657.0"
+    },
+    {
+      "tag": "008",
+      "value": "221104s2023    fi ||||       |0| f|swe| "
+    },
+    {
+      "tag": "020",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "978-952-333-520-2"
+        },
+        {
+          "code": "q",
+          "value": "mjuka pärmar"
+        }
+      ]
+    },
+    {
+      "tag": "040",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "FI-BTJ"
+        },
+        {
+          "code": "b",
+          "value": "swe"
+        },
+        {
+          "code": "e",
+          "value": "rda"
+        },
+        {
+          "code": "d",
+          "value": "FI-He"
+        },
+        {
+          "code": "d",
+          "value": "FI-KV"
+        }
+      ]
+    },
+    {
+      "tag": "041",
+      "ind1": "0",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "swe"
+        },
+        {
+          "code": "a",
+          "value": "eng"
+        },
+        {
+          "code": "a",
+          "value": "fin"
+        }
+      ]
+    },
+    {
+      "tag": "042",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "finb"
+        }
+      ]
+    },
+    {
+      "tag": "084",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "84.31"
+        },
+        {
+          "code": "2",
+          "value": "ykl"
+        }
+      ]
+    },
+    {
+      "tag": "100",
+      "ind1": "1",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "Perera, Adrian,"
+        },
+        {
+          "code": "e",
+          "value": "författare,"
+        },
+        {
+          "code": "g",
+          "value": "ENNAKKOTIETO."
+        }
+      ]
+    },
+    {
+      "tag": "245",
+      "ind1": "1",
+      "ind2": "0",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "Alla mänskorna ha problemen /"
+        },
+        {
+          "code": "c",
+          "value": "Adrian Perera."
+        }
+      ]
+    },
+    {
+      "tag": "264",
+      "ind1": " ",
+      "ind2": "1",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "Helsingfors :"
+        },
+        {
+          "code": "b",
+          "value": "Förlaget,"
+        },
+        {
+          "code": "c",
+          "value": "[2023]"
+        }
+      ]
+    },
+    {
+      "tag": "300",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "269 sidor ;"
+        },
+        {
+          "code": "c",
+          "value": "20 cm"
+        }
+      ]
+    },
+    {
+      "tag": "336",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "text"
+        },
+        {
+          "code": "b",
+          "value": "txt"
+        },
+        {
+          "code": "2",
+          "value": "rdacontent"
+        }
+      ]
+    },
+    {
+      "tag": "337",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "omedierad"
+        },
+        {
+          "code": "b",
+          "value": "n"
+        },
+        {
+          "code": "2",
+          "value": "rdamedia"
+        }
+      ]
+    },
+    {
+      "tag": "338",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "volym"
+        },
+        {
+          "code": "b",
+          "value": "nc"
+        },
+        {
+          "code": "2",
+          "value": "rdacarrier"
+        }
+      ]
+    },
+    {
+      "tag": "520",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "Constance, krigsdrabbad ensamförsörjande mor från Sri Lanka, har hamnat på den östnyländska glesbygden. På fyra språk lägger hon fram sina teorier om hur livet ska levas, hur alla är emot henne och hur det bara är Gud som bestämmer. I Adrian Pereras nya roman bjuds läsaren in i ett rikt, flerspråkigt landskap.[Bokinfo]"
+        }
+      ]
+    },
+    {
+      "tag": "546",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "svenska, engelska, finska."
+        }
+      ]
+    },
+    {
+      "tag": "594",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "ENNAKKOTIETO / KIRJAVÄLITYS"
+        },
+        {
+          "code": "5",
+          "value": "FENNI"
+        }
+      ]
+    },
+    {
+      "tag": "600",
+      "ind1": "0",
+      "ind2": "4",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "Constance"
+        },
+        {
+          "code": "c",
+          "value": "(fiktiv gestalt)"
+        }
+      ]
+    },
+    {
+      "tag": "650",
+      "ind1": " ",
+      "ind2": "7",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "föräldraskap"
+        },
+        {
+          "code": "2",
+          "value": "kauno/swe"
+        },
+        {
+          "code": "0",
+          "value": "http://www.yso.fi/onto/kauno/p3582"
+        }
+      ]
+    },
+    {
+      "tag": "650",
+      "ind1": " ",
+      "ind2": "7",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "äktenskap"
+        },
+        {
+          "code": "2",
+          "value": "kauno/swe"
+        },
+        {
+          "code": "0",
+          "value": "http://www.yso.fi/onto/kauno/p258"
+        }
+      ]
+    },
+    {
+      "tag": "650",
+      "ind1": " ",
+      "ind2": "7",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "problem"
+        },
+        {
+          "code": "2",
+          "value": "kauno/swe"
+        },
+        {
+          "code": "0",
+          "value": "http://www.yso.fi/onto/kauno/p1333"
+        }
+      ]
+    },
+    {
+      "tag": "650",
+      "ind1": " ",
+      "ind2": "7",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "invandrare"
+        },
+        {
+          "code": "2",
+          "value": "kauno/swe"
+        },
+        {
+          "code": "0",
+          "value": "http://www.yso.fi/onto/kauno/p3802"
+        }
+      ]
+    },
+    {
+      "tag": "650",
+      "ind1": " ",
+      "ind2": "7",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "ensamförsörjare"
+        },
+        {
+          "code": "2",
+          "value": "kauno/swe"
+        },
+        {
+          "code": "0",
+          "value": "http://www.yso.fi/onto/kauno/p1562"
+        }
+      ]
+    },
+    {
+      "tag": "650",
+      "ind1": " ",
+      "ind2": "7",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "kvinnor"
+        },
+        {
+          "code": "2",
+          "value": "kauno/swe"
+        },
+        {
+          "code": "0",
+          "value": "http://www.yso.fi/onto/kauno/p3043"
+        }
+      ]
+    },
+    {
+      "tag": "650",
+      "ind1": " ",
+      "ind2": "7",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "glesbygd"
+        },
+        {
+          "code": "2",
+          "value": "kauno/swe"
+        },
+        {
+          "code": "0",
+          "value": "http://www.yso.fi/onto/yso/p8225"
+        }
+      ]
+    },
+    {
+      "tag": "651",
+      "ind1": " ",
+      "ind2": "7",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "Östra Nyland"
+        },
+        {
+          "code": "2",
+          "value": "yso/swe"
+        },
+        {
+          "code": "0",
+          "value": "http://www.yso.fi/onto/yso/p105028"
+        }
+      ]
+    },
+    {
+      "tag": "655",
+      "ind1": " ",
+      "ind2": "7",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "psykologiska romaner"
+        },
+        {
+          "code": "2",
+          "value": "slm/swe"
+        },
+        {
+          "code": "0",
+          "value": "http://urn.fi/URN:NBN:fi:au:slm:s604"
+        }
+      ]
+    },
+    {
+      "tag": "655",
+      "ind1": " ",
+      "ind2": "7",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "romaner"
+        },
+        {
+          "code": "2",
+          "value": "slm/swe"
+        },
+        {
+          "code": "0",
+          "value": "http://urn.fi/URN:NBN:fi:au:slm:s518"
+        }
+      ]
+    },
+    {
+      "tag": "655",
+      "ind1": " ",
+      "ind2": "7",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "skönlitteratur"
+        },
+        {
+          "code": "2",
+          "value": "slm/swe"
+        },
+        {
+          "code": "0",
+          "value": "http://urn.fi/URN:NBN:fi:au:slm:s975"
+        }
+      ]
+    },
+    {
+      "tag": "655",
+      "ind1": " ",
+      "ind2": "7",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "finlandssvensk litteratur"
+        },
+        {
+          "code": "2",
+          "value": "slm/swe"
+        },
+        {
+          "code": "0",
+          "value": "http://urn.fi/URN:NBN:fi:au:slm:s269"
+        }
+      ]
+    },
+    {
+      "tag": "SID",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "c",
+          "value": "(ANDL100013)1924224"
+        },
+        {
+          "code": "b",
+          "value": "ander"
+        }
+      ]
+    },
+    {
+      "tag": "SID",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "c",
+          "value": "2532531"
+        },
+        {
+          "code": "b",
+          "value": "helme"
+        }
+      ]
+    },
+    {
+      "tag": "SID",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "c",
+          "value": "7337523"
+        },
+        {
+          "code": "b",
+          "value": "FI-BTJ"
+        }
+      ]
+    },
+    {
+      "tag": "CAT",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "FENNI-KV"
+        },
+        {
+          "code": "b",
+          "value": "30"
+        },
+        {
+          "code": "c",
+          "value": "20221104"
+        },
+        {
+          "code": "l",
+          "value": "FIN01"
+        },
+        {
+          "code": "h",
+          "value": "0700"
+        }
+      ]
+    },
+    {
+      "tag": "CAT",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "FENNI-KV"
+        },
+        {
+          "code": "b",
+          "value": "30"
+        },
+        {
+          "code": "c",
+          "value": "20230225"
+        },
+        {
+          "code": "l",
+          "value": "FIN01"
+        },
+        {
+          "code": "h",
+          "value": "0701"
+        }
+      ]
+    },
+    {
+      "tag": "CAT",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "ANDER0000"
+        },
+        {
+          "code": "b",
+          "value": "30"
+        },
+        {
+          "code": "c",
+          "value": "20230317"
+        },
+        {
+          "code": "l",
+          "value": "FIN01"
+        },
+        {
+          "code": "h",
+          "value": "1133"
+        }
+      ]
+    },
+    {
+      "tag": "CAT",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "IMP_HELMET"
+        },
+        {
+          "code": "b",
+          "value": "30"
+        },
+        {
+          "code": "c",
+          "value": "20230317"
+        },
+        {
+          "code": "l",
+          "value": "FIN01"
+        },
+        {
+          "code": "h",
+          "value": "1206"
+        }
+      ]
+    },
+    {
+      "tag": "LOW",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "ANDER"
+        }
+      ]
+    },
+    {
+      "tag": "LOW",
+      "ind1": " ",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "FIKKA"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+    "description": "Should return true if the only change is in f007",
+    "comment1":  "true: we do have (valid) changes in record",
+    "comment2": "test for coverage - do not normalize non-f008 controlfield",
+    "expectedResult": true,
+    "expectedToThrow": false,
+    "skip": false,
+    "only": false
+  }

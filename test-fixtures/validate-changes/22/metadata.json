@@ -1,0 +1,9 @@
+{
+    "description": "Should return true if the only change is in non-valid LDRs binary MARC21 values",
+    "comment1":  "true: we do have (valid) changes in record",
+    "comment2": "test for coverage - non-valid LDR cannot be normalized",
+    "expectedResult": true,
+    "expectedToThrow": false,
+    "skip": false,
+    "only": false
+  }

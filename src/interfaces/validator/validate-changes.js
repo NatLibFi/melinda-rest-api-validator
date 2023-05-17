@@ -82,7 +82,14 @@ export function validateChanges({incomingRecord, existingRecord, validate = true
 }
 
 function isActualContentField(field) {
-  return field.tag !== '001' && field.tag !== '003' && field.tag !== '005' && field.tag !== '884' && field.tag !== 'CAT';
+  // NonContentFields that are ignored when changes are validated
+  //'001', '003', '005', '040', '884', 'CAT'
+  const nonContentFields = ['001', '003', '005', '040', '884', 'CAT'];
+
+  if (nonContentFields.includes(field.tag)) {
+    return false;
+  }
+  return true;
 }
 
 function normalizeRecord(record) {
@@ -183,7 +190,7 @@ function normalizeRecord(record) {
   function sortAlephInternalFields(fields) {
     const alephInternalPattern = /^[A-Z][A-Z][A-Z]$/u;
     return [...fields].sort((a, b) => {
-      // If either of fields is and internal field do sort
+      // If either of fields is an internal field do sort
       if (alephInternalPattern.test(a.tag) || alephInternalPattern.test(b.tag)) {
         if (a.tag > b.tag) {
           return 1;
