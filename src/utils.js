@@ -2,6 +2,7 @@ import {toAlephId, getRecordTitle, getRecordStandardIdentifiers} from '@natlibfi
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import createDebugLogger from 'debug';
 import {MarcRecord} from '@natlibfi/marc-record';
+import {MARCXML} from '@natlibfi/marc-record-serializers';
 
 const logger = createLogger();
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:utils');
@@ -208,4 +209,31 @@ export function normalizeEmptySubfieldsRecord(record) {
 
   return new MarcRecord({leader: record.leader, fields});
 
+}
+
+export function getRecord(sruClient, id) {
+  return new Promise((resolve, reject) => {
+    let promise; // eslint-disable-line functional/no-let
+
+    sruClient.searchRetrieve(`rec.id=${id}`)
+      .on('record', xmlString => {
+        promise = MARCXML.from(xmlString, {subfieldValues: false});
+      })
+      .on('end', async () => {
+        if (promise) {
+          try {
+            const record = await promise;
+            resolve(record);
+          } catch (err) {
+            reject(err);
+          }
+
+          //logger.debug('No record promise from sru');
+          return;
+        }
+
+        resolve();
+      })
+      .on('error', err => reject(err));
+  });
 }
