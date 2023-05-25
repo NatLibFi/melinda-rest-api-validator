@@ -1,11 +1,10 @@
 import HttpStatus from 'http-status';
-import {MARCXML} from '@natlibfi/marc-record-serializers';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ValidationError, toAlephId} from '@natlibfi/melinda-commons';
 import {validations, conversions, fixes, OPERATIONS, logError} from '@natlibfi/melinda-rest-api-commons';
 import createSruClient from '@natlibfi/sru-client';
 import validateOwnChanges from './own-authorization';
-import {updateField001ToParamId, getRecordMetadata, getIdFromRecord, isValidAlephId} from '../../utils';
+import {updateField001ToParamId, getRecordMetadata, getIdFromRecord, isValidAlephId, getRecord} from '../../utils';
 import {validateExistingRecord} from './validate-existing-record';
 import {inspect} from 'util';
 import {MarcRecord} from '@natlibfi/marc-record';
@@ -211,7 +210,7 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
       // -> updating f001 is done later in processNormal, so it gets done to other CREATE operation too
 
       logger.verbose(`Reading record ${updateId} from SRU for ${headers.correlationId}`);
-      const existingRecord = await getRecord(updateId);
+      const existingRecord = await getRecord(sruClient, updateId);
       // let's not fixFormat existing record, we have the incoming record in the externalFormat still
       logger.silly(`Record from SRU: ${JSON.stringify(existingRecord)}`);
 
@@ -256,7 +255,7 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
       if (changeValidationResult === false) {
         const newNote = `No changes detected while trying to update existing record ${updateId}, update skipped.`;
         const updatedHeaders = {
-          operation: 'SKIPPED',
+          operation: 'SKIPPED_CHANGE',
           notes: newHeaders.notes ? newHeaders.notes.concat(`${newNote}`) : [newNote]
         };
         const finalHeaders = {...headers, ...updatedHeaders};
@@ -380,21 +379,19 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
       //Matchresult: {candidate: {id, record}, probability, matchSequence, action, preference: {value, name}}}
       const {updateValidationResult} = validateUpdate({incomingRecord: record, existingRecord: firstResult.candidate.record, cataloger});
       logger.debug(`UpdateValidationResult: ${JSON.stringify(updateValidationResult)}`);
+      const catalogerForLog = getCatalogerForLog(headers.cataloger);
 
       if (updateValidationResult === false) {
-        // we do not actually want to CONFLICT this, we want to SKIPPED to this...
-        logger.debug(`Update validation failed, updates from ${cataloger} are already included in the database record`);
+        logger.debug(`Update validation failed, updates from ${catalogerForLog} are already included in the database record`);
 
-        /*
-        const newNote = `No changes detected while trying to update existing record ${updateId}, update skipped.`;
+        const newNote = `No new incoming changes from ${catalogerForLog} detected while trying to update existing record ${firstResult.candidate.id}, update skipped.`;
         const updatedHeaders = {
-          operation: 'SKIPPED',
+          operation: 'SKIPPED_UPDATE',
           notes: headers.notes ? headers.notes.concat(`${newNote}`) : [newNote]
         };
         const finalHeaders = {...headers, ...updatedHeaders};
-        */
-        //return {result: validationResults, recordMetadata, headers: finalHeaders};
-        throw new ValidationError(HttpStatus.CONFLICT, {message: `UpdateValidation with ${firstResult.candidate.id} failed. This is actually not an error!`, ids: [firstResult.candidate.id], recordMetadata});
+        return {result: {record, validationResult: false}, recordMetadata, headers: finalHeaders};
+        //throw new ValidationError(HttpStatus.CONFLICT, {message: `UpdateValidation with ${firstResult.candidate.id} failed. This is actually not an error!`, ids: [firstResult.candidate.id], recordMetadata});
       }
 
       // run merge for record with the best valid match
@@ -485,8 +482,7 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
     logger.debug(`Logging the matchAction to mongoLogs here`);
     logger.silly(inspect(headers));
 
-    const catalogerForLog = headers.cataloger.id || headers.cataloger;
-    logger.debug(`Picked ${catalogerForLog} from ${JSON.stringify(headers.cataloger)}`);
+    const catalogerForLog = getCatalogerForLog(headers.cataloger);
 
     // matchResultsForLog is an array of matchResult objects:
     // {action, preference: {name, value}, message, candidate: {id, record}, probability, matchSequence}
@@ -522,9 +518,7 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
     logger.silly(inspect(headers));
     logger.debug(`Logging the mergeAction to mongoLogs here`);
 
-    const catalogerForLog = headers.cataloger.id || headers.cataloger;
-    logger.debug(`Picked ${catalogerForLog} from ${JSON.stringify(headers.cataloger)}`);
-
+    const catalogerForLog = getCatalogerForLog(headers.cataloger);
     // note: there's no correlationId in headers?
     // we want also a timestamp here - mongoLogOperator could create that?
 
@@ -629,30 +623,9 @@ export default async function ({preValidationFixOptions, postMergeFixOptions, pr
     return headers;
   }
 
-  function getRecord(id) {
-    return new Promise((resolve, reject) => {
-      let promise; // eslint-disable-line functional/no-let
-
-      sruClient.searchRetrieve(`rec.id=${id}`)
-        .on('record', xmlString => {
-          promise = MARCXML.from(xmlString, {subfieldValues: false});
-        })
-        .on('end', async () => {
-          if (promise) {
-            try {
-              const record = await promise;
-              resolve(record);
-            } catch (err) {
-              reject(err);
-            }
-
-            //logger.debug('No record promise from sru');
-            return;
-          }
-
-          resolve();
-        })
-        .on('error', err => reject(err));
-    });
+  function getCatalogerForLog(cataloger) {
+    const catalogerForLog = cataloger.id || cataloger || 'unknown';
+    logger.debug(`Picked ${catalogerForLog} from ${JSON.stringify(cataloger)}`);
+    return catalogerForLog;
   }
 }
