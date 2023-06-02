@@ -38,7 +38,6 @@ export default async function ({validatorOptions, mongoLogOperator}) {
 
   return process;
 
-
   // eslint-disable-next-line max-statements
   async function process(headers, data) {
     const {format, operationSettings, recordMetadata, operation, id} = headers;
@@ -94,6 +93,7 @@ export default async function ({validatorOptions, mongoLogOperator}) {
 
     logger.silly(`validator/index/process: Running validations for (${newHeaders.recordMetadata.sourceId})`);
     logger.debug(`validator/index/process: ${JSON.stringify(newHeaders)}`);
+
     try {
       const {result, recordMetadata, headers: resultHeaders} = await executeValidations({record, headers: newHeaders});
 
