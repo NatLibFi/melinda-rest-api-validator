@@ -18,7 +18,7 @@ export default async function ({
   // secord parameter is true for running amqpHealthCheck, which errors if channel and/or connection gets closed
   const amqpOperator = await amqpFactory(amqpUrl, true);
   const mongoLogOperator = await mongoLogFactory(mongoUri);
-  const validator = await validatorFactory({...validatorOptions, mongoLogOperator});
+  const validator = await validatorFactory({validatorOptions, mongoLogOperator});
   const toMarcRecords = await toMarcRecordFactory({amqpOperator, mongoOperator, mongoLogOperator, splitterOptions});
 
   logger.info(`Started Melinda-rest-api-validator: ${pollRequest ? 'PRIORITY' : 'BULK'} for ${recordType} records`);
@@ -185,7 +185,7 @@ export default async function ({
     // validator.process returns: {headers, data}
 
     logger.silly(`app/checkAmqp: Actually validating`);
-    const processResult = await validator.process(headers, content.data);
+    const processResult = await validator(headers, content.data);
     // If not-noop and validator.process fails, it errors
     // for noop failing marc-record-validate return result.failed: true
     logger.silly(`app/checkAmqp: Validation process results: ${inspect(processResult, {colors: true, maxArrayLength: 3, depth: 1})}`);
