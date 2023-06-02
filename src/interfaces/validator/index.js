@@ -13,8 +13,8 @@ import {validationsFactory} from './validations';
 //const debugData = debug.extend('data');
 
 export default async function ({validatorOptions, mongoLogOperator}) {
-  const {preValidationFixOptions, preImportFixOptions, recordType} = validatorOptions;
   const logger = createLogger();
+  const {preValidationFixOptions, preImportFixOptions, recordType} = validatorOptions;
   logger.debug(`preValidationFixOptions: ${JSON.stringify(preValidationFixOptions)}`);
   logger.debug(`preImportFixOptions: ${JSON.stringify(preImportFixOptions)}`);
 
@@ -30,7 +30,6 @@ export default async function ({validatorOptions, mongoLogOperator}) {
   // formerly known as formatRecord
   const {fixRecord} = fixes;
 
-
   const conversionService = conversions();
   // should we have here matcherService? commons mongo/amqp
   const {updateValidations, createValidations} = await validationsFactory(mongoLogOperator, fixRecord, validatorOptions);
@@ -38,6 +37,7 @@ export default async function ({validatorOptions, mongoLogOperator}) {
   //const mongoLogOperator = await mongoLogFactory(mongoUri);
 
   return process;
+
 
   // eslint-disable-next-line max-statements
   async function process(headers, data) {
@@ -88,14 +88,14 @@ export default async function ({validatorOptions, mongoLogOperator}) {
     if (!validateRecords) {
       logger.verbose(`Skipped record validate/unique/merge due to operationSettings`);
       // We propably should update 001 in record to id here?
-      const validatedRecord = checkAndUpdateId({record, headers});
-      return {headers, data: validatedRecord.toObject()};
+      const validatedRecord = checkAndUpdateId({record, headers: newHeaders});
+      return {headers: newHeaders, data: validatedRecord.toObject()};
     }
 
-    logger.silly(`validator/index/process: Running validations for (${headers.recordMetadata.sourceId})`);
-    logger.debug(`validator/index/process: ${JSON.stringify(headers)}`);
+    logger.silly(`validator/index/process: Running validations for (${newHeaders.recordMetadata.sourceId})`);
+    logger.debug(`validator/index/process: ${JSON.stringify(newHeaders)}`);
     try {
-      const {result, recordMetadata, headers: resultHeaders} = await executeValidations({record, headers});
+      const {result, recordMetadata, headers: resultHeaders} = await executeValidations({record, headers: newHeaders});
 
       // We got headers back
       logger.debug(`validator/index/process: Headers after validation: ${JSON.stringify(resultHeaders)}`);
@@ -121,7 +121,7 @@ export default async function ({validatorOptions, mongoLogOperator}) {
         logger.debug(`Error is a validationError.`);
         const {status, payload} = err;
         const newPayload = {
-          recordMetadata: headers.recordMetadata,
+          recordMetadata: newHeaders.recordMetadata,
           ...payload
         };
         logger.debug(`Payload from error: ${JSON.stringify(payload)}`);
