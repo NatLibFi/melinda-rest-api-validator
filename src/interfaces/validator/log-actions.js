@@ -4,6 +4,28 @@ import {inspect} from 'util';
 
 const logger = createLogger();
 
+// logRecord
+export function logRecord(mongoLogOperator, {headers, record}) {
+  logger.debug(`Logging record to mongoLogs here: `);
+  logger.silly(inspect(headers));
+  const catalogerForLog = getCatalogerForLog(headers.cataloger);
+
+  const recordLogItem = {
+    logItemType: LOG_ITEM_TYPE.INPUT_RECORD_LOG,
+    cataloger: catalogerForLog,
+    correlationId: headers.correlationId,
+    blobSequence: headers.recordMetadata.blobSequence,
+    ...headers.recordMetadata,
+    record
+  };
+
+  logger.silly(`RecordLogItem to add: ${inspect(recordLogItem)}`);
+  mongoLogOperator.addLogItem(recordLogItem);
+
+  return;
+
+}
+
 export function logMatchAction(mongoLogOperator, {headers, record, matchResultsForLog = [], matcherReports, logNoMatches = false}) {
 
   if (!logNoMatches && matchResultsForLog.length < 1) {
