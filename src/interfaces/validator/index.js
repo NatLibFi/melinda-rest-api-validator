@@ -62,7 +62,7 @@ export default async function ({validatorOptions, mongoLogOperator}) {
     const combinedRecordMetadata = getRecordMetadata({record, recordMetadata, getAllSourceIds});
     logger.debug(`Combined recordMetadata: ${JSON.stringify(combinedRecordMetadata)}`);
 
-    logRecord(mongoLogOperator, {headers, record, logItemType: LOG_ITEM_TYPE.INPUT_RECORD_LOG});
+    logRecord(mongoLogOperator, {headers, record, recordMetadata: combinedRecordMetadata, logItemType: LOG_ITEM_TYPE.INPUT_RECORD_LOG});
 
     // Create here also headers.id for batchBulk -records
     // For CREATE: blobSequence, for UPDATE: id from record (001)
