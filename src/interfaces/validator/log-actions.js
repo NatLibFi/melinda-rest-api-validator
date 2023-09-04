@@ -5,13 +5,13 @@ import {inspect} from 'util';
 const logger = createLogger();
 
 // logRecord
-export function logRecord(mongoLogOperator, {headers, record}) {
+export function logRecord(mongoLogOperator, {headers, record, logItemType}) {
   logger.debug(`Logging record to mongoLogs here: `);
   logger.silly(inspect(headers));
   const catalogerForLog = getCatalogerForLog(headers.cataloger);
 
   const recordLogItem = {
-    logItemType: LOG_ITEM_TYPE.INPUT_RECORD_LOG,
+    logItemType,
     cataloger: catalogerForLog,
     correlationId: headers.correlationId,
     blobSequence: headers.recordMetadata.blobSequence,
