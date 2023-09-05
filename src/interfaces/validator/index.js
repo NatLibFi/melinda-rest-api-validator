@@ -5,6 +5,9 @@ import {conversions, fixes, OPERATIONS, logError} from '@natlibfi/melinda-rest-a
 import {updateField001ToParamId, getRecordMetadata, getIdFromRecord, isValidAlephId} from '../../utils';
 import {inspect} from 'util';
 import {MarcRecord} from '@natlibfi/marc-record';
+import {logRecord} from './log-actions';
+import {LOG_ITEM_TYPE} from '@natlibfi/melinda-rest-api-commons/dist/constants';
+
 //import {AlephSequential} from '@natlibfi/marc-record-serializers';
 //import {detailedDiff} from 'deep-object-diff';
 import {validationsFactory} from './validations';
@@ -58,6 +61,8 @@ export default async function ({validatorOptions, mongoLogOperator}) {
     logger.debug(`Original recordMetadata: ${JSON.stringify(recordMetadata)}`);
     const combinedRecordMetadata = getRecordMetadata({record, recordMetadata, getAllSourceIds});
     logger.debug(`Combined recordMetadata: ${JSON.stringify(combinedRecordMetadata)}`);
+
+    logRecord(mongoLogOperator, {headers, record, recordMetadata: combinedRecordMetadata, logItemType: LOG_ITEM_TYPE.INPUT_RECORD_LOG, logConfig: validatorOptions.logInputRecord});
 
     // Create here also headers.id for batchBulk -records
     // For CREATE: blobSequence, for UPDATE: id from record (001)

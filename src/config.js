@@ -31,6 +31,7 @@ const validatorMatchPackages = readEnvironmentVariable('VALIDATOR_MATCH_PACKAGES
 const stopWhenFound = readEnvironmentVariable('STOP_WHEN_FOUND', {defaultValue: 1, format: v => parseBoolean(v)});
 const acceptZeroWithMaxCandidates = readEnvironmentVariable('ACCEPT_ZERO_WITH_MAX_CANDIDATES', {defaultValue: 0, format: v => parseBoolean(v)});
 const logNoMatches = readEnvironmentVariable('LOG_NO_MATCHES', {defaultValue: 0, format: v => parseBoolean(v)});
+const logInputRecord = readEnvironmentVariable('LOG_INPUT_RECORD', {defaultValue: 0, format: v => parseBoolean(v)});
 
 // We could have also settings matchValidation and merge here
 
@@ -43,7 +44,8 @@ export const validatorOptions = {
   matchOptionsList: generateMatchOptionsList(),
   stopWhenFound,
   acceptZeroWithMaxCandidates,
-  logNoMatches
+  logNoMatches,
+  logInputRecord
 };
 
 function generateMatchOptionsList() {
