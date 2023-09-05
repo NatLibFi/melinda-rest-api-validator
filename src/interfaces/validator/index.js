@@ -5,6 +5,10 @@ import {conversions, fixes, OPERATIONS, logError} from '@natlibfi/melinda-rest-a
 import {updateField001ToParamId, getRecordMetadata, getIdFromRecord, isValidAlephId} from '../../utils';
 import {inspect} from 'util';
 import {MarcRecord} from '@natlibfi/marc-record';
+import {logRecord} from './log-actions';
+import {LOG_ITEM_TYPE} from '@natlibfi/melinda-rest-api-commons/dist/constants';
+
+//import {AlephSequential} from '@natlibfi/marc-record-serializers';
 //import {detailedDiff} from 'deep-object-diff';
 import {validationsFactory} from './validations';
 
@@ -57,6 +61,8 @@ export default async function ({validatorOptions, mongoLogOperator}) {
     logger.debug(`Original recordMetadata: ${JSON.stringify(recordMetadata)}`);
     const combinedRecordMetadata = getRecordMetadata({record, recordMetadata, getAllSourceIds});
     logger.debug(`Combined recordMetadata: ${JSON.stringify(combinedRecordMetadata)}`);
+
+    logRecord(mongoLogOperator, {headers, record, recordMetadata: combinedRecordMetadata, logItemType: LOG_ITEM_TYPE.INPUT_RECORD_LOG, logConfig: validatorOptions.logInputRecord});
 
     // Create here also headers.id for batchBulk -records
     // For CREATE: blobSequence, for UPDATE: id from record (001)
@@ -113,7 +119,10 @@ export default async function ({validatorOptions, mongoLogOperator}) {
       // preImportFix - format $0 and $w to alephInternal format
       const fixedRecordObject = await fixRecord(validatedRecord, preImportFixOptions);
 
-      return {headers: resultHeaders, data: fixedRecordObject};
+      // Final validation : record is valid according to marcRecord and convertible to alephSequential
+      const alephValidatedRecordObject = await alephValidateRecord(fixedRecordObject);
+
+      return {headers: resultHeaders, data: alephValidatedRecordObject};
 
     } catch (err) {
       logger.debug(`validateRecord: validation errored: ${JSON.stringify(err)}`);
@@ -129,6 +138,28 @@ export default async function ({validatorOptions, mongoLogOperator}) {
         throw new ValidationError(status, newPayload);
       }
       throw new Error(err);
+    }
+
+    function alephValidateRecord(recordObject) {
+      try {
+        logger.debug(`---- alephValidate -----`);
+        logger.debug(`Validating that resulting record is a valid marcRecord and convertable to alephSequential`);
+        // We could have more strict validationOptions if we'd like to check everything?
+        const record = new MarcRecord(recordObject, {subfieldValues: false});
+        const alephSequential = conversionService.serialize(record, 'ALEPHSEQ');
+        //const record = new MarcRecord(recordObject, {subfieldValues: false});
+        //const alephSequential = AlephSequential.to(record);
+        logger.silly(alephSequential);
+        return recordObject;
+      } catch (error) {
+        logger.debug(`validation of marcRecord+AlephSequential failed: ${error}`);
+        logError(error);
+        logger.debug(JSON.stringify(error));
+        const message = error.message || error.payload?.message || error.payload;
+        const cleanErrorMessage = message.replace(/(?<lineBreaks>\r\n|\n|\r)/gmu, ' ');
+        //logger.silly(`${cleanErrorMessage}`);
+        throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: `Error in record. ${cleanErrorMessage}`, recordMetadata});
+      }
     }
 
     function executeValidations({record, headers}) {
@@ -166,11 +197,14 @@ export default async function ({validatorOptions, mongoLogOperator}) {
       // Format record - currently for bibs edit $0 and $w ISILs to Aleph internar library codes
       const recordObject = await fixRecord(unzerialized, preValidationFixOptions);
       logger.silly(`Formated recordObject:\n${JSON.stringify(recordObject)}`);
-      return new MarcRecord(recordObject, {subfieldValues: false});
+      //return new MarcRecord(recordObject, {subfieldValues: false});
+      return new MarcRecord(recordObject);
     } catch (err) {
       logger.debug(`unserializeAndFormatRecord errored:`);
       logError(err);
-      const cleanErrorMessage = err.message.replace(/(?<lineBreaks>\r\n|\n|\r)/gmu, ' ');
+      logger.debug(JSON.stringify(err));
+      const message = err.message || err.payload?.message || err.payload;
+      const cleanErrorMessage = message.replace(/(?<lineBreaks>\r\n|\n|\r)/gmu, ' ');
       //logger.silly(`${cleanErrorMessage}`);
       throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: `Parsing input data failed. ${cleanErrorMessage}`, recordMetadata});
     }
