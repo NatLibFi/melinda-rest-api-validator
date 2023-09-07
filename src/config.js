@@ -237,7 +237,7 @@ function generateSearchSpec(validatorMatchPackage) {
     if (validatorMatchPackage === 'CONTENT') {
       return [
         candidateSearch.searchTypes.bib.hostComponents,
-        candidateSearch.searchTypes.bib.titleAuthor,
+        //candidateSearch.searchTypes.bib.titleAuthor,
         candidateSearch.searchTypes.bib.title
       ];
     }
