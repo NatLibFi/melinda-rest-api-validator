@@ -45,7 +45,7 @@
 		"@natlibfi/melinda-marc-record-merge-reducers": "^2.0.15-alpha.2",
 		"@natlibfi/melinda-record-match-validator": "^2.0.7",
 		"@natlibfi/melinda-record-matching": "^4.2.0",
-		"@natlibfi/melinda-rest-api-commons": "^4.0.12",
+		"@natlibfi/melinda-rest-api-commons": "^4.0.13-alpha.1",
 		"@natlibfi/sru-client": "^6.0.5",
 		"deep-eql": "^4.1.3",
 		"deep-object-diff": "^1.1.9",
