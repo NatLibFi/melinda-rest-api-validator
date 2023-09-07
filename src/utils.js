@@ -31,7 +31,7 @@ export function getRecordMetadata({record, number = undefined, recordMetadata = 
     const sourceIds = recordMetadata.sourceIds || record ? getSourceIdsFromRecord(record, getAllSourceIds) : undefined;
     const title = recordMetadata.title || record ? getRecordTitle(record) : undefined;
     const standardIdentifiers = recordMetadata.standardIdentifiers || record ? getRecordStandardIdentifiers(record) : undefined;
-    const blobSequence = recordMetadata.blobSequence || number || '1';
+    const blobSequence = recordMetadata.blobSequence || number || 1;
     return {sourceIds, blobSequence, title, standardIdentifiers};
   }
 
@@ -39,7 +39,7 @@ export function getRecordMetadata({record, number = undefined, recordMetadata = 
   logger.debug(`sourceIds: ${JSON.stringify(sourceIds)}`);
   const title = record ? getRecordTitle(record) : undefined;
   const standardIdentifiers = record ? getRecordStandardIdentifiers(record) : undefined;
-  const blobSequence = number || '1';
+  const blobSequence = number || 1;
   return {sourceIds, blobSequence, title, standardIdentifiers};
 }
 
