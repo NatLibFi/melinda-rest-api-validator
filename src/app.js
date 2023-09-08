@@ -1,10 +1,11 @@
 import {promisify, inspect} from 'util';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
-import {mongoFactory, amqpFactory, logError, QUEUE_ITEM_STATE, IMPORT_JOB_STATE, OPERATIONS, createRecordResponseItem, addRecordResponseItem, mongoLogFactory} from '@natlibfi/melinda-rest-api-commons';
+import {mongoFactory, amqpFactory, logError, LOG_ITEM_TYPE, QUEUE_ITEM_STATE, IMPORT_JOB_STATE, OPERATIONS, createRecordResponseItem, addRecordResponseItem, mongoLogFactory} from '@natlibfi/melinda-rest-api-commons';
 import validatorFactory from './interfaces/validator';
 import toMarcRecordFactory from './interfaces/toMarcRecords';
 import httpStatus from 'http-status';
+import {logRecord} from './interfaces/validator/log-actions';
 
 const setTimeoutPromise = promisify(setTimeout);
 
@@ -197,17 +198,21 @@ export default async function ({
 
   async function processValidated({headers, correlationId, processResult, mongoOperator, prio}) {
 
-    logger.debug(`processValidated: operation: ${processResult.headers.operation}`);
+    logger.debug(`app/processValidated: operation: ${processResult.headers.operation}`);
     if (['SKIPPED', 'SKIPPED_CHANGE', 'SKIPPED_UPDATE'].includes(processResult.headers.operation)) {
+      // we do not log resultRecord for skipResults
       return setSkipResult({correlationId, processResult, mongoOperator, prio});
     }
 
+    // logResultRecord
+    logger.silly(`app/processValidated: processResult: ${inspect(processResult)}`);
+    logRecord(mongoLogOperator, {headers: processResult.headers, record: processResult.data, recordMetadata: processResult.headers.recordMetadata, logItemType: LOG_ITEM_TYPE.RESULT_RECORD_LOG, logConfig: validatorOptions.logOptions.logResultRecord});
 
     // check if validation changed operation
     await setOperationsInQueueItem({correlationId, mongoOperator, prio, addOperation: processResult.headers.operation, removeOperation: headers.operation});
 
     const {noop} = headers.operationSettings;
-    logger.silly(`app/checkAmqp: noop ${noop}`);
+    logger.silly(`app/processValidated: noop ${noop}`);
 
     if (noop) {
       return setNoopResult({correlationId, processResult, mongoOperator, prio});
@@ -236,12 +241,11 @@ export default async function ({
 
   async function setNormalResult({correlationId, processResult, mongoOperator, prio}) {
     const newOperation = processResult.headers.operation;
-
     const operationQueue = `${newOperation}.${correlationId}`;
-
 
     // eslint-disable-next-line functional/no-conditional-statements
     if (prio) {
+      // empty prio queue
       await amqpOperator.checkQueue({queue: operationQueue, style: 'messages', purge: true});
     }
 
@@ -253,7 +257,7 @@ export default async function ({
       data: processResult.data
     };
 
-    logger.silly(`app/checkAmqp: sending to queue ${inspect(toQueue, {colors: true, maxArrayLength: 3, depth: 4})}`);
+    logger.silly(`app/setNormalResult: sending to queue ${inspect(toQueue, {colors: true, maxArrayLength: 3, depth: 4})}`);
     await amqpOperator.sendToQueue(toQueue);
 
     if (prio) {
@@ -267,6 +271,7 @@ export default async function ({
       return initCheck();
     }
 
+    // we should not end up here
     return initCheck();
   }
 
@@ -289,6 +294,7 @@ export default async function ({
 
     // Remove logItems for SKIPPED records to save space in Mongo
     // (Move to an independent function)
+    // We probably remove also inputRecordLogs here?
     const {blobSequence} = processResult.headers.recordMetadata;
     mongoLogOperator.removeBySequences(correlationId, [blobSequence]);
 
@@ -327,11 +333,9 @@ export default async function ({
     return initCheck();
   }
 
-  // eslint-disable-next-line max-statements
   async function setError({error, correlationId, mongoOperator, prio, headers = undefined}) {
 
     logger.debug(`Headers from original message: ${JSON.stringify(headers)}`);
-
 
     logger.silly(`error.status: ${error.status}`);
     const responseStatus = error.status || httpStatus.INTERNAL_SERVER_ERROR;
@@ -367,7 +371,6 @@ export default async function ({
   async function checkMongo({mongoOperator, amqpOperator, prio}) {
 
     // bulk jobs for validation
-
     const queueItemValidating = await mongoOperator.getOne({queueItemState: QUEUE_ITEM_STATE.VALIDATOR.VALIDATING});
 
     if (queueItemValidating) {

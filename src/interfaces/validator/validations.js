@@ -30,7 +30,7 @@ export async function validationsFactory(
     matchOptionsList,
     stopWhenFound,
     acceptZeroWithMaxCandidates,
-    logNoMatches
+    logOptions
   }
 ) {
   logger.debug(`postMergeFixOptions: ${JSON.stringify(postMergeFixOptions)}`);
@@ -156,7 +156,7 @@ export async function validationsFactory(
         // Should we also validate the matches before erroring? Now we error also those cases, where the match would fail matchValidation
         const matchResultsForLog = matches.map((match, index) => ({action: false, preference: false, message: 'Validation not run', matchSequence: index, ...match}));
 
-        logMatchAction(mongoLogOperator, {headers, record, matchResultsForLog, matcherReports, logNoMatches});
+        logMatchAction(mongoLogOperator, {headers, record, matchResultsForLog, matcherReports, logNoMatches: logOptions.logNoMatches});
         throw new ValidationError(HttpStatus.CONFLICT, {message: 'Duplicates in database', ids: matches.map(({candidate: {id}}) => id), recordMetadata});
       }
 
@@ -167,7 +167,7 @@ export async function validationsFactory(
 
       logger.verbose('No matching records');
       // MATCH_LOG for no matches
-      logMatchAction(mongoLogOperator, {headers, record, matchResultsForLog: [], matcherReports, logNoMatches});
+      logMatchAction(mongoLogOperator, {headers, record, matchResultsForLog: [], matcherReports, logNoMatches: logOptions.logNoMatches});
 
       // Note validationService = validation.js from melinda-rest-api-commons
       // which uses marc-record-validate
