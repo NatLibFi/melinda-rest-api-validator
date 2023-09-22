@@ -14,7 +14,7 @@
 		"url": "git@github.com:NatLibFi/melinda-rest-api-validator.git"
 	},
 	"license": "AGPL-3.0+",
-	"version": "3.4.2",
+	"version": "3.4.3-alpha.1",
 	"main": "./dist/index.js",
 	"engines": {
 		"node": ">=18"
@@ -86,9 +86,9 @@
 			]
 		],
 		"plugins": [
-		 [
-			"@babel/transform-runtime"
-		 ]
+			[
+				"@babel/transform-runtime"
+			]
 		],
 		"env": {
 			"test": {
