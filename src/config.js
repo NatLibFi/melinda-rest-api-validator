@@ -33,7 +33,7 @@ const acceptZeroWithMaxCandidates = readEnvironmentVariable('ACCEPT_ZERO_WITH_MA
 const logNoMatches = readEnvironmentVariable('LOG_NO_MATCHES', {defaultValue: 0, format: v => parseBoolean(v)});
 const logInputRecord = readEnvironmentVariable('LOG_INPUT_RECORD', {defaultValue: 0, format: v => parseBoolean(v)});
 const logResultRecord = readEnvironmentVariable('LOG_RESULT_RECORD', {defaultValue: 0, format: v => parseBoolean(v)});
-
+const matchFailuresAsNew = readEnvironmentVariable('MATCH_FAILURES_AS_NEW', {defaultValue: false, format: v => parseBoolean(v)});
 
 // We could have also settings matchValidation and merge here
 
@@ -46,6 +46,7 @@ export const validatorOptions = {
   matchOptionsList: generateMatchOptionsList(),
   stopWhenFound,
   acceptZeroWithMaxCandidates,
+  matchFailuresAsNew,
   logOptions: {logNoMatches, logInputRecord, logResultRecord}
 };
 
