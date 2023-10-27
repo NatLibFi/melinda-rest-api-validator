@@ -48,8 +48,8 @@ describe('validateUpdate', () => {
     // eslint-disable-next-line max-statements
     callback: ({getFixture, expectedResult, cataloger, skipValidation = false}) => {
 
-      const record1 = new MarcRecord(getFixture('record1.json'));
-      const record2 = new MarcRecord(getFixture('record2.json'));
+      const record1 = new MarcRecord(getFixture('record1.json'), {subfieldValues: false});
+      const record2 = new MarcRecord(getFixture('record2.json'), {subfieldValues: false});
       debugData(`Record1:\n${record1}`);
       debugData(`Record2:\n${record2}`);
 

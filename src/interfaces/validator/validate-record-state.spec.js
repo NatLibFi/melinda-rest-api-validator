@@ -59,7 +59,7 @@ function updateCatsInRecord(record, updateCats) {
   return new MarcRecord({
     leader: record.leader,
     fields: updateCatFields(record.fields, currentTimeStampForC, currentTimeStampForH)
-  });
+  }, {subfieldValues: false});
 
   function updateCatFields(fields, timeC, timeH) {
     return fields.map(updateCat);
