@@ -198,7 +198,7 @@ export default async function ({validatorOptions, mongoLogOperator}) {
       const recordObject = await fixRecord(unzerialized, preValidationFixOptions);
       logger.silly(`Formated recordObject:\n${JSON.stringify(recordObject)}`);
       //return new MarcRecord(recordObject, {subfieldValues: false});
-      return new MarcRecord(recordObject);
+      return new MarcRecord(recordObject, {subfieldValues: false});
     } catch (err) {
       logger.debug(`unserializeAndFormatRecord errored:`);
       logError(err);
