@@ -102,8 +102,8 @@ describe('validateRecordState', () => {
     // eslint-disable-next-line max-statements
     callback: ({getFixture, expectedToThrow, expectedStatus, expectedError, skipValidation, updateCats}) => {
 
-      const record1 = updateCatsInRecord(new MarcRecord(getFixture('record1.json')), updateCats);
-      const record2 = updateCatsInRecord(new MarcRecord(getFixture('record2.json')), updateCats);
+      const record1 = updateCatsInRecord(new MarcRecord(getFixture('record1.json'), {subfieldValues: false}), updateCats);
+      const record2 = updateCatsInRecord(new MarcRecord(getFixture('record2.json'), {subfieldValues: false}), updateCats);
 
       if (skipValidation) {
         debug(`Running validation with (4th param) validate: false`);
