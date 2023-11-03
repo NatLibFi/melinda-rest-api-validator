@@ -25,7 +25,7 @@ describe('own-authorization', () => {
   describe('validateChanges', () => {
     it('Should pass', () => {
       const tags = JSON.parse(tags1);
-      const record = new MarcRecord(JSON.parse(record1));
+      const record = new MarcRecord(JSON.parse(record1), {subfieldValues: false});
 
       expect(() => {
         validateOwnChanges({ownTags: tags, incomingRecord: record, operation: OPERATIONS.CREATE});
@@ -34,8 +34,8 @@ describe('own-authorization', () => {
 
     it('Should pass (Record comparison)', () => {
       const tags = JSON.parse(tags2);
-      const recordA = new MarcRecord(JSON.parse(record2a));
-      const recordB = new MarcRecord(JSON.parse(record2b));
+      const recordA = new MarcRecord(JSON.parse(record2a), {subfieldValues: false});
+      const recordB = new MarcRecord(JSON.parse(record2b), {subfieldValues: false});
 
       expect(() => {
         validateOwnChanges({ownTags: tags, incomingRecord: recordA, existingRecord: recordB});
@@ -44,7 +44,7 @@ describe('own-authorization', () => {
 
     it('Should throw', () => {
       const tags = JSON.parse(tags3);
-      const record = new MarcRecord(JSON.parse(record3));
+      const record = new MarcRecord(JSON.parse(record3), {subfieldValues: false});
 
       expect(() => {
         validateOwnChanges({ownTags: tags, incomingRecord: record, operation: OPERATIONS.CREATE});
@@ -53,7 +53,7 @@ describe('own-authorization', () => {
 
     it('Should throw (operation UPDATE, no existingRecord)', () => {
       const tags = JSON.parse(tags1);
-      const record = new MarcRecord(JSON.parse(record1));
+      const record = new MarcRecord(JSON.parse(record1), {subfieldValues: false});
 
       expect(() => {
         validateOwnChanges({ownTags: tags, incomingRecord: record, operation: OPERATIONS.UPDATE});
@@ -63,8 +63,8 @@ describe('own-authorization', () => {
 
     it('Should throw (Record comparison)', () => {
       const tags = JSON.parse(tags4);
-      const recordA = new MarcRecord(JSON.parse(record4a));
-      const recordB = new MarcRecord(JSON.parse(record4b));
+      const recordA = new MarcRecord(JSON.parse(record4a), {subfieldValues: false});
+      const recordB = new MarcRecord(JSON.parse(record4b), {subfieldValues: false});
 
       expect(() => {
         validateOwnChanges({ownTags: tags, incomingRecord: recordA, existingRecord: recordB});
@@ -73,8 +73,8 @@ describe('own-authorization', () => {
 
     it('Should skip validation if validate param is false', () => {
       const tags = JSON.parse(tags4);
-      const recordA = new MarcRecord(JSON.parse(record4a));
-      const recordB = new MarcRecord(JSON.parse(record4b));
+      const recordA = new MarcRecord(JSON.parse(record4a), {subfieldValues: false});
+      const recordB = new MarcRecord(JSON.parse(record4b), {subfieldValues: false});
 
       const result = validateOwnChanges({ownTags: tags, incomingRecord: recordA, existingRecord: recordB, validate: false});
       expect(result).to.eql('skipped');
