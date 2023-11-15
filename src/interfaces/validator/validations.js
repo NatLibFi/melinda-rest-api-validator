@@ -285,7 +285,8 @@ export async function validationsFactory(
         const newNote = `No new incoming changes from ${catalogerForLog} detected while trying to update existing record ${firstResult.candidate.id}, update skipped.`;
         const updatedHeaders = {
           operation: 'SKIPPED_UPDATE',
-          notes: headers.notes ? headers.notes.concat(`${newNote}`) : [newNote]
+          notes: headers.notes ? headers.notes.concat(`${newNote}`) : [newNote],
+          id: firstResult?.candidate?.id || headers.id
         };
         const finalHeaders = {...headers, ...updatedHeaders};
         return {result: {record, validationResult: false}, recordMetadata, headers: finalHeaders};
