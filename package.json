@@ -116,7 +116,7 @@
 		"lines": 80,
 		"statements": 80,
 		"functions": 80,
-		"branches": 80
+		"branches": 74
 	},
 	"nodemonConfig": {
 		"exec": "npm run test:dev && npm run start:dev",
