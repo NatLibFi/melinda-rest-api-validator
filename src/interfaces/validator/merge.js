@@ -1,9 +1,9 @@
 import HttpStatus from 'http-status';
 import createDebugLogger from 'debug';
 import {MarcRecord} from '@natlibfi/marc-record';
-import merger, {Reducers} from '@natlibfi/marc-record-merge';
+import merger from '@natlibfi/marc-record-merge';
 //import {inspect} from 'util';
-import {MelindaReducers, MelindaCopyReducerConfigs} from '@natlibfi/melinda-marc-record-merge-reducers';
+import {MelindaReducers} from '@natlibfi/melinda-marc-record-merge-reducers';
 import {Error as MergeError} from '@natlibfi/melinda-commons';
 
 // merge.js
@@ -19,8 +19,9 @@ export default function ({base, source, recordType}) {
   debug(' ----- MERGE ----- ');
 
   /* istanbul ignore next */
-  const melindaCopyReducers = MelindaCopyReducerConfigs.map(conf => Reducers.copy(conf));
-  const reducers = recordType === 'bib' ? [...melindaCopyReducers, ...MelindaReducers] : undefined;
+  //const melindaCopyReducers = MelindaCopyReducerConfigs.map(conf => Reducers.copy(conf));
+  //const reducers = recordType === 'bib' ? [...melindaCopyReducers, ...MelindaReducers] : undefined;
+  const reducers = recordType === 'bib' ? MelindaReducers : undefined;
 
   if (!reducers) {
     debug(`No reducers! RecordType: ${recordType}`);
