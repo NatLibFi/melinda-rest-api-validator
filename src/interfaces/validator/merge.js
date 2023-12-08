@@ -47,6 +47,7 @@ export default function ({base, source, recordType}) {
   debug(`Merge result is: ${result.constructor.name}`);
   debugData(`${result.toString()}`);
 
+  /* istanbul ignore if  */
   if (!result) {
     throw new MergeError(HttpStatus.UNPROCESSABLE_ENTITY, `Merge resulted in no record`);
   }
