@@ -31,6 +31,7 @@ export default async function ({validatorOptions, mongoLogOperator}) {
   //    - this should handle extra f884s too
   // preImportFix:
   //    - format $w and $0 codes to alephInternal Format
+  //    - delete f984 $a including any of control phases for validator
   // formerly known as formatRecord
   const {fixRecord} = fixes;
 
