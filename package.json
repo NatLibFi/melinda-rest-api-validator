@@ -14,7 +14,7 @@
 		"url": "git@github.com:NatLibFi/melinda-rest-api-validator.git"
 	},
 	"license": "AGPL-3.0+",
-	"version": "3.4.12",
+	"version": "3.4.13-alpha.1",
 	"main": "./dist/index.js",
 	"engines": {
 		"node": ">=18"
@@ -43,7 +43,7 @@
 		"@natlibfi/melinda-backend-commons": "^2.2.5",
 		"@natlibfi/melinda-commons": "^13.0.10",
 		"@natlibfi/melinda-marc-record-merge-reducers": "^2.0.24",
-		"@natlibfi/melinda-record-match-validator": "^2.1.0",
+		"@natlibfi/melinda-record-match-validator": "^2.2.0-alpha.1",
 		"@natlibfi/melinda-record-matching": "^4.3.0",
 		"@natlibfi/melinda-rest-api-commons": "^4.1.0",
 		"@natlibfi/sru-client": "^6.0.8",
@@ -59,7 +59,7 @@
 		"@babel/plugin-transform-runtime": "^7.23.7",
 		"@babel/preset-env": "^7.23.8",
 		"@babel/register": "^7.23.7",
-		"@natlibfi/eslint-config-melinda-backend": "^3.0.3",
+		"@natlibfi/eslint-config-melinda-backend": "^3.0.4-alpha.2 ",
 		"@natlibfi/fixugen-http-server": "^1.1.9",
 		"@natlibfi/fixura": "^3.0.4",
 		"babel-plugin-istanbul": "^6.1.1",
