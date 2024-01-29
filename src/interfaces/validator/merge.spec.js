@@ -49,8 +49,8 @@ describe('merge', () => {
 
       debug(`Running test`);
 
-      const record1 = new MarcRecord(getFixture('record1.json'));
-      const record2 = new MarcRecord(getFixture('record2.json'));
+      const record1 = new MarcRecord(getFixture('record1.json'), {subfieldValues: false});
+      const record2 = new MarcRecord(getFixture('record2.json'), {subfieldValues: false});
       //const record1 = getFixture('record1.json');
       //const record2 = getFixture('record2.json');
 

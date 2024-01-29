@@ -207,7 +207,7 @@ export function normalizeEmptySubfieldsRecord(record) {
 
   const fields = controlFields.concat(dataFields);
 
-  return new MarcRecord({leader: record.leader, fields});
+  return new MarcRecord({leader: record.leader, fields}, {subfieldValues: false});
 
 }
 

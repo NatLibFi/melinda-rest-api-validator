@@ -47,7 +47,7 @@ describe('validateExistingRecord', () => {
     // eslint-disable-next-line max-statements
     callback: ({getFixture, expectedToThrow, expectedStatus, expectedError, skipValidation}) => {
 
-      const record = new MarcRecord(getFixture('record.json'));
+      const record = new MarcRecord(getFixture('record.json'), {subfieldValues: false});
 
       if (skipValidation) {
         debug(`Running validation with (3rd param) validate: false`);
