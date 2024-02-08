@@ -27,7 +27,8 @@ export const splitterOptions = {
   keepSplitterReport: readEnvironmentVariable('KEEP_SPLITTER_REPORT', {defaultValue: 'ERROR'})
 };
 
-const validatorMatchPackages = readEnvironmentVariable('VALIDATOR_MATCH_PACKAGES', {defaultValue: 'IDS,STANDARD_IDS,CONTENT'}).split(',');
+//const validatorMatchPackages = readEnvironmentVariable('VALIDATOR_MATCH_PACKAGES', {defaultValue: 'IDS,STANDARD_IDS,CONTENT'}).split(',');
+const validatorMatchPackages = readEnvironmentVariable('VALIDATOR_MATCH_PACKAGES', {defaultValue: 'IDS,STANDARD_IDS,CONTENTALT'}).split(',');
 const stopWhenFound = readEnvironmentVariable('STOP_WHEN_FOUND', {defaultValue: 1, format: v => parseBoolean(v)});
 const acceptZeroWithMaxCandidates = readEnvironmentVariable('ACCEPT_ZERO_WITH_MAX_CANDIDATES', {defaultValue: 0, format: v => parseBoolean(v)});
 const logNoMatches = readEnvironmentVariable('LOG_NO_MATCHES', {defaultValue: 0, format: v => parseBoolean(v)});
@@ -196,7 +197,7 @@ function generateStrategy(validatorMatchPackage) {
       ];
     }
 
-    if (validatorMatchPackage === 'CONTENT') {
+    if (['CONTENT', 'CONTENTALT'].includes(validatorMatchPackage)) {
       return [
         matchDetection.features.bib.hostComponent(),
         matchDetection.features.bib.isbn(),
@@ -241,6 +242,15 @@ function generateSearchSpec(validatorMatchPackage) {
         //candidateSearch.searchTypes.bib.titleAuthor,
         candidateSearch.searchTypes.bib.title
       ];
+    }
+    if (validatorMatchPackage === 'CONTENTALT') {
+      return [
+        candidateSearch.searchTypes.bib.hostComponents,
+        // titleAuthorYearAlternates searches for matchCandidates
+        // with alternate queries, starting from more tight searches
+        candidateSearch.searchTypes.bib.titleAuthorYearAlternates
+      ];
+
     }
     throw new Error('Unsupported match validation package');
   }
