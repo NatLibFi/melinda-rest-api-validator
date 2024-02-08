@@ -121,8 +121,8 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
         // eslint-disable-next-line no-param-reassign
         matcherNoRunCount += 1;
 
-        // If CONTENT -matcher or last matcher to run did not generate queries, match is not reliable
-        if (matcherName === 'CONTENT' || matchers.length <= 1) {
+        // If CONTENT/CONTENTALT -matcher or last matcher to run did not generate queries, match is not reliable
+        if (['CONTENT', 'CONTENTALT'].includes(matcherName) || matchers.length <= 1) {
           logger.verbose(`Matcher ${matcherSequence} (${matcherName}) could not generate search queries.`);
           throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: err.message});
         }
