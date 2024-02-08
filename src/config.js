@@ -246,6 +246,8 @@ function generateSearchSpec(validatorMatchPackage) {
     if (validatorMatchPackage === 'CONTENTALT') {
       return [
         candidateSearch.searchTypes.bib.hostComponents,
+        // titleAuthorYearAlternates searches for matchCandidates
+        // with alternate queries, starting from more tight searches
         candidateSearch.searchTypes.bib.titleAuthorYearAlternates
       ];
 
