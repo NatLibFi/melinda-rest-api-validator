@@ -170,17 +170,16 @@ export default async function ({
   async function processFreshMessage({message, mongoOperator, amqpOperator, prio}) {
 
     // different contents in headers here? batchBulk has just format
-    const {headers} = message.properties;
-    const {correlationId} = message.properties;
+    const {headers, correlationId} = message.properties;
 
     // content data: streambulk: recordObject, prio & batchbulk: messageBody to unserializeAndFormat to record
+    //               prioFix: empty, bulkFix: messageBody to format to AlephSysList
     const messageContentString = message.content.toString();
     logger.silly(`messageContentString: ${messageContentString}`);
 
     const content = JSON.parse(messageContentString);
 
     logger.silly(`app/checkAmqp: content ${content}`);
-    //
     //logger.silly(`app/checkAmqp: content ${inspect(content, {colors: true, maxArrayLength: 3, depth: 1})}}`);
 
     // validator.process returns: {headers, data}
@@ -189,15 +188,24 @@ export default async function ({
     const processResult = await validator(headers, content.data);
     // If not-noop and validator.process fails, it errors
     // for noop failing marc-record-validate return result.failed: true
-    logger.silly(`app/checkAmqp: Validation process results: ${inspect(processResult, {colors: true, maxArrayLength: 3, depth: 1})}`);
-    logger.debug(`app/checkAmqp: Validation process results: ${JSON.stringify(processResult.headers)}`);
+    logger.debug(`app/checkAmqp: Validation process results: ${inspect(processResult, {colors: true, maxArrayLength: 3, depth: 1})}`);
+    logger.debug(`app/checkAmqp: Validation process results (headers): ${JSON.stringify(processResult.headers)}`);
 
     await amqpOperator.ackMessages([message]);
-    return processValidated({headers, correlationId, processResult, mongoOperator, prio});
+
+    const {operation} = processResult.headers;
+    logger.debug(`OPERATION: ${operation}`);
+
+    if ([OPERATIONS.UPDATE, OPERATIONS.CREATE].includes(operation)) {
+      return processValidatedLoad({headers, correlationId, processResult, mongoOperator, prio});
+    }
+    if ([OPERATIONS.FIX].includes(operation)) {
+      return processValidatedFix({headers, correlationId, processResult, mongoOperator, prio});
+    }
+    throw new Error(httpStatus.INTERNAL_SERVER_ERROR, `Unknown operation ${operation}`);
   }
 
-  async function processValidated({headers, correlationId, processResult, mongoOperator, prio}) {
-
+  async function processValidatedLoad({headers, correlationId, processResult, mongoOperator, prio}) {
     logger.debug(`app/processValidated: operation: ${processResult.headers.operation}`);
     if (['SKIPPED', 'SKIPPED_CHANGE', 'SKIPPED_UPDATE'].includes(processResult.headers.operation)) {
       // we do not log resultRecord for skipResults
@@ -213,6 +221,20 @@ export default async function ({
 
     const {noop} = headers.operationSettings;
     logger.silly(`app/processValidated: noop ${noop}`);
+
+    if (noop) {
+      logger.debug(`FOO`);
+      return setNoopResult({correlationId, processResult, mongoOperator, prio});
+    }
+
+    return setNormalResult({correlationId, processResult, mongoOperator, prio});
+  }
+
+  function processValidatedFix({headers, correlationId, processResult, mongoOperator, prio}) {
+    logger.debug(`app/processValidatedFix: operation: ${processResult.headers.operation}`);
+
+    const {noop} = headers.operationSettings;
+    logger.silly(`app/processValidatedFix: noop ${noop}`);
 
     if (noop) {
       return setNoopResult({correlationId, processResult, mongoOperator, prio});
@@ -242,12 +264,16 @@ export default async function ({
   async function setNormalResult({correlationId, processResult, mongoOperator, prio}) {
     const newOperation = processResult.headers.operation;
     const operationQueue = `${newOperation}.${correlationId}`;
+    logger.debug(JSON.stringify(newOperation));
+    logger.debug(JSON.stringify(operationQueue));
 
     // eslint-disable-next-line functional/no-conditional-statements
     if (prio) {
       // empty prio queue
       await amqpOperator.checkQueue({queue: operationQueue, style: 'messages', purge: true});
     }
+
+    logger.debug(`Next sendtoQueue`);
 
     // Normal (non-noop and not NO_CHANGES) data to queue operation.correlationId
     const toQueue = {
@@ -257,8 +283,9 @@ export default async function ({
       data: processResult.data
     };
 
-    logger.silly(`app/setNormalResult: sending to queue ${inspect(toQueue, {colors: true, maxArrayLength: 3, depth: 4})}`);
+    logger.debug(`app/setNormalResult: sending to queue ${inspect(toQueue, {colors: true, maxArrayLength: 3, depth: 4})}`);
     await amqpOperator.sendToQueue(toQueue);
+    logger.debug(`MongoOperator: ${JSON.stringify(mongoOperator)}`);
 
     if (prio) {
       await mongoOperator.checkAndSetImportJobState({correlationId, operation: newOperation, importJobState: IMPORT_JOB_STATE.IN_QUEUE});
@@ -306,7 +333,20 @@ export default async function ({
     return initCheck();
   }
 
-  async function setNoopResult({correlationId, processResult, mongoOperator, prio}) {
+  function setNoopResult({correlationId, processResult, mongoOperator, prio}) {
+    logger.debug(`correlationId: ${correlationId}`);
+    logger.debug(`processResult ${JSON.stringify(processResult)}`);
+    logger.debug(`mongoOperator: ${JSON.stringify(mongoOperator)}`);
+    logger.debug(`Prio: ${JSON.stringify(prio)}`);
+
+    if (processResult.headers.operation === OPERATIONS.FIX) {
+      return setNoopResultFix({correlationId, processResult, mongoOperator, prio});
+    }
+    return setNoopResultLoad({correlationId, processResult, mongoOperator, prio});
+  }
+
+
+  async function setNoopResultLoad({correlationId, processResult, mongoOperator, prio}) {
 
     logger.debug(`Setting noop result`);
     const status = processResult.headers.operation === 'CREATE' ? 'CREATED' : 'UPDATED';
@@ -332,6 +372,43 @@ export default async function ({
 
     return initCheck();
   }
+
+  async function setNoopResultFix({correlationId, processResult, mongoOperator, prio}) {
+
+    logger.debug(`Setting noop result`);
+    const status = 'FIXED';
+    const {id} = processResult.headers;
+    const {fixType} = processResult.headers.operationSettings;
+
+
+    logger.silly(inspect(processResult));
+
+    const {notes} = processResult.headers;
+    const notesString = notes && Array.isArray(notes) && notes.length > 0 ? `${notes.join(' - ')} - ` : '';
+
+    const messageStart = `Would fix (${fixType}) record ${id}.`;
+    const messageEnd = ` - Noop.`;
+
+    const responsePayload = {message: `${notesString}${messageStart}${messageEnd}`};
+
+    const recordResponseItem = createRecordResponseItem({responseStatus: status, responsePayload, recordMetadata: processResult.headers.recordMetadata, id});
+
+    logger.debug(`Add record response item to Mongo`);
+    logger.debug(`recordResponseItem: ${JSON.stringify(recordResponseItem)}`);
+    logger.debug(`correlationId: ${JSON.stringify(correlationId)}`);
+    logger.debug(`mongoOperator: ${JSON.stringify(mongoOperator)}`);
+
+
+    await addRecordResponseItem({recordResponseItem, correlationId, mongoOperator});
+
+    if (prio) {
+      await mongoOperator.checkAndSetState({correlationId, state: QUEUE_ITEM_STATE.DONE});
+      return initCheck();
+    }
+
+    return initCheck();
+  }
+
 
   async function setError({error, correlationId, mongoOperator, prio, headers = undefined}) {
 
