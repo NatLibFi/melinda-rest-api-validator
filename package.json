@@ -13,7 +13,7 @@
 		"type": "git",
 		"url": "git@github.com:NatLibFi/melinda-rest-api-validator.git"
 	},
-	"license": "AGPL-3.0+",
+	"license": "MIT",
 	"version": "3.6.2",
 	"main": "./dist/index.js",
 	"engines": {
