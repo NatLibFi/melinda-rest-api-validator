@@ -42,7 +42,7 @@
 		"@natlibfi/marc-record-validators-melinda": "^11.3.1",
 		"@natlibfi/melinda-backend-commons": "^2.2.6",
 		"@natlibfi/melinda-commons": "^13.0.15",
-		"@natlibfi/melinda-marc-record-merge-reducers": "^2.2.4",
+		"@natlibfi/melinda-marc-record-merge-reducers": "^2.2.5",
 		"@natlibfi/melinda-record-match-validator": "^2.2.2",
 		"@natlibfi/melinda-record-matching": "^4.3.3",
 		"@natlibfi/melinda-rest-api-commons": "^4.1.7",
