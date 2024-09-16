@@ -27,7 +27,8 @@ export const splitterOptions = {
   keepSplitterReport: readEnvironmentVariable('KEEP_SPLITTER_REPORT', {defaultValue: 'ERROR'})
 };
 
-const validatorMatchPackages = readEnvironmentVariable('VALIDATOR_MATCH_PACKAGES', {defaultValue: 'IDS,STANDARD_IDS,CONTENT'}).split(',');
+//const validatorMatchPackages = readEnvironmentVariable('VALIDATOR_MATCH_PACKAGES', {defaultValue: 'IDS,STANDARD_IDS,CONTENT'}).split(',');
+const validatorMatchPackages = readEnvironmentVariable('VALIDATOR_MATCH_PACKAGES', {defaultValue: 'IDS,STANDARD_IDS,CONTENTALT'}).split(',');
 const stopWhenFound = readEnvironmentVariable('STOP_WHEN_FOUND', {defaultValue: 1, format: v => parseBoolean(v)});
 const acceptZeroWithMaxCandidates = readEnvironmentVariable('ACCEPT_ZERO_WITH_MAX_CANDIDATES', {defaultValue: 0, format: v => parseBoolean(v)});
 const logNoMatches = readEnvironmentVariable('LOG_NO_MATCHES', {defaultValue: 0, format: v => parseBoolean(v)});
@@ -78,19 +79,19 @@ function generateMatchOptions(validatorMatchPackage) {
 }
 
 function generateMaxMatches(validatorMatchPackage) {
-  if (validatorMatchPackage === 'IDS') {
+  if (['IDS'].includes(validatorMatchPackage)) {
     const value = 1;
     debug(`MaxMatches for ${validatorMatchPackage} is defined in in config: ${value}`);
     return value;
   }
 
-  if (validatorMatchPackage === 'STANDARD_IDS') {
+  if (['STANDARD_IDS'].includes(validatorMatchPackage)) {
     const value = 10;
     debug(`MaxMatches for ${validatorMatchPackage} is defined in in config: ${value}`);
     return value;
   }
 
-  if (validatorMatchPackage === 'CONTENT') {
+  if (['CONTENT', 'CONTENTALT'].includes(validatorMatchPackage)) {
     const value = 10;
     debug(`MaxMatches for ${validatorMatchPackage} is defined in in config: ${value}`);
     return value;
@@ -101,23 +102,30 @@ function generateMaxMatches(validatorMatchPackage) {
 }
 
 function generateMaxCandidates(validatorMatchPackage) {
-  if (validatorMatchPackage === 'IDS') {
+  if (['IDS'].includes(validatorMatchPackage)) {
     const value = 50;
     debug(`MaxCandidates for ${validatorMatchPackage} is defined in in config: ${value}`);
     return value;
   }
 
-  if (validatorMatchPackage === 'STANDARD_IDS') {
+  if (['STANDARD_IDS'].includes(validatorMatchPackage)) {
     const value = 50;
     debug(`MaxCandidates for ${validatorMatchPackage} is defined in in config: ${value}`);
     return value;
   }
 
-  if (validatorMatchPackage === 'CONTENT') {
+  if (['CONTENT'].includes(validatorMatchPackage)) {
     const value = 50;
     debug(`MaxCandidates for ${validatorMatchPackage} is defined in in config: ${value}`);
     return value;
   }
+
+  if (['CONTENTALT'].includes(validatorMatchPackage)) {
+    const value = 150;
+    debug(`MaxCandidates for ${validatorMatchPackage} is defined in in config: ${value}`);
+    return value;
+  }
+
 
   debug(`MaxCandidates for ${validatorMatchPackage} uses environment variable`);
   return readEnvironmentVariable('MAX_CANDIDATES', {defaultValue: 25, format: v => Number(v)});
@@ -165,7 +173,7 @@ function generatePreImportFixOptions() {
 
 function generateStrategy(validatorMatchPackage) {
   if (recordType === 'bib') {
-    if (validatorMatchPackage === 'IDS') {
+    if (['IDS'].includes(validatorMatchPackage)) {
       return [
         matchDetection.features.bib.melindaId(),
         matchDetection.features.bib.allSourceIds()
@@ -175,7 +183,7 @@ function generateStrategy(validatorMatchPackage) {
     // We could have differing strategy for STANDARD_IDS
     // Let's not run title in strategy when we found the candidates through standard_ids search
 
-    if (validatorMatchPackage === 'STANDARD_IDS') {
+    if (['STANDARD_IDS'].includes(validatorMatchPackage)) {
       return [
         matchDetection.features.bib.hostComponent(),
         matchDetection.features.bib.isbn(),
@@ -197,7 +205,7 @@ function generateStrategy(validatorMatchPackage) {
       ];
     }
 
-    if (validatorMatchPackage === 'CONTENT') {
+    if (['CONTENT', 'CONTENTALT'].includes(validatorMatchPackage)) {
       return [
         matchDetection.features.bib.hostComponent(),
         matchDetection.features.bib.isbn(),
@@ -225,23 +233,32 @@ function generateStrategy(validatorMatchPackage) {
 
 function generateSearchSpec(validatorMatchPackage) {
   if (recordType === 'bib') {
-    if (validatorMatchPackage === 'IDS') {
+    if (['IDS'].includes(validatorMatchPackage)) {
       return [
         candidateSearch.searchTypes.bib.melindaId,
         candidateSearch.searchTypes.bib.sourceIds
       ];
     }
 
-    if (validatorMatchPackage === 'STANDARD_IDS') {
+    if (['STANDARD_IDS'].includes(validatorMatchPackage)) {
       return [candidateSearch.searchTypes.bib.standardIdentifiers];
     }
 
-    if (validatorMatchPackage === 'CONTENT') {
+    if (['CONTENT'].includes(validatorMatchPackage)) {
       return [
         candidateSearch.searchTypes.bib.hostComponents,
         //candidateSearch.searchTypes.bib.titleAuthor,
         candidateSearch.searchTypes.bib.title
       ];
+    }
+    if (['CONTENTALT'].includes(validatorMatchPackage)) {
+      return [
+        candidateSearch.searchTypes.bib.hostComponents,
+        // titleAuthorYearAlternates searches for matchCandidates
+        // with alternate queries, starting from more tight searches
+        candidateSearch.searchTypes.bib.titleAuthorYearAlternates
+      ];
+
     }
     throw new Error('Unsupported match validation package');
   }
