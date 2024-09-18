@@ -53,6 +53,8 @@ export default async function ({validatorOptions, mongoLogOperator}) {
     if ([OPERATIONS.FIX].includes(headers.operation)) {
       return processFix(headers, data);
     }
+    logger.debug(`Unknown operation: ${headers.operation}`);
+    throw new ValidationError(HttpStatus.INTERNAL_SERVER_ERROR, {message: `Unknown operation: ${headers.operation}`});
   }
 
   function processFix(headers) {

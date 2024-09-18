@@ -196,13 +196,18 @@ export default async function ({
     const {operation} = processResult.headers;
     logger.debug(`OPERATION: ${operation}`);
 
-    if ([OPERATIONS.UPDATE, OPERATIONS.CREATE].includes(operation)) {
-      return processValidatedLoad({headers, correlationId, processResult, mongoOperator, prio});
-    }
     if ([OPERATIONS.FIX].includes(operation)) {
       return processValidatedFix({headers, correlationId, processResult, mongoOperator, prio});
     }
-    throw new Error(httpStatus.INTERNAL_SERVER_ERROR, `Unknown operation ${operation}`);
+
+    return processValidatedLoad({headers, correlationId, processResult, mongoOperator, prio});
+
+    // Note: we have also operations SKIPPED_CHANGE, SKIPPED_UPDATE at this point!
+    //if ([OPERATIONS.UPDATE, OPERATIONS.CREATE].includes(operation)) {
+    //  return processValidatedLoad({headers, correlationId, processResult, mongoOperator, prio});
+    //}
+
+    //throw new Error(httpStatus.INTERNAL_SERVER_ERROR, `Unknown operation ${operation}`);
   }
 
   async function processValidatedLoad({headers, correlationId, processResult, mongoOperator, prio}) {
