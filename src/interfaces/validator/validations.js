@@ -54,6 +54,7 @@ export async function validationsFactory(
 
     // Currently also melinda-api-http forces all validations (validate=true) for prio and batchBulk
     const runValidations = operationSettings.validate || true;
+    const skipLowValidation = operationSettings.skipLowValidation || false;
 
     if (updateId) {
       // -> updating f001 is done later in validateRecord, so it gets done to other CREATE operation too
@@ -78,7 +79,7 @@ export async function validationsFactory(
       const updateMergeNeeded = operationSettings.merge && updateOperation !== 'updateAfterMerge';
       const {mergedRecord: updatedRecordAfterMerge, headers: newHeaders} = updateMergeNeeded ? await mergeRecordForUpdates({record: updateRecord, existingRecord, id: updateId, headers}) : {mergedRecord: updateRecord, headers};
 
-      runValidateOwnChanges({cataloger, incomingRecord: updatedRecordAfterMerge, existingRecord, operation: headers.operation, recordMetadata, runValidations});
+      runValidateOwnChanges({cataloger, incomingRecord: updatedRecordAfterMerge, existingRecord, operation: headers.operation, recordMetadata, runValidations, skipLowValidation});
 
       logger.verbose('Checking CAT field history');
       validateRecordState({incomingRecord: updatedRecordAfterMerge, existingRecord, existingId: updateId, recordMetadata, validate: runValidations});
@@ -124,10 +125,11 @@ export async function validationsFactory(
     const {recordMetadata, cataloger, operationSettings} = headers;
     // Currently force all validations for prio and batchBulk
     const runValidations = operationSettings.validate || true;
+    const skipLowValidation = operationSettings.skipLowValidation || false;
 
     logger.verbose(`Validations for CREATE operation. Unique: ${operationSettings.unique}, merge: ${operationSettings.merge}`);
 
-    runValidateOwnChanges({cataloger, incomingRecord: record, operation: headers.operation, recordMetadata, runValidations});
+    runValidateOwnChanges({cataloger, incomingRecord: record, operation: headers.operation, recordMetadata, runValidations, skipLowValidation});
 
     if (operationSettings.unique || operationSettings.merge) {
       logger.verbose('Attempting to find matching records in the SRU');
@@ -302,8 +304,12 @@ export async function validationsFactory(
     }
   }
 
-  function runValidateOwnChanges({cataloger, incomingRecord, existingRecord, operation, recordMetadata, runValidations}) {
+  function runValidateOwnChanges({cataloger, incomingRecord, existingRecord, operation, recordMetadata, runValidations, skipLowValidation}) {
     logger.debug(`cataloger: ${JSON.stringify(cataloger)}`);
+    if (skipLowValidation) {
+      logger.verbose(`skipLowValidation: ${skipLowValidation} - not checkin LOW-tag authorization`);
+      return;
+    }
     // bulks do not currently have cataloger.id AND cataloger.authorization
     // what if we have empty authorization?
     if (cataloger.id && cataloger.authorization) {
