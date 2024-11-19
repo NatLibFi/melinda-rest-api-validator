@@ -14,7 +14,7 @@
 		"url": "git@github.com:NatLibFi/melinda-rest-api-validator.git"
 	},
 	"license": "MIT",
-	"version": "3.7.2-alpha.1",
+	"version": "3.7.2-alpha.3",
 	"main": "./dist/index.js",
 	"engines": {
 		"node": ">=18"
@@ -40,10 +40,10 @@
 		"@natlibfi/marc-record-serializers": "^10.1.4",
 		"@natlibfi/melinda-backend-commons": "^2.3.5",
 		"@natlibfi/melinda-commons": "^13.0.18",
-		"@natlibfi/melinda-marc-record-merge-reducers": "^2.3.1",
+		"@natlibfi/melinda-marc-record-merge-reducers": "^2.3.2",
 		"@natlibfi/melinda-record-match-validator": "^2.2.4",
 		"@natlibfi/melinda-record-matching": "^4.3.3",
-		"@natlibfi/melinda-rest-api-commons": "^4.2.1",
+		"@natlibfi/melinda-rest-api-commons": "^4.2.2-alpha.3",
 		"@natlibfi/sru-client": "^6.0.16",
 		"debug": "^4.3.7",
 		"deep-eql": "^4.1.4",
