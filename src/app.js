@@ -23,6 +23,7 @@ export default async function ({
   const toMarcRecords = await toMarcRecordFactory({amqpOperator, mongoOperator, mongoLogOperator, splitterOptions});
 
   logger.info(`Started Melinda-rest-api-validator: ${pollRequest ? 'PRIORITY' : 'BULK'} for ${recordType} records`);
+  logger.debug(`Poll wait time: ${pollWaitTime} is ${typeof pollWaitTime}`);
 
   const server = await initCheck();
 
