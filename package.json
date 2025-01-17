@@ -46,7 +46,7 @@
 		"@natlibfi/melinda-rest-api-commons": "^4.2.3",
 		"@natlibfi/sru-client": "^6.0.17",
 		"debug": "^4.4.0",
-		"deep-eql": "^5.0.2",
+		"deep-eql": "^4.1.4",
 		"deep-object-diff": "^1.1.9",
 		"http-status": "^2.1.0"
 	},
