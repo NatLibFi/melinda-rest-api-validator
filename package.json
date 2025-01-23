@@ -39,7 +39,7 @@
 		"@natlibfi/marc-record-merge": "^7.0.8",
 		"@natlibfi/marc-record-serializers": "^10.1.5",
 		"@natlibfi/melinda-backend-commons": "^2.3.6",
-		"@natlibfi/melinda-commons": "^13.0.19-alpha.3",
+		"@natlibfi/melinda-commons": "^13.0.19",
 		"@natlibfi/melinda-marc-record-merge-reducers": "^2.3.3",
 		"@natlibfi/melinda-record-match-validator": "^2.2.5",
 		"@natlibfi/melinda-record-matching": "^4.3.4",
@@ -65,7 +65,7 @@
 		"chai": "^4.5.0",
 		"cross-env": "^7.0.3",
 		"eslint": "^8.57.1",
-		"mocha": "^11.0.1",
+		"mocha": "^11.1.0",
 		"nodemon": "^3.1.9",
 		"nyc": "^17.1.0"
 	},
