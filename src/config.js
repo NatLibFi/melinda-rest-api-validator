@@ -10,7 +10,7 @@ const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:config');
 
 // Poll variables
 export const pollRequest = readEnvironmentVariable('POLL_REQUEST', {defaultValue: 0, format: v => parseBoolean(v)});
-export const pollWaitTime = readEnvironmentVariable('POLL_WAIT_TIME', {defaultValue: 1000});
+export const pollWaitTime = parseInt(readEnvironmentVariable('POLL_WAIT_TIME', {defaultValue: 1000}), 10);
 
 // Amqp variables to priority
 export const amqpUrl = readEnvironmentVariable('AMQP_URL', {defaultValue: 'amqp://127.0.0.1:5672/'});
