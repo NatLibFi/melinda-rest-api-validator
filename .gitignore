@@ -24,8 +24,7 @@ node_modules/
 .eslintcache
 
 # dotenv environment variables file
-.env
-.env2
+.env*
 
 .nyc_output
 coverage

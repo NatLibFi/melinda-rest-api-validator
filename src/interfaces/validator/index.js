@@ -47,6 +47,7 @@ export default async function ({validatorOptions, mongoLogOperator}) {
   return process;
 
   function process(headers, data) {
+    logger.debug(`--- Checking operation: ${headers.operation}---`);
     if ([OPERATIONS.CREATE, OPERATIONS.UPDATE].includes(headers.operation)) {
       return processLoad(headers, data);
     }
