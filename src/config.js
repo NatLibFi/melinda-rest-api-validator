@@ -34,6 +34,8 @@ const acceptZeroWithMaxCandidates = readEnvironmentVariable('ACCEPT_ZERO_WITH_MA
 const logNoMatches = readEnvironmentVariable('LOG_NO_MATCHES', {defaultValue: 0, format: v => parseBoolean(v)});
 const logInputRecord = readEnvironmentVariable('LOG_INPUT_RECORD', {defaultValue: 0, format: v => parseBoolean(v)});
 const logResultRecord = readEnvironmentVariable('LOG_RESULT_RECORD', {defaultValue: 0, format: v => parseBoolean(v)});
+
+// Note: matchFailuresAsNew from operationSettings of the job overrides this default setting given in environmental variables
 const matchFailuresAsNew = readEnvironmentVariable('MATCH_FAILURES_AS_NEW', {defaultValue: false, format: v => parseBoolean(v)});
 
 // We could have also settings matchValidation and merge here
