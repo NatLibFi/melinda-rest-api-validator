@@ -11,6 +11,8 @@ import {LOG_ITEM_TYPE} from '@natlibfi/melinda-rest-api-commons/dist/constants';
 //import {AlephSequential} from '@natlibfi/marc-record-serializers';
 //import {detailedDiff} from 'deep-object-diff';
 import {validationsFactory} from './validations';
+import {fixValidationsFactory} from './fix-validations';
+
 
 //import createDebugLogger from 'debug';
 //const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator');
@@ -38,14 +40,36 @@ export default async function ({validatorOptions, mongoLogOperator}) {
   const conversionService = conversions();
   // should we have here matcherService? commons mongo/amqp
   const {updateValidations, createValidations} = await validationsFactory(mongoLogOperator, fixRecord, validatorOptions);
+  const {fixValidations} = await fixValidationsFactory(mongoLogOperator, {sruUrl: validatorOptions.sruUrl});
   //logger.debug(`Creating mongoLogOperator in ${mongoUri}`);
   //const mongoLogOperator = await mongoLogFactory(mongoUri);
 
   return process;
 
+  function process(headers, data) {
+    logger.debug(`--- Checking operation: ${headers.operation}---`);
+    if ([OPERATIONS.CREATE, OPERATIONS.UPDATE].includes(headers.operation)) {
+      logger.debug(`UPDATE/CREATE: processLoad`);
+      return processLoad(headers, data);
+    }
+    if ([OPERATIONS.FIX].includes(headers.operation)) {
+      logger.debug(`FIX: processFix`);
+      return processFix(headers);
+    }
+    logger.debug(`Unknown operation: ${headers.operation}`);
+    throw new ValidationError(HttpStatus.INTERNAL_SERVER_ERROR, {message: `Unknown operation: ${headers.operation}`});
+  }
+
+  function processFix(headers) {
+    logger.debug(`process headers ${JSON.stringify(headers)}`);
+    return fixValidations({headers});
+  }
+
+
   // eslint-disable-next-line max-statements
-  async function process(headers, data) {
+  async function processLoad(headers, data) {
     const {format, operationSettings, recordMetadata, operation, id} = headers;
+
     logger.debug(`process headers ${JSON.stringify(headers)}`);
 
     if (recordType !== 'bib' && (operationSettings.merge || operationSettings.unique)) {

@@ -1,6 +1,6 @@
 import httpStatus from 'http-status';
 import {Error as ValidationError, Error as ApiError} from '@natlibfi/melinda-commons';
-import {OPERATIONS} from '@natlibfi/melinda-rest-api-commons/dist/constants';
+import {OPERATIONS} from '@natlibfi/melinda-rest-api-commons';
 
 import createDebugLogger from 'debug';
 
