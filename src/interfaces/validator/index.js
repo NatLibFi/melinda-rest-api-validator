@@ -202,6 +202,7 @@ export default async function ({validatorOptions, mongoLogOperator}) {
   function checkAndUpdateId({record, headers}) {
     logger.debug(`--- Check and update id ---`);
     const recordF001 = getIdFromRecord(record);
+    //logger.debug(`Headers: ${JSON.stringify(headers)}`);
     const sequence = headers.recordMetadata.blobSequence;
     const {noStream, prio} = headers.operationSettings;
     logger.debug(`Operation: ${headers.operation}, Id from headers: <${headers.id}>, Id from record: <${recordF001}>, blobSequence: <${sequence}>, noStream: ${noStream}, prio: ${prio}`);

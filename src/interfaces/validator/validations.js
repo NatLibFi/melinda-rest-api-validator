@@ -30,6 +30,7 @@ export async function validationsFactory(
     matchOptionsList,
     stopWhenFound,
     acceptZeroWithMaxCandidates,
+    matchFailuresAsNew,
     logOptions
   }
 ) {
@@ -126,6 +127,7 @@ export async function validationsFactory(
     // Currently force all validations for prio and batchBulk
     const runValidations = operationSettings.validate || true;
     const skipLowValidation = operationSettings.skipLowValidation || false;
+    const handleMatchFailuresAsNew = operationSettings.matchFailuresAsNew ? operationSettings.matchFailuresAsNew : matchFailuresAsNew;
 
     logger.verbose(`Validations for CREATE operation. Unique: ${operationSettings.unique}, merge: ${operationSettings.merge}`);
 
@@ -151,9 +153,11 @@ export async function validationsFactory(
       logger.debug(`MatchReports: ${JSON.stringify(matcherReports)}`);
 
       const newHeaders = updateHeadersAfterMatch({matches, headers});
+      logger.debug(`Headers after match: ${JSON.stringify(newHeaders)}`);
 
+      // ERROR 409 CONFLICT
+      if (matches.length > 0 && !operationSettings.merge && !handleMatchFailuresAsNew) {
 
-      if (matches.length > 0 && !operationSettings.merge) {
         // we log the matches here before erroring
         // Should we also validate the matches before erroring? Now we error also those cases, where the match would fail matchValidation
         const matchResultsForLog = matches.map((match, index) => ({action: false, preference: false, message: 'Validation not run', matchSequence: index, ...match}));
@@ -162,26 +166,30 @@ export async function validationsFactory(
         throw new ValidationError(HttpStatus.CONFLICT, {message: 'Duplicates in database', ids: matches.map(({candidate: {id}}) => id), recordMetadata});
       }
 
-      if (matches.length > 0 && operationSettings.merge) {
-        logger.debug(`Found matches (${matches.length}) for merging.`);
-        return validateAndMergeMatchResults({record, matchResults: matches, headers: newHeaders, matcherReports});
+      // VALIDATE MATCHES
+      if (matches.length > 0 && (operationSettings.merge || handleMatchFailuresAsNew)) {
+        logger.debug(`Found matches (${matches.length}) for matchValidation and merging.`);
+        return validateAndMergeMatchResults({record, matchResults: matches, headers: newHeaders, matcherReports, handleMatchFailuresAsNew});
       }
 
       logger.verbose('No matching records');
       // MATCH_LOG for no matches
       logMatchAction(mongoLogOperator, {headers, record, matchResultsForLog: [], matcherReports, logNoMatches: logOptions.logNoMatches});
-
-      // Note validationService = validation.js from melinda-rest-api-commons
-      // which uses marc-record-validate
-      // currently checks only that possible f003 has value FI-MELINDA
-      // for some reason this does not work for noop CREATEs
-      // Do we actually need this validation?
-
-      const validationResults = await validationService(record);
-      return {result: validationResults, recordMetadata, headers: newHeaders};
+      return noValidMatches({record, recordMetadata, headers: newHeaders});
     }
 
     logger.debug('No unique/merge');
+    const validationResults = await validationService(record);
+    return {result: validationResults, recordMetadata, headers};
+  }
+
+  async function noValidMatches({record, recordMetadata, headers}) {
+    // Note validationService = validation.js from melinda-rest-api-commons
+    // which uses marc-record-validate
+    // currently checks only that possible f003 has value FI-MELINDA
+    // for some reason this does not work for noop CREATEs
+    // Do we actually need this validation?
+    logger.debug(`Headers after in noValidMatches: ${JSON.stringify(headers)}`);
     const validationResults = await validationService(record);
     return {result: validationResults, recordMetadata, headers};
   }
@@ -236,8 +244,9 @@ export async function validationsFactory(
   }
 
   // eslint-disable-next-line max-statements
-  async function validateAndMergeMatchResults({record, matchResults, headers, matcherReports}) {
+  async function validateAndMergeMatchResults({record, matchResults, headers, matcherReports, handleMatchFailuresAsNew}) {
     const {recordMetadata, cataloger} = headers;
+    logger.debug(`OperationSetting: ${JSON.stringify(headers.operationSettings)}`);
     try {
       logger.debug(`We have matchResults (${matchResults.length}) here: ${JSON.stringify(matchResults.map(({candidate: {id}, probability}) => ({id, probability})))}`);
       logger.silly(`matchResults: ${inspect(matchResults, {colors: true, maxArrayLength: 3, depth: 2})}`);
@@ -259,7 +268,19 @@ export async function validationsFactory(
       // have a valid match that could be found by later matchers
       if (!matchValidationResult.result) {
         const messages = sortedValidatedMatchResults.map(match => `${match.candidate.id}: ${match.message}`);
-        throw new ValidationError(HttpStatus.CONFLICT, {message: `MatchValidation for all ${sortedValidatedMatchResults.length} matches failed. ${messages.join(`, `)}`, ids: sortedValidatedMatchResults.map(match => match.candidate.id), recordMetadata});
+        const matchValidationMessage = messages.join(`, `);
+        if (!handleMatchFailuresAsNew) {
+          throw new ValidationError(HttpStatus.CONFLICT, {message: `MatchValidation for all ${sortedValidatedMatchResults.length} matches failed. ${matchValidationMessage}`, ids: sortedValidatedMatchResults.map(match => match.candidate.id), recordMetadata});
+        }
+        logger.debug(`Here we should return to adding record as new.`);
+        // add messages to headers
+        logger.debug(`Headers: ${JSON.stringify(headers)}`);
+        const updatedHeaders = {
+          notes: headers.notes ? headers.notes.concat(matchValidationMessage) : [matchValidationMessage]
+        };
+        const newHeaders = {...headers, ...updatedHeaders};
+        logger.debug(`Updated headers: ${JSON.stringify(newHeaders)}`);
+        return noValidMatches({record, recordMetadata, headers: newHeaders});
       }
 
       const firstResult = matchValidationResult.result;
