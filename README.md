@@ -26,6 +26,7 @@ While service is in operation:
 | VALIDATOR_MATCH_PACKAGES | No    | Defaults to `IDS,STANDARD_IDS,CONTENT`. |
 | STOP_WHEN_FOUND      | No        | A numeric presentation of boolean option to stop iterating matchers when a match is found. Defaults to `true`.  |
 | ACCEPT_ZERO_WITH_MAX_CANDIDATES | No | A numeric presentation of boolean option to accept zero matches result without erroring when matchStatus is false and stopReason is maxCandidates. Defaults to `false`. |
+| MATCH_FAILURES_AS_NEW | No | A numeric presentation of boolean option to handle a matching result where all matches fail matchValidation as a no-match matching result. This setting can be overridden by a job's operationSettings.matchFailuresAsNew. Defaults to `false`. |
 | LOG_NO_MATCHES | No | A numeric presentation of boolean option to keep MATCH_LOG logItems also when record did not find any matches. Defaults to `false`. |
 | LOG_INPUT_RECORD | No | A numeric presentation of boolean option to log incoming record in INPUT_RECORD_LOG logItem. Defaults to `false`. Note: logItems are not kept for records that end up with any of SKIPPED -recordStatuses.|
 | LOG_RESULT_RECORD | No | A numeric presentation of boolean option to log result record (that is/would be saved to database) in RESULT_RECORD_LOG logItem. Defaults to `false`. Note: logItems are not kept for records that end up with any of SKIPPED -recordStatuses. |
