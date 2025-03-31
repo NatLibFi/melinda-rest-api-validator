@@ -1,0 +1,10 @@
+{
+    "description": "It should throw CONFLICT error if we're are merging record if there are current non-unique CAT-fields",
+    "expectedToThrow": true,
+    "expectedStatus": 409,
+    "expectedError": "Possible modification history mismatch \\(CAT\\)",
+    "updateCats": true,
+    "mergedIncomingRecord": true,
+    "skip": false,
+    "only": false
+  }

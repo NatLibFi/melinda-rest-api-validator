@@ -9,7 +9,7 @@ import createDebugLogger from 'debug';
 import {toTwoDigits, normalizeEmptySubfields} from '../../utils';
 
 // Checks that the modification history is identical
-export function validateRecordState({incomingRecord, existingRecord, existingId, recordMetadata, validate}) {
+export function validateRecordState({incomingRecord, existingRecord, existingId, recordMetadata, validate, mergedIncomingRecord = true}) {
   //const logger = createLogger();
   const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator:validate-record-state');
   const debugData = debug.extend('data');
@@ -18,13 +18,14 @@ export function validateRecordState({incomingRecord, existingRecord, existingId,
     debug(`Skipping validateRecordState. Validate: ${validate}`);
     return 'skipped';
   }
+  debug(`mergedIncomingRecord: ${mergedIncomingRecord}`);
 
   // MarcRecord.get returns empty array if there are no matching fields in the record
   // unique CATs, because in case of a merged incoming record merge uniques CATs in the incoming record, so that duplicate CATs in existing record cause unnecessary CONFLICTs
   debug(`----- Build ic`);
-  const incomingModificationHistory = uniqueModificationHistory(incomingRecord.get(/^CAT$/u).map(normalizeEmptySubfields));
+  const incomingModificationHistory = getModificationHistory({record: incomingRecord, needUnique: mergedIncomingRecord});
   debug(`----- Build db`);
-  const existingModificationHistory = uniqueModificationHistory(existingRecord.get(/^CAT$/u).map(normalizeEmptySubfields));
+  const existingModificationHistory = getModificationHistory({record: existingRecord, needUnique: mergedIncomingRecord});
 
   debug(`---- Comparing CATs`);
   debug(`Incoming CATs (${incomingModificationHistory.length}), existing CATs (${existingModificationHistory.length})`);
@@ -40,6 +41,11 @@ export function validateRecordState({incomingRecord, existingRecord, existingId,
   }
   debug(`validateRecordState: OK`);
   return true;
+
+  function getModificationHistory({record, needUnique = true}) {
+    debug(`needUnique: ${needUnique}`);
+    return needUnique ? uniqueModificationHistory(record.get(/^CAT$/u).map(normalizeEmptySubfields)) : record.get(/^CAT$/u).map(normalizeEmptySubfields);
+  }
 
   // eslint-disable-next-line max-statements
   function uniqueModificationHistory(modificationHistory) {
@@ -57,6 +63,8 @@ export function validateRecordState({incomingRecord, existingRecord, existingId,
     // We're diffing uniqued CATs to non-uniqued CATS so removed CATs are labeled as 'added' by diff
     // We get the actual removed fields from diff by doing it this way
     const removed = detailedDiff(uniqueModificationHistoryStringArray, modificationHistoryStringArray).added;
+    //debugData(`Removed: ${JSON.stringify(removed)}`);
+
 
     if (removed) {
       debug(`Uniquing CAT-fields removed duplicates (${Object.keys(removed).length}).`);
@@ -76,6 +84,7 @@ export function validateRecordState({incomingRecord, existingRecord, existingId,
       if (currentRemoved.length > 0) {
         debug(`There are non-unique CATs that are current (${currentRemoved.length}) - cannot unique CATs`);
         debugData(`Current CATs that would have been removed: ${JSON.stringify(currentRemoved)}`);
+        // throw CONFLICT only when (possibly) merging records
         throw new ValidationError(HttpStatus.CONFLICT, {message: `Possible modification history mismatch (CAT) with existing record ${existingId}`, recordMetadata, ids: [existingId]});
       }
       debug(`There are non-unique CATs, but they are not current - using uniqued CATs`);
