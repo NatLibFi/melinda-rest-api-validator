@@ -83,8 +83,7 @@ export async function validationsFactory(
       runValidateOwnChanges({cataloger, incomingRecord: updatedRecordAfterMerge, existingRecord, operation: headers.operation, recordMetadata, runValidations, skipLowValidation});
 
       logger.verbose('Checking CAT field history');
-      validateRecordState({incomingRecord: updatedRecordAfterMerge, existingRecord, existingId: updateId, recordMetadata, validate: runValidations});
-
+      validateRecordState({incomingRecord: updatedRecordAfterMerge, existingRecord, existingId: updateId, recordMetadata, validate: runValidations, mergedIncomingRecord: operationSettings.merge});
       // Note validationService = validation.js from melinda-rest-api-commons
       // which uses marc-record-validate
       // currently checks only that possible f003 has value FI-MELINDA

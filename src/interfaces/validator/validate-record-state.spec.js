@@ -73,14 +73,14 @@ describe('validateRecordState', () => {
       reader: READERS.JSON
     },
     // eslint-disable-next-line max-statements
-    callback: ({getFixture, expectedToThrow, expectedStatus, expectedError, skipValidation, updateCats}) => {
+    callback: ({getFixture, expectedToThrow, expectedStatus, expectedError, skipValidation, updateCats, mergedIncomingRecord = true}) => {
 
       const record1 = updateCatsInRecord(new MarcRecord(getFixture('record1.json'), {subfieldValues: false}), updateCats);
       const record2 = updateCatsInRecord(new MarcRecord(getFixture('record2.json'), {subfieldValues: false}), updateCats);
 
       if (skipValidation) {
         debug(`Running validation with (4th param) validate: false`);
-        const result = validateRecordState({incomingRecord: record1, existingRecord: record2, existingId: '000123456', recordMetadata: 'recordMetadata', validate: false});
+        const result = validateRecordState({incomingRecord: record1, existingRecord: record2, existingId: '000123456', recordMetadata: 'recordMetadata', validate: false, mergedIncomingRecord});
         debug(`Result: ${result}`);
         expect(result).to.equal('skipped');
         return;
@@ -90,7 +90,7 @@ describe('validateRecordState', () => {
       if (expectedToThrow) {
         debugData(`Expecting error: ${expectedToThrow}, ${expectedStatus}, ${expectedError}`);
         try {
-          validateRecordState({incomingRecord: record1, existingRecord: record2, existingId: '000123456', recordMetadata: 'recordMetadata', validate: true});
+          validateRecordState({incomingRecord: record1, existingRecord: record2, existingId: '000123456', recordMetadata: 'recordMetadata', validate: true, mergedIncomingRecord});
           throw new Error('Expected an error');
         } catch (err) {
 
@@ -104,7 +104,7 @@ describe('validateRecordState', () => {
       }
 
       try {
-        validateRecordState({incomingRecord: record1, existingRecord: record2, existingId: '000123456', recordMetadata: 'recordMetadata', validate: true});
+        validateRecordState({incomingRecord: record1, existingRecord: record2, existingId: '000123456', recordMetadata: 'recordMetadata', validate: true, mergedIncomingRecord});
         debug('Did not get an error.');
       } catch (err) {
         debugData(err);
