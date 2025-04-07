@@ -1,0 +1,8 @@
+{
+    "description": "It should not throw error if we're are not merging record even if there are current non-unique CAT-fields",
+    "expectedToThrow": false,
+    "updateCats": true,
+    "mergedIncomingRecord": false,
+    "skip": false,
+    "only": false
+  }
