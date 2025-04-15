@@ -8,10 +8,13 @@ const debugData = debug.extend('data');
 // Note: when we get new recordImport catalogers or imported conversions, these need to be updated
 // These could also exist as env-configs
 const catalogerToConversionNameMapping = {
-  'IMP_HELMET': 'Helmet to Melinda MARC transformation',
-  'IMP_TATI': 'TATI to Melinda MARC transformation',
-  'IMP_ENNAKK': 'ONIX3 to MARC transformation',
-  'IMP_VPKPL': 'ONIX3 to MARC transformation'
+  'IMP_HELMET': ['Helmet to Melinda MARC transformation'],
+  'IMP_TATI': ['TATI to Melinda MARC transformation'],
+  'IMP_ENNAKK': ['ONIX3 to MARC transformation'],
+  'IMP_VPKPL': [
+    'ONIX3 to MARC transformation',
+    'Dublin Core to MARC transformation'
+  ]
 };
 
 // eslint-disable-next-line max-statements
@@ -41,17 +44,22 @@ export function validateUpdate({incomingRecord, existingRecord, cataloger, valid
     return {updateValidationResult: true};
   }
 
-  const conversionName = catalogerToConversionNameMapping[actualCataloger];
+  const conversionNames = catalogerToConversionNameMapping[actualCataloger];
+  debug(`conversions for ${actualCataloger}: ${JSON.stringify(conversionNames)}`);
 
-  debug(`Searching for fields with $a: "${conversionName}"`);
-  const incomingSourceHashes = getSourceHashes(incomingF884, conversionName);
-  const existingSourceHashes = getSourceHashes(existingF884, conversionName);
+  const incomingSourceHashes = getSourceHashes(incomingF884, conversionNames);
+  const existingSourceHashes = getSourceHashes(existingF884, conversionNames);
+
+  debug(`We have incoming source hashes: ${incomingSourceHashes.length}`);
+  debug(`We have existing source hashes: ${existingSourceHashes.length}`);
 
   if (incomingSourceHashes.length < 1 || existingSourceHashes.length < 1) {
     debug(`No incoming (${incomingSourceHashes.length}) or existing (${existingSourceHashes.length}) sourceHashes found to do update validation`);
     return {updateValidationResult: true};
   }
 
+  // NOTE: this actually matches also when a cataloger has several valid conversionNames and hashes match between conversions
+  //       this is *not* a problem, because if hash matches, the data is exactly the same and it doesn't matter where it's from
   if (incomingSourceHashes.some(sh => existingSourceHashes.indexOf(sh) !== -1)) {
     debug(`We have an incoming sourceHash that matches existing sourceHash: no need to update!`);
     return {updateValidationResult: false};
@@ -61,10 +69,10 @@ export function validateUpdate({incomingRecord, existingRecord, cataloger, valid
   return {updateValidationResult: true};
 }
 
-function getSourceHashes(fields, conversionName) {
-  // we want sf $k from those fields that have sf $a that matches the conversion name
-  const matchingFields = fields.filter((field) => field.subfields && field.subfields.some((subfield) => subfield.code === 'a' && subfield.value === conversionName));
-  debugData(`We have (${matchingFields.length}) fields with $a matching "${conversionName}"`);
+function getSourceHashes(fields, conversionNames) {
+  // we want sf $k from those fields that have sf $a that matches any of the conversion names
+  const matchingFields = fields.filter((field) => field.subfields && field.subfields.some((subfield) => subfield.code === 'a' && conversionNames.includes(subfield.value)));
+  debugData(`We have (${matchingFields.length}) fields with $a matching "${JSON.stringify(conversionNames)}"`);
   debugData(`${JSON.stringify(matchingFields)}`);
 
   const sourceHashes = matchingFields.map((field) => field.subfields
