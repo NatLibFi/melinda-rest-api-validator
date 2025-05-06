@@ -86,13 +86,15 @@ export default function ({amqpOperator, mongoOperator, splitterOptions, mongoLog
           async function transform(record, number) {
 
             logger.debug(`Adding record information to the headers`);
+            // Only CREATEs use incoming record sourceIds in recordMetadata
             const getAllSourceIds = headers.operation === OPERATIONS.CREATE;
 
             logger.debug(`Getting recordMetadata`);
             const recordMetadata = getRecordMetadata({record, number, getAllSourceIds});
 
             logger.debug(`Getting id - use ${number} for CREATE, get ID from record for UPDATE`);
-            // Note: toAlephId faild non-strings
+            // Note: toAlephId fails non-strings
+            // CREATEs do not have Melinda-ID in f001, UPDATEs should have Melinda-ID in f001
             const id = headers.operation === OPERATIONS.CREATE ? toAlephId(number.toString()) : getIdFromRecord(record);
 
             logger.debug(`ID: ${id} for ${headers.operation}`);
