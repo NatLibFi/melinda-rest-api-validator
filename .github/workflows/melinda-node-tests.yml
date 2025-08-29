@@ -11,12 +11,12 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [18.x, 20.x, 22.x, 23.x]
+        node-version: [18.x, 20.x, 22.x, 24.x]
         # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
 
     steps:
     - name: Checkout the code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
     - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v4
       with:
@@ -32,10 +32,10 @@ jobs:
   license-scan:
     name: License compliance check
     runs-on: ubuntu-latest
-    container: docker://node:18
+    container: docker://node:22
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: mikaelvesavuori/license-compliance-action@v1.0.3
         with:
           exclude_pattern: /^@natlibfi/
@@ -43,11 +43,11 @@ jobs:
   njsscan:
     name: Njsscan check
     runs-on: ubuntu-latest
-    container: docker://node:18
+    container: docker://node:22
 
     steps:
     - name: Checkout the code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
     - name: nodejsscan scan
       id: njsscan
       uses: ajinabraham/njsscan-action@master
