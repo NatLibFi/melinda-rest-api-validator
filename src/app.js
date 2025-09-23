@@ -9,7 +9,7 @@ import {
   OPERATIONS, createRecordResponseItem,
   addRecordResponseItem, mongoLogFactory
 } from '@natlibfi/melinda-rest-api-commons';
-import validatorFactory from './interfaces/validator.js';
+import validatorFactory from './interfaces/validator/index.js';
 import toMarcRecordFactory from './interfaces/toMarcRecords.js';
 import {logRecord} from './interfaces/validator/log-actions.js';
 
