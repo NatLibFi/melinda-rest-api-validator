@@ -1,6 +1,6 @@
+import {inspect} from 'util';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {LOG_ITEM_TYPE} from '@natlibfi/melinda-rest-api-commons/dist/constants';
-import {inspect} from 'util';
 
 const logger = createLogger();
 

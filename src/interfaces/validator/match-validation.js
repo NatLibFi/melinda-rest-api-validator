@@ -1,6 +1,6 @@
 import createDebugLogger from 'debug';
-import matchValidator from '@natlibfi/melinda-record-match-validator';
 import {inspect} from 'util';
+import matchValidator from '@natlibfi/melinda-record-match-validator';
 //import {Error as ValidationError} from '@natlibfi/melinda-commons';
 //import HttpStatus from 'http-status';
 
@@ -46,7 +46,6 @@ export async function matchValidationForMatchResults(record, matchResults) {
   // matchSequence is used to as a tie breaker (matcher is setup to give matchers from id:s first)
 
   const matchResultsAndMatchValidationsClone = matchResultsAndMatchValidations;
-  // eslint-disable-next-line functional/immutable-data
   const sortedValidatedMatchResults = matchResultsAndMatchValidationsClone.sort(sortMatch);
   debugData(inspect(sortedValidatedMatchResults));
 

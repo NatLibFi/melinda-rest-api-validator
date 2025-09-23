@@ -1,11 +1,17 @@
+import httpStatus from 'http-status';
 import {promisify, inspect} from 'util';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
-import {mongoFactory, amqpFactory, logError, LOG_ITEM_TYPE, QUEUE_ITEM_STATE, IMPORT_JOB_STATE, OPERATIONS, createRecordResponseItem, addRecordResponseItem, mongoLogFactory} from '@natlibfi/melinda-rest-api-commons';
-import validatorFactory from './interfaces/validator';
-import toMarcRecordFactory from './interfaces/toMarcRecords';
-import httpStatus from 'http-status';
-import {logRecord} from './interfaces/validator/log-actions';
+import {
+  mongoFactory, amqpFactory,
+  logError, LOG_ITEM_TYPE,
+  QUEUE_ITEM_STATE, IMPORT_JOB_STATE,
+  OPERATIONS, createRecordResponseItem,
+  addRecordResponseItem, mongoLogFactory
+} from '@natlibfi/melinda-rest-api-commons';
+import validatorFactory from './interfaces/validator.js';
+import toMarcRecordFactory from './interfaces/toMarcRecords.js';
+import {logRecord} from './interfaces/validator/log-actions.js';
 
 const setTimeoutPromise = promisify(setTimeout);
 
@@ -273,7 +279,6 @@ export default async function ({
     logger.debug(JSON.stringify(newOperation));
     logger.debug(JSON.stringify(operationQueue));
 
-    // eslint-disable-next-line functional/no-conditional-statements
     if (prio) {
       // empty prio queue
       await amqpOperator.checkQueue({queue: operationQueue, style: 'messages', purge: true});
