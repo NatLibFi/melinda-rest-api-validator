@@ -1,8 +1,8 @@
 
-import HttpStatus from 'http-status';
+import httpStatus from 'http-status';
+import {inspect} from 'util';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ValidationError} from '@natlibfi/melinda-commons';
-import {inspect} from 'util';
 
 const logger = createLogger();
 
@@ -16,7 +16,6 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
   const [matcher] = matchers;
   const [matchOptions] = matchOptionsList;
 
-  // eslint-disable-next-line functional/no-conditional-statements
   if (matcher) {
 
     const newmatcherSequence = matcherSequence + 1;
@@ -124,7 +123,7 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
         // If CONTENT/CONTENTALT -matcher or last matcher to run did not generate queries, match is not reliable
         if (['CONTENT', 'CONTENTALT'].includes(matcherName) || matchers.length <= 1) {
           logger.verbose(`Matcher ${matcherSequence} (${matcherName}) could not generate search queries.`);
-          throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: err.message});
+          throw new ValidationError(httpStatus.UNPROCESSABLE_ENTITY, {message: err.message});
         }
 
         return iterateMatchers({matchers: matchers.slice(1), matchOptionsList: matchOptionsList.slice(1), stopWhenFound, acceptZeroWithMaxCandidates, record, matcherSequence: newmatcherSequence, matcherNoRunCount, matcherFalseZeroCounts, matcherReports: newMatcherReports, allMatches, allStatus});
@@ -133,7 +132,7 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
       // SRU SruSearchErrors are 200-responses that include diagnostics from SRU server
       if (err.message.startsWith('SRU SruSearchError')) {
         logger.verbose(`Matcher ${matcherSequence} (${matcherName}) resulted in SRU search error: ${err.message}`);
-        throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: err.message});
+        throw new ValidationError(httpStatus.UNPROCESSABLE_ENTITY, {message: err.message});
       }
 
       // SRU unexpected errors: non-200 responses from SRU server etc.
@@ -160,19 +159,19 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
     // Fail if we could not create any search queries from the record
     if (matcherNoRunCount === matcherSequence) {
       logger.debug(`None of the matchers could generate search query for candidates`);
-      throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: 'Generated query list contains no queries'});
+      throw new ValidationError(httpStatus.UNPROCESSABLE_ENTITY, {message: 'Generated query list contains no queries'});
     }
 
     // Fail if we got too many search candidates and no matches
     if (matcherFalseZeroCounts.maxCandidates > 0 && !acceptZeroWithMaxCandidates) {
       logger.debug(`${matcherFalseZeroCounts.maxCandidates} matchers returned no matches, but did not check all possible candidates (maxCandidates)`);
-      throw new ValidationError(HttpStatus.CONFLICT, {message: `Matcher found too many candidates to check (maxCandidates)`});
+      throw new ValidationError(httpStatus.CONFLICT, {message: `Matcher found too many candidates to check (maxCandidates)`});
     }
 
     // Fail if we got too many search candidates and no matches
     if (matcherFalseZeroCounts.maxedQueries > 0) {
       logger.debug(`${matcherFalseZeroCounts.maxedQueries} matchers returned no matches, but did not check all possible candidates (maxedQueries)`);
-      throw new ValidationError(HttpStatus.CONFLICT, {message: `Matcher found too many candidates to check (maxedQueries)`});
+      throw new ValidationError(httpStatus.CONFLICT, {message: `Matcher found too many candidates to check (maxedQueries)`});
     }
 
     // Fail if we got conversionFailures and no matches
@@ -185,7 +184,7 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
       logger.debug(`Non-zero conversionFailureIds: ${JSON.stringify(nonZeroConversionFailureIds)}`);
       logger.debug(`Unique conversionFailureIds: ${JSON.stringify(uniqConversionFailureIds)}`);
 
-      throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: `Matcher found only non-convertable candidates to check`, ids: uniqConversionFailureIds});
+      throw new ValidationError(httpStatus.UNPROCESSABLE_ENTITY, {message: `Matcher found only non-convertable candidates to check`, ids: uniqConversionFailureIds});
     }
     logger.debug(`No reasons to suspect the results with 0 matches.`);
   }
@@ -213,26 +212,20 @@ function checkStopReasonForZeroMatches({matchAmount, matcherSequence, matcherNam
     // - currently stopReason can be non-empty also in cases where status is true, if matcher hit the stop reason when handling the last available candidate record
 
 
-    // eslint-disable-next-line functional/no-conditional-statements
     if (matchStatus.status === false && matchStatus.stopReason === 'maxCandidates') {
       logger.verbose(`Matcher ${matcherName} resulted in ${matchStatus.status}, stopReason ${matchStatus.stopReason}`);
-      // eslint-disable-next-line no-param-reassign, functional/immutable-data
       matcherFalseZeroCounts.maxCandidates += 1;
     }
 
 
-    // eslint-disable-next-line functional/no-conditional-statements
     if (matchStatus.status === false && matchStatus.stopReason === 'maxedQueries') {
       logger.verbose(`Matcher ${matcherName} resulted in ${matchStatus.status}, stopReason ${matchStatus.stopReason}`);
-      // eslint-disable-next-line no-param-reassign, functional/immutable-data
       matcherFalseZeroCounts.maxedQueries += 1;
     }
 
 
-    // eslint-disable-next-line functional/no-conditional-statements
     if (matchStatus.status === false && matchStatus.stopReason === 'conversionFailures') {
       logger.verbose(`Matcher ${matcherName} resulted in ${matchStatus.status}, stopReason ${matchStatus.stopReason}`);
-      // eslint-disable-next-line no-param-reassign, functional/immutable-data
       matcherFalseZeroCounts.conversionFailures += 1;
     }
   }

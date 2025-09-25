@@ -1,7 +1,7 @@
+import createDebugLogger from 'debug';
+import httpStatus from 'http-status';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ValidationError, isDeletedRecord} from '@natlibfi/melinda-commons';
-import httpStatus from 'http-status';
-import createDebugLogger from 'debug';
 
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator:validate-existing-record');
 const debugData = debug.extend('data');

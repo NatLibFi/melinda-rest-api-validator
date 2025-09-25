@@ -1,11 +1,11 @@
+import httpStatus from 'http-status';
+import {promisify, inspect} from 'util';
 import {Json, MARCXML, AlephSequential, ISO2709} from '@natlibfi/marc-record-serializers';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ApiError, toAlephId} from '@natlibfi/melinda-commons';
-import {updateField001ToParamId, getIdFromRecord, getRecordMetadata, isValidAlephId} from '../utils';
-import httpStatus from 'http-status';
-import {promisify, inspect} from 'util';
 import {MarcRecordError} from '@natlibfi/marc-record';
 import {OPERATIONS, logError, QUEUE_ITEM_STATE, LOG_ITEM_TYPE, createRecordResponseItem, addRecordResponseItem} from '@natlibfi/melinda-rest-api-commons';
+import {updateField001ToParamId, getIdFromRecord, getRecordMetadata, isValidAlephId} from '../utils.js';
 
 export default function ({amqpOperator, mongoOperator, splitterOptions, mongoLogOperator}) {
   const {failBulkOnError, keepSplitterReport} = splitterOptions;
@@ -23,13 +23,13 @@ export default function ({amqpOperator, mongoOperator, splitterOptions, mongoLog
     logger.debug(`Headers: ${JSON.stringify(headers)}`);
     logger.debug(`ContentType: ${JSON.stringify(contentType)}`);
     // recordNumber is counter for data-events from the reader
-    let recordNumber = 0; // eslint-disable-line functional/no-let
+    let recordNumber = 0;
     // sequenceNumber is counter for data and error events from the reader
-    let sequenceNumber = 0; // eslint-disable-line functional/no-let
+    let sequenceNumber = 0;
     // promises contains record promises from the reader
     const promises = [];
-    let readerErrored = false; // eslint-disable-line functional/no-let
-    let transformerErrored = false; // eslint-disable-line functional/no-let
+    let readerErrored = false;
+    let transformerErrored = false;
     const readerErrors = [];
 
 
@@ -48,7 +48,7 @@ export default function ({amqpOperator, mongoOperator, splitterOptions, mongoLog
           logError(err);
           const cleanErrorMessage = err.message.replace(/(?<lineBreaks>\r\n|\n|\r)/gmu, ' ');
 
-          readerErrors.push({sequenceNumber, error: cleanErrorMessage}); // eslint-disable-line functional/immutable-data
+          readerErrors.push({sequenceNumber, error: cleanErrorMessage});
 
           // Reader returns "Record is invalid" -error, if the input is a valid array, but an element is not a valid MarcRecord
           const recordErrorRegExp = /^Record is invalid/u;
@@ -59,8 +59,6 @@ export default function ({amqpOperator, mongoOperator, splitterOptions, mongoLog
           const recordResponseItem = createRecordResponseItem({responseStatus: httpStatus.UNPROCESSABLE_ENTITY, responsePayload: cleanErrorMessage, recordMetadata: getRecordMetadata({record: undefined, number: sequenceNumber}), id: undefined});
           addRecordResponseItem({recordResponseItem, correlationId, mongoOperator});
 
-
-          // eslint-disable-next-line functional/no-conditional-statements
           if (failOnError || !recordError) {
             createSplitterReportAndLogs();
             reject(new ApiError(httpStatus.UNPROCESSABLE_ENTITY, `Invalid payload! (${sequenceNumber}) ${cleanErrorMessage}`));
@@ -78,7 +76,7 @@ export default function ({amqpOperator, mongoOperator, splitterOptions, mongoLog
           logger.silly(`Record number ${recordNumber}`);
 
           // SequenceNumber instead of recordNumber here - failed 'records' count as records
-          promises.push(transform(data, sequenceNumber)); // eslint-disable-line functional/immutable-data
+          promises.push(transform(data, sequenceNumber));
 
           log100thQueue(recordNumber, 'read');
 
@@ -102,7 +100,7 @@ export default function ({amqpOperator, mongoOperator, splitterOptions, mongoLog
               const recordResponseItem = createRecordResponseItem({responseStatus: httpStatus.UNPROCESSABLE_ENTITY, responsePayload, recordMetadata, id: undefined});
               addRecordResponseItem({recordResponseItem, correlationId, mongoOperator});
 
-              readerErrors.push({sequenceNumber, error: responsePayload}); // eslint-disable-line functional/immutable-data
+              readerErrors.push({sequenceNumber, error: responsePayload});
               transformerErrored = true;
 
               if (failOnError) {
@@ -152,8 +150,6 @@ export default function ({amqpOperator, mongoOperator, splitterOptions, mongoLog
           // Add blobSize, just for completeness sake
           mongoOperator.setBlobSize({correlationId, blobSize: sequenceNumber});
 
-
-          // eslint-disable-next-line functional/no-conditional-statements
           if (promises.length === 0) {
             logger.debug(`Got no record promises from reader stream`);
             createSplitterReportAndLogs();
