@@ -3,15 +3,15 @@ import {inspect} from 'util';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ValidationError, toAlephId} from '@natlibfi/melinda-commons';
 import {conversions, fixes, OPERATIONS, logError} from '@natlibfi/melinda-rest-api-commons';
-import {LOG_ITEM_TYPE} from '@natlibfi/melinda-rest-api-commons/dist/constants';
+import {LOG_ITEM_TYPE} from '@natlibfi/melinda-rest-api-commons';
 import {MarcRecord} from '@natlibfi/marc-record';
-import {logRecord} from './log-actions.js';
-import {updateField001ToParamId, getRecordMetadata, getIdFromRecord, isValidAlephId} from '../../utils.js';
 
 //import {AlephSequential} from '@natlibfi/marc-record-serializers';
 //import {detailedDiff} from 'deep-object-diff';
-import {validationsFactory} from './validations';
-import {fixValidationsFactory} from './fix-validations';
+import {logRecord} from './log-actions.js';
+import {validationsFactory} from './validations.js';
+import {fixValidationsFactory} from './fix-validations.js';
+import {updateField001ToParamId, getRecordMetadata, getIdFromRecord, isValidAlephId} from '../../utils.js';
 
 
 //import createDebugLogger from 'debug';
