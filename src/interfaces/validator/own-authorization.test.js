@@ -1,14 +1,15 @@
+import assert from 'node:assert';
+import {describe, it} from 'node:test';
 import fs from 'fs';
 import path from 'path';
-import {expect} from 'chai';
 import {MarcRecord} from '@natlibfi/marc-record';
-import validateOwnChanges from './own-authorization';
 import {Error as ValidationError} from '@natlibfi/melinda-commons';
-import {OPERATIONS} from '@natlibfi/melinda-rest-api-commons/dist/constants';
+import {OPERATIONS} from '@natlibfi/melinda-rest-api-commons';
+import validateOwnChanges from './own-authorization.js';
 
 MarcRecord.setValidationOptions({subfieldValues: false});
 
-const FIXTURES_PATH = path.join(__dirname, '../../../test-fixtures/own-authorization');
+const FIXTURES_PATH = path.join(import.meta.dirname, '../../../test-fixtures/own-authorization');
 
 const tags1 = fs.readFileSync(path.join(FIXTURES_PATH, 'tags1.json'), 'utf8');
 const tags2 = fs.readFileSync(path.join(FIXTURES_PATH, 'tags2.json'), 'utf8');
@@ -27,9 +28,9 @@ describe('own-authorization', () => {
       const tags = JSON.parse(tags1);
       const record = new MarcRecord(JSON.parse(record1), {subfieldValues: false});
 
-      expect(() => {
+      assert(() => {
         validateOwnChanges({ownTags: tags, incomingRecord: record, operation: OPERATIONS.CREATE});
-      }).to.not.throw();
+      });
     });
 
     it('Should pass (Record comparison)', () => {
@@ -37,27 +38,31 @@ describe('own-authorization', () => {
       const recordA = new MarcRecord(JSON.parse(record2a), {subfieldValues: false});
       const recordB = new MarcRecord(JSON.parse(record2b), {subfieldValues: false});
 
-      expect(() => {
+      assert(() => {
         validateOwnChanges({ownTags: tags, incomingRecord: recordA, existingRecord: recordB});
-      }).to.not.throw();
+      });
     });
 
     it('Should throw', () => {
       const tags = JSON.parse(tags3);
       const record = new MarcRecord(JSON.parse(record3), {subfieldValues: false});
 
-      expect(() => {
+      try {
         validateOwnChanges({ownTags: tags, incomingRecord: record, operation: OPERATIONS.CREATE});
-      }).to.throw(ValidationError);
+      } catch (error) {
+        assert(error instanceof ValidationError);
+      }
     });
 
     it('Should throw (operation UPDATE, no existingRecord)', () => {
       const tags = JSON.parse(tags1);
       const record = new MarcRecord(JSON.parse(record1), {subfieldValues: false});
 
-      expect(() => {
+      try {
         validateOwnChanges({ownTags: tags, incomingRecord: record, operation: OPERATIONS.UPDATE});
-      }).to.throw(ValidationError);
+      } catch (error) {
+        assert(error instanceof ValidationError);
+      }
     });
 
 
@@ -66,9 +71,11 @@ describe('own-authorization', () => {
       const recordA = new MarcRecord(JSON.parse(record4a), {subfieldValues: false});
       const recordB = new MarcRecord(JSON.parse(record4b), {subfieldValues: false});
 
-      expect(() => {
+      try {
         validateOwnChanges({ownTags: tags, incomingRecord: recordA, existingRecord: recordB});
-      }).to.throw(ValidationError);
+      } catch (error) {
+        assert(error instanceof ValidationError);
+      }
     });
 
     it('Should skip validation if validate param is false', () => {
@@ -77,7 +84,7 @@ describe('own-authorization', () => {
       const recordB = new MarcRecord(JSON.parse(record4b), {subfieldValues: false});
 
       const result = validateOwnChanges({ownTags: tags, incomingRecord: recordA, existingRecord: recordB, validate: false});
-      expect(result).to.eql('skipped');
+      assert.equal(result, 'skipped');
     });
 
 
