@@ -57,13 +57,14 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
       logger.debug(`MatchStatus: ${JSON.stringify(matchStatus)})`);
       logger.silly(`MatchResult: ${inspect(matchResults, {colors: true, maxArrayLength: 10, depth: 3})}`);
 
-      logger.debug(`Conversion failures: ${conversionFailures.length}`);
-      logger.silly(`Conversion failures: ${JSON.stringify(conversionFailures.map(f => f.payload.id))}`);
+      if (conversionFailures !== undefined) {
+        logger.debug(`Conversion failures: ${conversionFailures.length}`);
+        logger.silly(`Conversion failures: ${JSON.stringify(conversionFailures.map(f => f.payload.id))}`);
+        // We probably want to log conversionFailures somewhere here - currently conversionFailures are logged only when matching fails due to them
+        const newConversionFailures = allConversionFailures.concat(...conversionFailures);
+      }
 
       logger.debug(`CandidateCount: ${JSON.stringify(candidateCount)})`);
-
-      // We probably want to log conversionFailures somewhere here - currently conversionFailures are logged only when matching fails due to them
-      const newConversionFailures = allConversionFailures.concat(...conversionFailures);
 
       const newMatches = allMatches.concat(matches);
       const newAllStatus = matchStatus.status === false ? false : allStatus;
@@ -75,7 +76,7 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
         matcherName,
         matchAmount,
         candidateCount,
-        conversionFailureCount: conversionFailures.length,
+        conversionFailureCount: conversionFailures !== undefined ? conversionFailures.length : undefined,
         matchStatus,
         matchIds
       };
@@ -175,7 +176,7 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
     }
 
     // Fail if we got conversionFailures and no matches
-    if (matcherFalseZeroCounts.conversionFailures > 0) {
+    if (matcherFalseZeroCounts.conversionFailures !== undefined && matcherFalseZeroCounts.conversionFailures > 0) {
       logger.debug(`${matcherFalseZeroCounts.conversionFailures} matchers returned no matches, but had non-convertable candidates.`);
 
       // Matcher does not curently find ids for conversionFailures, but might do that later
