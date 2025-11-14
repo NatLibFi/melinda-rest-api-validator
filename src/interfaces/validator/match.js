@@ -53,7 +53,7 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
 
       const {matches, matchStatus, conversionFailures: conversionFailuresFromMatcher, candidateCount} = matchResults;
 
-      if (conversionFailures === undefined) {
+      if (conversionFailuresFromMatcher === undefined) {
         logger.debug(`NOTE: No conversion failures information returned by matcher`);
       }
 
