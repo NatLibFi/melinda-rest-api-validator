@@ -51,9 +51,9 @@
 	"devDependencies": {
 		"@natlibfi/fixugen": "^3.0.0-alpha.6",
 		"@natlibfi/fixura": "^4.0.0-alpha.13",
-		"cross-env": "^10.0.0",
-		"esbuild": "^0.25.10",
-		"eslint": "^9.36.0"
+		"cross-env": "^10.1.0",
+		"esbuild": "^0.25.11",
+		"eslint": "^9.38.0"
 	},
 	"overrides": {
 		"nanoid": "^3.3.8"
