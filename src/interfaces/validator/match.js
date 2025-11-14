@@ -9,7 +9,6 @@ const logger = createLogger();
 // stopWhenFound = stop iterating matchers when the first match is found
 // acceptZeroWithMaxCandidates = do not error if we get a zero match result with matchStatus: false and stopReason: maxCandidates
 
-// eslint-disable-next-line max-statements
 export async function iterateMatchers({matchers, matchOptionsList, record, stopWhenFound = true, acceptZeroWithMaxCandidates = false, matcherSequence = 0, matcherNoRunCount = 0, matcherFalseZeroCounts = {maxCandidates: 0, maxedQueries: 0, conversionFailures: 0}, matcherReports = [], allConversionFailures = [], allMatches = [], allStatus = true}) {
   logger.debug(`Matchers left: ${matchers.length}`);
 
@@ -52,17 +51,23 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
       const recordExternal = {recordSource: 'incomingRecord', label: 'ic'};
       const matchResults = await matcher({record, recordExternal});
 
-      const {matches, matchStatus, conversionFailures, candidateCount} = matchResults;
+      const {matches, matchStatus, conversionFailures: conversionFailuresFromMatcher, candidateCount} = matchResults;
+
+      if (conversionFailures === undefined) {
+        logger.debug(`NOTE: No conversion failures information returned by matcher`);
+      }
+
+      // Update marc-record-matching-js does not return any conversionFailure information
+      // DEVELOP: handle this in some smart way
+      const conversionFailures = conversionFailuresFromMatcher !== undefined ? conversionFailuresFromMatcher : [];
 
       logger.debug(`MatchStatus: ${JSON.stringify(matchStatus)})`);
       logger.silly(`MatchResult: ${inspect(matchResults, {colors: true, maxArrayLength: 10, depth: 3})}`);
 
-      if (conversionFailures !== undefined) {
-        logger.debug(`Conversion failures: ${conversionFailures.length}`);
-        logger.silly(`Conversion failures: ${JSON.stringify(conversionFailures.map(f => f.payload.id))}`);
-        // We probably want to log conversionFailures somewhere here - currently conversionFailures are logged only when matching fails due to them
-        const newConversionFailures = allConversionFailures.concat(...conversionFailures);
-      }
+      logger.debug(`Conversion failures: ${conversionFailures.length}`);
+      logger.silly(`Conversion failures: ${JSON.stringify(conversionFailures.map(f => f.payload.id))}`);
+      // We probably want to log conversionFailures somewhere here - currently conversionFailures are logged only when matching fails due to them
+      const newConversionFailures = allConversionFailures.concat(...conversionFailures);
 
       logger.debug(`CandidateCount: ${JSON.stringify(candidateCount)})`);
 
@@ -76,7 +81,7 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
         matcherName,
         matchAmount,
         candidateCount,
-        conversionFailureCount: conversionFailures !== undefined ? conversionFailures.length : undefined,
+        conversionFailureCount: conversionFailures.length,
         matchStatus,
         matchIds
       };
@@ -118,7 +123,6 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
 
       if (err.message === 'Generated query list contains no queries') {
         logger.debug(`Matcher ${matcherSequence} (${matcherName}) did not run: ${err.message}`);
-        // eslint-disable-next-line no-param-reassign
         matcherNoRunCount += 1;
 
         // If CONTENT/CONTENTALT -matcher or last matcher to run did not generate queries, match is not reliable
