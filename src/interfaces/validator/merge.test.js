@@ -1,17 +1,18 @@
 
+import assert from 'node:assert';
+import {describe} from 'node:test';
+import createDebugLogger from 'debug';
 import generateTests from '@natlibfi/fixugen';
 import {READERS} from '@natlibfi/fixura';
-import {expect} from 'chai';
 import {MarcRecord} from '@natlibfi/marc-record';
-import mergeFromValidator from './merge';
-import createDebugLogger from 'debug';
+import mergeFromValidator from './merge.js';
 
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator:merge:test');
 const debugData = debug.extend('data');
 
 describe('merge', () => {
   generateTests({
-    path: [__dirname, '..', '..', '..', 'test-fixtures', 'merge'],
+    path: [import.meta.dirname, '..', '..', '..', 'test-fixtures', 'merge'],
     useMetadataFile: true,
     recurse: false,
     fixura: {
@@ -30,7 +31,6 @@ describe('merge', () => {
 
       debug(`We have records`);
 
-      // eslint-disable-next-line functional/no-conditional-statements
       if (expectedToThrow) {
         debugData(`Expecting error: ${expectedToThrow}, ${expectedStatus}, ${expectedError}`);
         try {
@@ -43,9 +43,9 @@ describe('merge', () => {
           debug(`Got error: ${err.status}, ${JSON.stringify(err.payload)}`);
           //debugData(err);
 
-          expect(err).to.be.an('error');
-          expect(err.status).to.equal(expectedStatus);
-          expect(err.payload).to.match(new RegExp(expectedError, 'u'));
+          assert.equal(err instanceof Error, true);
+          assert.equal(err.status, expectedStatus);
+          assert.match(err.payload, new RegExp(expectedError, 'u'));
           return;
         }
       }
@@ -54,10 +54,10 @@ describe('merge', () => {
       const result = mergeFromValidator({base: record1, source: record2, recordType});
       //debugData(result.status);
       //debug('Did not get an error.');
-      expect(result.status).to.equal(expectedResultStatus);
+      assert.equal(result.status, expectedResultStatus);
       //debugData(result.record);
       //debugData(expectedMergedRecord);
-      expect(result.record.toString()).to.equal(expectedMergedRecord.toString());
+      assert.deepStrictEqual(result.record, expectedMergedRecord);
     }
 
   });

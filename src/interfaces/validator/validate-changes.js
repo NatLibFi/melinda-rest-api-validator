@@ -1,8 +1,8 @@
 
+import createDebugLogger from 'debug';
 import deepEqual from 'deep-eql';
 import {detailedDiff} from 'deep-object-diff';
-import createDebugLogger from 'debug';
-import {normalizeEmptySubfields, getSubfieldValues} from '../../utils';
+import {normalizeEmptySubfields, getSubfieldValues} from '../../utils.js';
 import {MarcRecord} from '@natlibfi/marc-record';
 
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator:validate-changes');
@@ -144,9 +144,9 @@ function normalizeRecord(record) {
   }
 
   function emptyCreationDate(f008value) {
-  // emptyCreationDate:
-  // Normalize f008/00-05 - In non-MARC21 imports f008 'Date entered on file' gets always the current date
-  // This propably should be configurable
+    // emptyCreationDate:
+    // Normalize f008/00-05 - In non-MARC21 imports f008 'Date entered on file' gets always the current date
+    // This propably should be configurable
     debug(`Empty 008 creationDate.`);
     const newValue = `000000${f008value.substring(6)}`;
     debugData(`f008Orig: ${f008value}`);

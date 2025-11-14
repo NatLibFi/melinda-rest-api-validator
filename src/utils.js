@@ -1,6 +1,6 @@
+import createDebugLogger from 'debug';
 import {toAlephId, getRecordTitle, getRecordStandardIdentifiers} from '@natlibfi/melinda-commons';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
-import createDebugLogger from 'debug';
 import {MarcRecord} from '@natlibfi/marc-record';
 import {MARCXML} from '@natlibfi/marc-record-serializers';
 
@@ -21,7 +21,7 @@ export function updateField001ToParamId(id, record) {
     return record;
   }
 
-  fields[0].value = toAlephId(id); // eslint-disable-line functional/immutable-data
+  fields[0].value = toAlephId(id);
 
   return record;
 }
@@ -112,7 +112,7 @@ export function getSidsFromRecord(record) {
   }
 
   function countSubfields(field, subfieldCode) {
-  // debug(`Counting subfields ${subfieldCode}`);
+    // debug(`Counting subfields ${subfieldCode}`);
     return field.subfields.filter(({code}) => code === subfieldCode).length;
   }
 
@@ -213,7 +213,7 @@ export function normalizeEmptySubfieldsRecord(record) {
 
 export function getRecord(sruClient, id) {
   return new Promise((resolve, reject) => {
-    let promise; // eslint-disable-line functional/no-let
+    let promise;
 
     sruClient.searchRetrieve(`rec.id=${id}`)
       .on('record', xmlString => {

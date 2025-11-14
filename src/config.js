@@ -1,9 +1,9 @@
 
+import createDebugLogger from 'debug';
 import {parseBoolean} from '@natlibfi/melinda-commons';
 import {readEnvironmentVariable} from '@natlibfi/melinda-backend-commons';
 import {candidateSearch, matchDetection} from '@natlibfi/melinda-record-matching';
 import {fixes} from '@natlibfi/melinda-rest-api-commons';
-import createDebugLogger from 'debug';
 
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:config');
 //const debugData = debug.extend('data');

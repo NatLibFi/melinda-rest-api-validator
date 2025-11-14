@@ -1,10 +1,11 @@
+import assert from 'node:assert';
+import {describe} from 'node:test';
+import createDebugLogger from 'debug';
 
 import generateTests from '@natlibfi/fixugen';
 import {READERS} from '@natlibfi/fixura';
-import {expect} from 'chai';
 import {MarcRecord} from '@natlibfi/marc-record';
-import {validateChanges} from './validate-changes';
-import createDebugLogger from 'debug';
+import {validateChanges} from './validate-changes.js';
 
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator:validate-changes:test');
 const debugData = debug.extend('data');
@@ -12,7 +13,7 @@ const debugData = debug.extend('data');
 
 describe('validateChanges', () => {
   generateTests({
-    path: [__dirname, '..', '..', '..', 'test-fixtures', 'validate-changes'],
+    path: [import.meta.dirname, '..', '..', '..', 'test-fixtures', 'validate-changes'],
     useMetadataFile: true,
     recurse: false,
     fixura: {
@@ -30,7 +31,7 @@ describe('validateChanges', () => {
         debug(`Running validation with (4th param) validate: false`);
         const result = validateChanges({incomingRecord: record1, existingRecord: record2, existingId: '000123456', recordMetadata: 'recordMetadata', validate: false});
         debug(`Result: ${result}`);
-        expect(result.changeValidationResult).to.equal('skipped');
+        assert.equal(result.changeValidationResult, 'skipped');
         return;
       }
 
@@ -55,7 +56,7 @@ describe('validateChanges', () => {
       try {
         const result = validateChanges({incomingRecord: record1, existingRecord: record2, validate: true});
         debug('Did not get an error.');
-        expect(result.changeValidationResult).to.equal(expectedResult);
+        assert.deepStrictEqual(result.changeValidationResult, expectedResult);
       } catch (err) {
         debugData(err);
         throw new Error('Did not expect an error');

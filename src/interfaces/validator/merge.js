@@ -1,5 +1,5 @@
-import HttpStatus from 'http-status';
 import createDebugLogger from 'debug';
+import httpStatus from 'http-status';
 import {MarcRecord} from '@natlibfi/marc-record';
 import merger from '@natlibfi/marc-record-merge';
 //import {inspect} from 'util';
@@ -25,7 +25,7 @@ export default function ({base, source, recordType}) {
 
   if (!reducers) {
     debug(`No reducers! RecordType: ${recordType}`);
-    throw new MergeError(HttpStatus.INTERNAL_SERVER_ERROR, `No merge-reducers specified for ${recordType} records!`);
+    throw new MergeError(httpStatus.INTERNAL_SERVER_ERROR, `No merge-reducers specified for ${recordType} records!`);
   }
 
   //debugData(`Reducers: ${inspect(reducers, {colors: true, maxArrayLength: 10, depth: 8})})}`);
@@ -49,7 +49,7 @@ export default function ({base, source, recordType}) {
 
   /* istanbul ignore if  */
   if (!result) {
-    throw new MergeError(HttpStatus.UNPROCESSABLE_ENTITY, `Merge resulted in no record`);
+    throw new MergeError(httpStatus.UNPROCESSABLE_ENTITY, `Merge resulted in no record`);
   }
 
   const mergeResult = {
