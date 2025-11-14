@@ -180,7 +180,7 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
     }
 
     // Fail if we got conversionFailures and no matches
-    if (matcherFalseZeroCounts.conversionFailures !== undefined && matcherFalseZeroCounts.conversionFailures > 0) {
+    if (matcherFalseZeroCounts.conversionFailures > 0) {
       logger.debug(`${matcherFalseZeroCounts.conversionFailures} matchers returned no matches, but had non-convertable candidates.`);
 
       // Matcher does not curently find ids for conversionFailures, but might do that later
