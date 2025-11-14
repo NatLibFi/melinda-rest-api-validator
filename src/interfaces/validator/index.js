@@ -1,17 +1,17 @@
-import HttpStatus from 'http-status';
+import httpStatus from 'http-status';
+import {inspect} from 'util';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ValidationError, toAlephId} from '@natlibfi/melinda-commons';
 import {conversions, fixes, OPERATIONS, logError} from '@natlibfi/melinda-rest-api-commons';
-import {updateField001ToParamId, getRecordMetadata, getIdFromRecord, isValidAlephId} from '../../utils';
-import {inspect} from 'util';
+import {LOG_ITEM_TYPE} from '@natlibfi/melinda-rest-api-commons';
 import {MarcRecord} from '@natlibfi/marc-record';
-import {logRecord} from './log-actions';
-import {LOG_ITEM_TYPE} from '@natlibfi/melinda-rest-api-commons/dist/constants';
 
 //import {AlephSequential} from '@natlibfi/marc-record-serializers';
 //import {detailedDiff} from 'deep-object-diff';
-import {validationsFactory} from './validations';
-import {fixValidationsFactory} from './fix-validations';
+import {logRecord} from './log-actions.js';
+import {validationsFactory} from './validations.js';
+import {fixValidationsFactory} from './fix-validations.js';
+import {updateField001ToParamId, getRecordMetadata, getIdFromRecord, isValidAlephId} from '../../utils.js';
 
 
 //import createDebugLogger from 'debug';
@@ -57,7 +57,7 @@ export default async function ({validatorOptions, mongoLogOperator}) {
       return processFix(headers);
     }
     logger.debug(`Unknown operation: ${headers.operation}`);
-    throw new ValidationError(HttpStatus.INTERNAL_SERVER_ERROR, {message: `Unknown operation: ${headers.operation}`});
+    throw new ValidationError(httpStatus.INTERNAL_SERVER_ERROR, {message: `Unknown operation: ${headers.operation}`});
   }
 
   function processFix(headers) {
@@ -73,7 +73,7 @@ export default async function ({validatorOptions, mongoLogOperator}) {
     logger.debug(`process headers ${JSON.stringify(headers)}`);
 
     if (recordType !== 'bib' && (operationSettings.merge || operationSettings.unique)) {
-      throw new ValidationError(HttpStatus.BAD_REQUEST, {message: `merge=1 and unique=1 are not yet usable with non-bib records. <${recordType}>`, recordMetadata});
+      throw new ValidationError(httpStatus.BAD_REQUEST, {message: `merge=1 and unique=1 are not yet usable with non-bib records. <${recordType}>`, recordMetadata});
     }
 
     // create recordObject
@@ -99,7 +99,7 @@ export default async function ({validatorOptions, mongoLogOperator}) {
 
     // We do not update the CREATE record itself here, because incoming 001 might be useful for matching etc.
     if (operation === OPERATIONS.UPDATE && (!newId || !isValidAlephId(newId))) {
-      throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: `There is no valid id for updating the record. <${newId}>`, recordMetadata: combinedRecordMetadata});
+      throw new ValidationError(httpStatus.UNPROCESSABLE_ENTITY, {message: `There is no valid id for updating the record. <${newId}>`, recordMetadata: combinedRecordMetadata});
     }
 
     const newHeaders = {
@@ -135,7 +135,7 @@ export default async function ({validatorOptions, mongoLogOperator}) {
       // throw ValidationError for failed validationService
       if (result.failed) {
         logger.debug('Validation failed');
-        throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: result.messages, recordMetadata});
+        throw new ValidationError(httpStatus.UNPROCESSABLE_ENTITY, {message: result.messages, recordMetadata});
       }
 
       // We check/update 001 in record to id in headers here
@@ -183,7 +183,7 @@ export default async function ({validatorOptions, mongoLogOperator}) {
         const message = error.message || error.payload?.message || error.payload;
         const cleanErrorMessage = message.replace(/(?<lineBreaks>\r\n|\n|\r)/gmu, ' ');
         //logger.silly(`${cleanErrorMessage}`);
-        throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: `Error in record. ${cleanErrorMessage}`, recordMetadata});
+        throw new ValidationError(httpStatus.UNPROCESSABLE_ENTITY, {message: `Error in record. ${cleanErrorMessage}`, recordMetadata});
       }
     }
 
@@ -232,7 +232,7 @@ export default async function ({validatorOptions, mongoLogOperator}) {
       const message = err.message || err.payload?.message || err.payload;
       const cleanErrorMessage = message.replace(/(?<lineBreaks>\r\n|\n|\r)/gmu, ' ');
       //logger.silly(`${cleanErrorMessage}`);
-      throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: `Parsing input data failed. ${cleanErrorMessage}`, recordMetadata});
+      throw new ValidationError(httpStatus.UNPROCESSABLE_ENTITY, {message: `Parsing input data failed. ${cleanErrorMessage}`, recordMetadata});
     }
   }
 }
