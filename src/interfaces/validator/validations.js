@@ -44,7 +44,6 @@ export async function validationsFactory(
 
   return {updateValidations, createValidations};
 
-  // eslint-disable-next-line max-statements
   async function updateValidations({updateId, updateRecord, updateOperation, mergeValidationResult = undefined, headers}) {
     logger.verbose(`Validations for UPDATE operation (${updateOperation}) (${updateId}) for ${headers.correlationId}`);
     logger.debug(`updateValidation, headers (${JSON.stringify(headers)})`);
@@ -120,7 +119,6 @@ export async function validationsFactory(
     throw new ValidationError(httpStatus.BAD_REQUEST, {message: 'Update id missing!', recordMetadata});
   }
 
-  // eslint-disable-next-line max-statements
   async function createValidations({record, headers}) {
     const {recordMetadata, cataloger, operationSettings} = headers;
     // Currently force all validations for prio and batchBulk
@@ -193,7 +191,6 @@ export async function validationsFactory(
     return {result: validationResults, recordMetadata, headers};
   }
 
-  // eslint-disable-next-line max-statements
   async function mergeRecordForUpdates({record, existingRecord, id, headers}) {
     logger.debug(`Merging record ${id} to existing record ${id}`);
     const {recordMetadata} = headers;
@@ -242,7 +239,6 @@ export async function validationsFactory(
     return {...headers, ...updatedHeaders};
   }
 
-  // eslint-disable-next-line max-statements
   async function validateAndMergeMatchResults({record, matchResults, headers, matcherReports, handleMatchFailuresAsNew}) {
     const {recordMetadata, cataloger} = headers;
     logger.debug(`OperationSetting: ${JSON.stringify(headers.operationSettings)}`);

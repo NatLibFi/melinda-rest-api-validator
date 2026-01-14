@@ -47,7 +47,6 @@ export function validateRecordState({incomingRecord, existingRecord, existingId,
     return needUnique ? uniqueModificationHistory(record.get(/^CAT$/u).map(normalizeEmptySubfields)) : record.get(/^CAT$/u).map(normalizeEmptySubfields);
   }
 
-  // eslint-disable-next-line max-statements
   function uniqueModificationHistory(modificationHistory) {
     const modificationHistoryStringArray = modificationHistory.map(JSON.stringify);
     const uniqueModificationHistoryStringArray = [...new Set(modificationHistory.map(JSON.stringify))];

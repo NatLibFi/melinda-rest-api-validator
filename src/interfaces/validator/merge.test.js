@@ -18,7 +18,6 @@ describe('merge', () => {
     fixura: {
       reader: READERS.JSON
     },
-    // eslint-disable-next-line max-statements
     callback: ({getFixture, expectedResultStatus, expectedToThrow, expectedStatus, expectedError, recordType = 'bib'}) => {
 
       debug(`Running test`);

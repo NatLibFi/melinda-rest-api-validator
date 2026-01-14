@@ -66,7 +66,6 @@ export default async function ({validatorOptions, mongoLogOperator}) {
   }
 
 
-  // eslint-disable-next-line max-statements
   async function processLoad(headers, data) {
     const {format, operationSettings, recordMetadata, operation, id} = headers;
 

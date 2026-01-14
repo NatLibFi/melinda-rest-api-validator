@@ -17,7 +17,6 @@ const catalogerToConversionNameMapping = {
   ]
 };
 
-// eslint-disable-next-line max-statements
 export function validateUpdate({incomingRecord, existingRecord, cataloger, validate = true}) {
 
   if (validate === false) {
