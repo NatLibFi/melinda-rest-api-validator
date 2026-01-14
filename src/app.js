@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import httpStatus from 'http-status';
 import {promisify, inspect} from 'util';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
