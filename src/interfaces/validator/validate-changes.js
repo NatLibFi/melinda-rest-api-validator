@@ -9,7 +9,6 @@ const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator:
 const debugData = debug.extend('data');
 
 // Checks that the incomingRecord and existingRecord are not identical
-// eslint-disable-next-line max-statements
 export function validateChanges({incomingRecord, existingRecord, validate = true}) {
 
   if (validate === false) {

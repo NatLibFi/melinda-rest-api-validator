@@ -14,7 +14,7 @@
 		"url": "git@github.com:NatLibFi/melinda-rest-api-validator.git"
 	},
 	"license": "MIT",
-	"version": "4.0.0-alpha.3",
+	"version": "4.0.0-alpha.4",
 	"type": "module",
 	"main": "./dist/index.js",
 	"engines": {
@@ -36,13 +36,13 @@
 		"@natlibfi/marc-record": "^10.0.1",
 		"@natlibfi/marc-record-merge": "^8.0.0",
 		"@natlibfi/marc-record-serializers": "^11.0.1",
-		"@natlibfi/melinda-backend-commons": "^3.0.1",
-		"@natlibfi/melinda-commons": "^14.0.1",
-		"@natlibfi/melinda-marc-record-merge-reducers": "^3.1.0",
-		"@natlibfi/melinda-record-match-validator": "^3.1.1",
-		"@natlibfi/melinda-record-matching": "^5.0.0",
-		"@natlibfi/melinda-rest-api-commons": "^5.0.2",
-		"@natlibfi/sru-client": "^7.0.0",
+		"@natlibfi/melinda-backend-commons": "^3.0.2",
+		"@natlibfi/melinda-commons": "^14.0.2",
+		"@natlibfi/melinda-marc-record-merge-reducers": "^3.1.1",
+		"@natlibfi/melinda-record-match-validator": "^3.1.2",
+		"@natlibfi/melinda-record-matching": "^5.0.1",
+		"@natlibfi/melinda-rest-api-commons": "^5.0.4",
+		"@natlibfi/sru-client": "^7.0.1",
 		"debug": "^4.4.3",
 		"deep-eql": "^5.0.2",
 		"deep-object-diff": "^1.1.9",
@@ -52,8 +52,8 @@
 		"@natlibfi/fixugen": "^3.0.0",
 		"@natlibfi/fixura": "^4.0.0",
 		"cross-env": "^10.1.0",
-		"esbuild": "^0.27.1",
-		"eslint": "^9.39.1"
+		"esbuild": "^0.27.2",
+		"eslint": "^9.39.2"
 	},
 	"overrides": {
 		"nanoid": "^3.3.8"

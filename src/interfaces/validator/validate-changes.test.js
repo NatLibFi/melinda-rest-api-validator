@@ -19,7 +19,6 @@ describe('validateChanges', () => {
     fixura: {
       reader: READERS.JSON
     },
-    // eslint-disable-next-line max-statements
     callback: ({getFixture, expectedResult, skipValidation}) => {
 
       const record1 = new MarcRecord(getFixture('record1.json'), {subfieldValues: false});

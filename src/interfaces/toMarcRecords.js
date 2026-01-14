@@ -80,7 +80,6 @@ export default function ({amqpOperator, mongoOperator, splitterOptions, mongoLog
 
           log100thQueue(recordNumber, 'read');
 
-          // eslint-disable-next-line max-statements
           async function transform(record, number) {
 
             logger.debug(`Adding record information to the headers`);
@@ -184,7 +183,7 @@ export default function ({amqpOperator, mongoOperator, splitterOptions, mongoLog
         mongoLogOperator.addLogItem(splitterLogItem);
 
         logger.debug(`Creating splitterReport to queueItem if needed`);
-        if ((keepSplitterReport === 'ALL') || (keepSplitterReport === 'ERROR' && (readerErrored || transformerErrored))) { // eslint-disable-line no-extra-parens
+        if ((keepSplitterReport === 'ALL') || (keepSplitterReport === 'ERROR' && (readerErrored || transformerErrored))) { 
           logger.debug(`Got ${readerErrors.length} errors. Pushing report to mongo`);
           mongoOperator.pushMessages({correlationId, messages: [splitterReport], messageField: 'splitterReport'});
           return;

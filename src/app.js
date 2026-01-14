@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import httpStatus from 'http-status';
 import {promisify, inspect} from 'util';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
@@ -15,6 +16,7 @@ import {logRecord} from './interfaces/validator/log-actions.js';
 
 const setTimeoutPromise = promisify(setTimeout);
 
+// eslint-disable-next-line max-lines-per-function
 export default async function ({
   pollRequest, pollWaitTime, amqpUrl, mongoUri, validatorOptions, splitterOptions, recordType
 }) {
@@ -93,7 +95,6 @@ export default async function ({
 
 
   // Check amqp for records in PENDING_VALIDATION.correlationId  AMQP queue for bulk
-  // eslint-disable-next-line max-statements
   async function checkAmqpForBulkPendingValidation({correlationId, mongoOperator, amqpOperator, prio, noop}) {
     logger.silly('Checking amqp');
     const validatorQueue = `PENDING_VALIDATION.${correlationId}`;
@@ -455,7 +456,6 @@ export default async function ({
 
 
   // Check Mongo for jobs
-  // eslint-disable-next-line max-statements
   async function checkMongo({mongoOperator, amqpOperator, prio}) {
 
     // bulk jobs for validation
