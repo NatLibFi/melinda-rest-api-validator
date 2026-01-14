@@ -1,22 +1,22 @@
-import HttpStatus from 'http-status';
+import httpStatus from 'http-status';
+import {inspect} from 'util';
 import {MarcRecord} from '@natlibfi/marc-record';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ValidationError} from '@natlibfi/melinda-commons';
 import {validations, logError, OPERATIONS} from '@natlibfi/melinda-rest-api-commons';
 import createMatchInterface from '@natlibfi/melinda-record-matching';
 import createSruClient from '@natlibfi/sru-client';
-import {inspect} from 'util';
 
-import {logMergeAction, logMatchAction, getCatalogerForLog} from './log-actions';
-import * as matcherService from './match';
-import {matchValidationForMatchResults} from './match-validation';
-import merger from './merge';
-import validateOwnChanges from './own-authorization';
-import {validateChanges} from './validate-changes';
-import {validateExistingRecord} from './validate-existing-record';
-import {validateRecordState} from './validate-record-state';
-import {validateUpdate} from './validate-update';
-import {getRecord} from '../../utils';
+import {logMergeAction, logMatchAction, getCatalogerForLog} from './log-actions.js';
+import * as matcherService from './match.js';
+import {matchValidationForMatchResults} from './match-validation.js';
+import merger from './merge.js';
+import validateOwnChanges from './own-authorization.js';
+import {validateChanges} from './validate-changes.js';
+import {validateExistingRecord} from './validate-existing-record.js';
+import {validateRecordState} from './validate-record-state.js';
+import {validateUpdate} from './validate-update.js';
+import {getRecord} from '../../utils.js';
 
 const logger = createLogger();
 
@@ -44,7 +44,6 @@ export async function validationsFactory(
 
   return {updateValidations, createValidations};
 
-  // eslint-disable-next-line max-statements
   async function updateValidations({updateId, updateRecord, updateOperation, mergeValidationResult = undefined, headers}) {
     logger.verbose(`Validations for UPDATE operation (${updateOperation}) (${updateId}) for ${headers.correlationId}`);
     logger.debug(`updateValidation, headers (${JSON.stringify(headers)})`);
@@ -67,7 +66,7 @@ export async function validationsFactory(
 
       if (!existingRecord) {
         logger.debug(`Record ${updateId} was not found from SRU.`);
-        throw new ValidationError(HttpStatus.NOT_FOUND, {message: `Cannot find record ${updateId} to update`, recordMetadata});
+        throw new ValidationError(httpStatus.NOT_FOUND, {message: `Cannot find record ${updateId} to update`, recordMetadata});
       }
 
       // aleph-record-load-api cannot currently update a record if the existing record is deleted
@@ -117,10 +116,9 @@ export async function validationsFactory(
     }
 
     logger.debug('No id in headers / merge results');
-    throw new ValidationError(HttpStatus.BAD_REQUEST, {message: 'Update id missing!', recordMetadata});
+    throw new ValidationError(httpStatus.BAD_REQUEST, {message: 'Update id missing!', recordMetadata});
   }
 
-  // eslint-disable-next-line max-statements
   async function createValidations({record, headers}) {
     const {recordMetadata, cataloger, operationSettings} = headers;
     // Currently force all validations for prio and batchBulk
@@ -136,7 +134,7 @@ export async function validationsFactory(
       logger.verbose('Attempting to find matching records in the SRU');
 
       if (matchers.length < 0 || matchers.length !== matchOptionsList.length) {
-        throw new ValidationError(HttpStatus.INTERNAL_SERVER_ERROR, {message: `There's no matcher defined, or no matchOptions for all matchers`, recordMetadata});
+        throw new ValidationError(httpStatus.INTERNAL_SERVER_ERROR, {message: `There's no matcher defined, or no matchOptions for all matchers`, recordMetadata});
       }
 
       logger.debug(`There are ${matchers.length} matchers with matchOptions: ${JSON.stringify(matchOptionsList)}`);
@@ -162,7 +160,7 @@ export async function validationsFactory(
         const matchResultsForLog = matches.map((match, index) => ({action: false, preference: false, message: 'Validation not run', matchSequence: index, ...match}));
 
         logMatchAction(mongoLogOperator, {headers, record, matchResultsForLog, matcherReports, logNoMatches: logOptions.logNoMatches});
-        throw new ValidationError(HttpStatus.CONFLICT, {message: 'Duplicates in database', ids: matches.map(({candidate: {id}}) => id), recordMetadata});
+        throw new ValidationError(httpStatus.CONFLICT, {message: 'Duplicates in database', ids: matches.map(({candidate: {id}}) => id), recordMetadata});
       }
 
       // VALIDATE MATCHES
@@ -193,7 +191,6 @@ export async function validationsFactory(
     return {result: validationResults, recordMetadata, headers};
   }
 
-  // eslint-disable-next-line max-statements
   async function mergeRecordForUpdates({record, existingRecord, id, headers}) {
     logger.debug(`Merging record ${id} to existing record ${id}`);
     const {recordMetadata} = headers;
@@ -228,7 +225,7 @@ export async function validationsFactory(
       logger.error(`mergeRecordForUpdates errored: ${err}`);
       logError(err);
       const errorMessage = err;
-      throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: `Merge errored: ${errorMessage}`, recordMetadata});
+      throw new ValidationError(httpStatus.UNPROCESSABLE_ENTITY, {message: `Merge errored: ${errorMessage}`, recordMetadata});
     }
   }
 
@@ -242,7 +239,6 @@ export async function validationsFactory(
     return {...headers, ...updatedHeaders};
   }
 
-  // eslint-disable-next-line max-statements
   async function validateAndMergeMatchResults({record, matchResults, headers, matcherReports, handleMatchFailuresAsNew}) {
     const {recordMetadata, cataloger} = headers;
     logger.debug(`OperationSetting: ${JSON.stringify(headers.operationSettings)}`);
@@ -269,7 +265,7 @@ export async function validationsFactory(
         const messages = sortedValidatedMatchResults.map(match => `${match.candidate.id}: ${match.message}`);
         const matchValidationMessage = messages.join(`, `);
         if (!handleMatchFailuresAsNew) {
-          throw new ValidationError(HttpStatus.CONFLICT, {message: `MatchValidation for all ${sortedValidatedMatchResults.length} matches failed. ${matchValidationMessage}`, ids: sortedValidatedMatchResults.map(match => match.candidate.id), recordMetadata});
+          throw new ValidationError(httpStatus.CONFLICT, {message: `MatchValidation for all ${sortedValidatedMatchResults.length} matches failed. ${matchValidationMessage}`, ids: sortedValidatedMatchResults.map(match => match.candidate.id), recordMetadata});
         }
         logger.debug(`Here we should return to adding record as new.`);
         // add messages to headers
@@ -287,7 +283,7 @@ export async function validationsFactory(
 
       // Do we ever get this kind of result from the matchValidation?
       if (firstResult.action === false) {
-        throw new ValidationError(HttpStatus.CONFLICT, {message: `MatchValidation with ${firstResult.candidate.id} failed. ${firstResult.message}`, ids: [firstResult.candidate.id], recordMetadata});
+        throw new ValidationError(httpStatus.CONFLICT, {message: `MatchValidation with ${firstResult.candidate.id} failed. ${firstResult.message}`, ids: [firstResult.candidate.id], recordMetadata});
       }
 
       // We don't have a matchValidationNote, because the preference information is available in the mergeNote
@@ -312,7 +308,7 @@ export async function validationsFactory(
         };
         const finalHeaders = {...headers, ...updatedHeaders};
         return {result: {record, validationResult: false}, recordMetadata, headers: finalHeaders};
-        //throw new ValidationError(HttpStatus.CONFLICT, {message: `UpdateValidation with ${firstResult.candidate.id} failed. This is actually not an error!`, ids: [firstResult.candidate.id], recordMetadata});
+        //throw new ValidationError(httpStatus.CONFLICT, {message: `UpdateValidation with ${firstResult.candidate.id} failed. This is actually not an error!`, ids: [firstResult.candidate.id], recordMetadata});
       }
 
       // run merge for record with the best valid match
@@ -391,7 +387,7 @@ export async function validationsFactory(
 
       logError(err);
       const errorMessage = err.message || err.payload;
-      throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: `Merge errored: ${errorMessage}`, recordMetadata});
+      throw new ValidationError(httpStatus.UNPROCESSABLE_ENTITY, {message: `Merge errored: ${errorMessage}`, recordMetadata});
     }
   }
 

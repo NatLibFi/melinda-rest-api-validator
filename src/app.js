@@ -1,14 +1,22 @@
+/* eslint-disable max-lines */
+import httpStatus from 'http-status';
 import {promisify, inspect} from 'util';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
-import {mongoFactory, amqpFactory, logError, LOG_ITEM_TYPE, QUEUE_ITEM_STATE, IMPORT_JOB_STATE, OPERATIONS, createRecordResponseItem, addRecordResponseItem, mongoLogFactory} from '@natlibfi/melinda-rest-api-commons';
-import validatorFactory from './interfaces/validator';
-import toMarcRecordFactory from './interfaces/toMarcRecords';
-import httpStatus from 'http-status';
-import {logRecord} from './interfaces/validator/log-actions';
+import {
+  mongoFactory, amqpFactory,
+  logError, LOG_ITEM_TYPE,
+  QUEUE_ITEM_STATE, IMPORT_JOB_STATE,
+  OPERATIONS, createRecordResponseItem,
+  addRecordResponseItem, mongoLogFactory
+} from '@natlibfi/melinda-rest-api-commons';
+import validatorFactory from './interfaces/validator/index.js';
+import toMarcRecordFactory from './interfaces/toMarcRecords.js';
+import {logRecord} from './interfaces/validator/log-actions.js';
 
 const setTimeoutPromise = promisify(setTimeout);
 
+// eslint-disable-next-line max-lines-per-function
 export default async function ({
   pollRequest, pollWaitTime, amqpUrl, mongoUri, validatorOptions, splitterOptions, recordType
 }) {
@@ -87,7 +95,6 @@ export default async function ({
 
 
   // Check amqp for records in PENDING_VALIDATION.correlationId  AMQP queue for bulk
-  // eslint-disable-next-line max-statements
   async function checkAmqpForBulkPendingValidation({correlationId, mongoOperator, amqpOperator, prio, noop}) {
     logger.silly('Checking amqp');
     const validatorQueue = `PENDING_VALIDATION.${correlationId}`;
@@ -273,7 +280,6 @@ export default async function ({
     logger.debug(JSON.stringify(newOperation));
     logger.debug(JSON.stringify(operationQueue));
 
-    // eslint-disable-next-line functional/no-conditional-statements
     if (prio) {
       // empty prio queue
       await amqpOperator.checkQueue({queue: operationQueue, style: 'messages', purge: true});
@@ -450,7 +456,6 @@ export default async function ({
 
 
   // Check Mongo for jobs
-  // eslint-disable-next-line max-statements
   async function checkMongo({mongoOperator, amqpOperator, prio}) {
 
     // bulk jobs for validation

@@ -1,9 +1,9 @@
-import HttpStatus from 'http-status';
+import httpStatus from 'http-status';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ValidationError} from '@natlibfi/melinda-commons';
 import createSruClient from '@natlibfi/sru-client';
-import {validateExistingRecord} from './validate-existing-record';
-import {getRecord} from '../../utils';
+import {validateExistingRecord} from './validate-existing-record.js';
+import {getRecord} from '../../utils.js';
 
 const logger = createLogger();
 
@@ -29,7 +29,7 @@ export function fixValidationsFactory(mongoLogOperator, {sruUrl}) {
 
     if (!existingRecord) {
       logger.debug(`Record ${id} was not found from SRU.`);
-      throw new ValidationError(HttpStatus.NOT_FOUND, {message: `Cannot find record ${id} to fix`});
+      throw new ValidationError(httpStatus.NOT_FOUND, {message: `Cannot find record ${id} to fix`});
     }
 
     if (fixType !== 'UNDEL') {

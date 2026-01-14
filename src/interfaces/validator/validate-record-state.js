@@ -1,12 +1,12 @@
 
+import createDebugLogger from 'debug';
 import deepEqual from 'deep-eql';
 import {detailedDiff} from 'deep-object-diff';
+import httpStatus from 'http-status';
 import {Error as ValidationError} from '@natlibfi/melinda-commons';
 //import {createLogger} from '@natlibfi/melinda-backend-commons';
 //import {inspect} from 'util';
-import HttpStatus from 'http-status';
-import createDebugLogger from 'debug';
-import {toTwoDigits, normalizeEmptySubfields} from '../../utils';
+import {toTwoDigits, normalizeEmptySubfields} from '../../utils.js';
 
 // Checks that the modification history is identical
 export function validateRecordState({incomingRecord, existingRecord, existingId, recordMetadata, validate, mergedIncomingRecord = true}) {
@@ -37,7 +37,7 @@ export function validateRecordState({incomingRecord, existingRecord, existingId,
     debugData(`Differences in CATs: ${JSON.stringify(detailedDiff(incomingModificationHistory, existingModificationHistory), {colors: true, depth: 4})}`);
     debugData(`Incoming record: ${JSON.stringify(incomingRecord)}`);
     debugData(`Existing record: ${JSON.stringify(existingRecord)}`);
-    throw new ValidationError(HttpStatus.CONFLICT, {message: `Modification history mismatch (CAT) with existing record ${existingId}`, recordMetadata, ids: [existingId]});
+    throw new ValidationError(httpStatus.CONFLICT, {message: `Modification history mismatch (CAT) with existing record ${existingId}`, recordMetadata, ids: [existingId]});
   }
   debug(`validateRecordState: OK`);
   return true;
@@ -47,7 +47,6 @@ export function validateRecordState({incomingRecord, existingRecord, existingId,
     return needUnique ? uniqueModificationHistory(record.get(/^CAT$/u).map(normalizeEmptySubfields)) : record.get(/^CAT$/u).map(normalizeEmptySubfields);
   }
 
-  // eslint-disable-next-line max-statements
   function uniqueModificationHistory(modificationHistory) {
     const modificationHistoryStringArray = modificationHistory.map(JSON.stringify);
     const uniqueModificationHistoryStringArray = [...new Set(modificationHistory.map(JSON.stringify))];
@@ -85,7 +84,7 @@ export function validateRecordState({incomingRecord, existingRecord, existingId,
         debug(`There are non-unique CATs that are current (${currentRemoved.length}) - cannot unique CATs`);
         debugData(`Current CATs that would have been removed: ${JSON.stringify(currentRemoved)}`);
         // throw CONFLICT only when (possibly) merging records
-        throw new ValidationError(HttpStatus.CONFLICT, {message: `Possible modification history mismatch (CAT) with existing record ${existingId}`, recordMetadata, ids: [existingId]});
+        throw new ValidationError(httpStatus.CONFLICT, {message: `Possible modification history mismatch (CAT) with existing record ${existingId}`, recordMetadata, ids: [existingId]});
       }
       debug(`There are non-unique CATs, but they are not current - using uniqued CATs`);
       return uniqueModificationHistoryStringArray.map(JSON.parse);

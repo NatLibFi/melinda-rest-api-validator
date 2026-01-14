@@ -1,23 +1,23 @@
+import assert from 'node:assert';
+import {describe} from 'node:test';
+import createDebugLogger from 'debug';
 
 import generateTests from '@natlibfi/fixugen';
 import {READERS} from '@natlibfi/fixura';
-import {expect} from 'chai';
 import {MarcRecord} from '@natlibfi/marc-record';
-import {validateExistingRecord} from './validate-existing-record';
-import createDebugLogger from 'debug';
+import {validateExistingRecord} from './validate-existing-record.js';
 
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator:validate-existing-record:test');
 const debugData = debug.extend('data');
 
 describe('validateExistingRecord', () => {
   generateTests({
-    path: [__dirname, '..', '..', '..', 'test-fixtures', 'validate-existing-record'],
+    path: [import.meta.dirname, '..', '..', '..', 'test-fixtures', 'validate-existing-record'],
     useMetadataFile: true,
     recurse: false,
     fixura: {
       reader: READERS.JSON
     },
-    // eslint-disable-next-line max-statements
     callback: ({getFixture, expectedToThrow, expectedStatus, expectedError, skipValidation}) => {
 
       const record = new MarcRecord(getFixture('record.json'), {subfieldValues: false});
@@ -26,13 +26,12 @@ describe('validateExistingRecord', () => {
         debug(`Running validation with (3rd param) validate: false`);
         const result = validateExistingRecord(record, 'recordMetadata', false);
         debug(`Result: ${result}`);
-        expect(result).to.equal('skipped');
+        assert.equal(result, 'skipped');
         return;
       }
 
       debugData(`Expecting error: ${expectedToThrow}, ${expectedStatus}, ${expectedError}`);
 
-      // eslint-disable-next-line functional/no-conditional-statements
       if (expectedToThrow) {
         try {
           validateExistingRecord(record, 'recordMetadata', true);
@@ -41,9 +40,9 @@ describe('validateExistingRecord', () => {
 
           debug(`Got error: ${err.status}, ${err.payload}`);
 
-          expect(err).to.be.an('error');
-          expect(err.status).to.equal(404);
-          expect(err.payload.message).to.match(new RegExp(expectedError, 'u'));
+          assert.equal(err instanceof Error, true);
+          assert.equal(err.status, 404);
+          assert.match(err.payload.message, new RegExp(expectedError, 'u'));
           return;
         }
       }

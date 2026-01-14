@@ -1,11 +1,12 @@
 
+import assert from 'node:assert';
+import {describe} from 'node:test';
+import createDebugLogger from 'debug';
 import generateTests from '@natlibfi/fixugen';
 import {READERS} from '@natlibfi/fixura';
-import {expect} from 'chai';
 import {MarcRecord} from '@natlibfi/marc-record';
-import {validateRecordState} from './validate-record-state';
-import createDebugLogger from 'debug';
-import {toTwoDigits} from '../../utils';
+import {validateRecordState} from './validate-record-state.js';
+import {toTwoDigits} from '../../utils.js';
 
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator:validate-record-state:test');
 const debugData = debug.extend('data');
@@ -66,13 +67,12 @@ function updateCatsInRecord(record, updateCats) {
 
 describe('validateRecordState', () => {
   generateTests({
-    path: [__dirname, '..', '..', '..', 'test-fixtures', 'validate-record-state'],
+    path: [import.meta.dirname, '..', '..', '..', 'test-fixtures', 'validate-record-state'],
     useMetadataFile: true,
     recurse: false,
     fixura: {
       reader: READERS.JSON
     },
-    // eslint-disable-next-line max-statements
     callback: ({getFixture, expectedToThrow, expectedStatus, expectedError, skipValidation, updateCats, mergedIncomingRecord = true}) => {
 
       const record1 = updateCatsInRecord(new MarcRecord(getFixture('record1.json'), {subfieldValues: false}), updateCats);
@@ -82,11 +82,10 @@ describe('validateRecordState', () => {
         debug(`Running validation with (4th param) validate: false`);
         const result = validateRecordState({incomingRecord: record1, existingRecord: record2, existingId: '000123456', recordMetadata: 'recordMetadata', validate: false, mergedIncomingRecord});
         debug(`Result: ${result}`);
-        expect(result).to.equal('skipped');
+        assert.equal(result, 'skipped');
         return;
       }
 
-      // eslint-disable-next-line functional/no-conditional-statements
       if (expectedToThrow) {
         debugData(`Expecting error: ${expectedToThrow}, ${expectedStatus}, ${expectedError}`);
         try {
@@ -96,9 +95,9 @@ describe('validateRecordState', () => {
 
           debug(`Got error: ${err.status}, ${JSON.stringify(err.payload)}`);
 
-          expect(err).to.be.an('error');
-          expect(err.status).to.equal(expectedStatus);
-          expect(err.payload.message).to.match(new RegExp(expectedError, 'u'));
+          assert.equal(err instanceof Error, true);
+          assert.equal(err.status, expectedStatus);
+          assert.match(err.payload.message, new RegExp(expectedError, 'u'));
           return;
         }
       }

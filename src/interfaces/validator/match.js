@@ -1,22 +1,20 @@
 
-import HttpStatus from 'http-status';
+import httpStatus from 'http-status';
+import {inspect} from 'util';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ValidationError} from '@natlibfi/melinda-commons';
-import {inspect} from 'util';
 
 const logger = createLogger();
 
 // stopWhenFound = stop iterating matchers when the first match is found
 // acceptZeroWithMaxCandidates = do not error if we get a zero match result with matchStatus: false and stopReason: maxCandidates
 
-// eslint-disable-next-line max-statements
 export async function iterateMatchers({matchers, matchOptionsList, record, stopWhenFound = true, acceptZeroWithMaxCandidates = false, matcherSequence = 0, matcherNoRunCount = 0, matcherFalseZeroCounts = {maxCandidates: 0, maxedQueries: 0, conversionFailures: 0}, matcherReports = [], allConversionFailures = [], allMatches = [], allStatus = true}) {
   logger.debug(`Matchers left: ${matchers.length}`);
 
   const [matcher] = matchers;
   const [matchOptions] = matchOptionsList;
 
-  // eslint-disable-next-line functional/no-conditional-statements
   if (matcher) {
 
     const newmatcherSequence = matcherSequence + 1;
@@ -53,18 +51,25 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
       const recordExternal = {recordSource: 'incomingRecord', label: 'ic'};
       const matchResults = await matcher({record, recordExternal});
 
-      const {matches, matchStatus, conversionFailures, candidateCount} = matchResults;
+      const {matches, matchStatus, conversionFailures: conversionFailuresFromMatcher, candidateCount} = matchResults;
+
+      if (conversionFailuresFromMatcher === undefined) {
+        logger.debug(`NOTE: No conversion failures information returned by matcher`);
+      }
+
+      // Update marc-record-matching-js does not return any conversionFailure information
+      // DEVELOP: handle this in some smart way
+      const conversionFailures = conversionFailuresFromMatcher !== undefined ? conversionFailuresFromMatcher : [];
 
       logger.debug(`MatchStatus: ${JSON.stringify(matchStatus)})`);
       logger.silly(`MatchResult: ${inspect(matchResults, {colors: true, maxArrayLength: 10, depth: 3})}`);
 
       logger.debug(`Conversion failures: ${conversionFailures.length}`);
       logger.silly(`Conversion failures: ${JSON.stringify(conversionFailures.map(f => f.payload.id))}`);
-
-      logger.debug(`CandidateCount: ${JSON.stringify(candidateCount)})`);
-
       // We probably want to log conversionFailures somewhere here - currently conversionFailures are logged only when matching fails due to them
       const newConversionFailures = allConversionFailures.concat(...conversionFailures);
+
+      logger.debug(`CandidateCount: ${JSON.stringify(candidateCount)})`);
 
       const newMatches = allMatches.concat(matches);
       const newAllStatus = matchStatus.status === false ? false : allStatus;
@@ -118,13 +123,12 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
 
       if (err.message === 'Generated query list contains no queries') {
         logger.debug(`Matcher ${matcherSequence} (${matcherName}) did not run: ${err.message}`);
-        // eslint-disable-next-line no-param-reassign
         matcherNoRunCount += 1;
 
         // If CONTENT/CONTENTALT -matcher or last matcher to run did not generate queries, match is not reliable
         if (['CONTENT', 'CONTENTALT'].includes(matcherName) || matchers.length <= 1) {
           logger.verbose(`Matcher ${matcherSequence} (${matcherName}) could not generate search queries.`);
-          throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: err.message});
+          throw new ValidationError(httpStatus.UNPROCESSABLE_ENTITY, {message: err.message});
         }
 
         return iterateMatchers({matchers: matchers.slice(1), matchOptionsList: matchOptionsList.slice(1), stopWhenFound, acceptZeroWithMaxCandidates, record, matcherSequence: newmatcherSequence, matcherNoRunCount, matcherFalseZeroCounts, matcherReports: newMatcherReports, allMatches, allStatus});
@@ -133,7 +137,7 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
       // SRU SruSearchErrors are 200-responses that include diagnostics from SRU server
       if (err.message.startsWith('SRU SruSearchError')) {
         logger.verbose(`Matcher ${matcherSequence} (${matcherName}) resulted in SRU search error: ${err.message}`);
-        throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: err.message});
+        throw new ValidationError(httpStatus.UNPROCESSABLE_ENTITY, {message: err.message});
       }
 
       // SRU unexpected errors: non-200 responses from SRU server etc.
@@ -160,19 +164,19 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
     // Fail if we could not create any search queries from the record
     if (matcherNoRunCount === matcherSequence) {
       logger.debug(`None of the matchers could generate search query for candidates`);
-      throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: 'Generated query list contains no queries'});
+      throw new ValidationError(httpStatus.UNPROCESSABLE_ENTITY, {message: 'Generated query list contains no queries'});
     }
 
     // Fail if we got too many search candidates and no matches
     if (matcherFalseZeroCounts.maxCandidates > 0 && !acceptZeroWithMaxCandidates) {
       logger.debug(`${matcherFalseZeroCounts.maxCandidates} matchers returned no matches, but did not check all possible candidates (maxCandidates)`);
-      throw new ValidationError(HttpStatus.CONFLICT, {message: `Matcher found too many candidates to check (maxCandidates)`});
+      throw new ValidationError(httpStatus.CONFLICT, {message: `Matcher found too many candidates to check (maxCandidates)`});
     }
 
     // Fail if we got too many search candidates and no matches
     if (matcherFalseZeroCounts.maxedQueries > 0) {
       logger.debug(`${matcherFalseZeroCounts.maxedQueries} matchers returned no matches, but did not check all possible candidates (maxedQueries)`);
-      throw new ValidationError(HttpStatus.CONFLICT, {message: `Matcher found too many candidates to check (maxedQueries)`});
+      throw new ValidationError(httpStatus.CONFLICT, {message: `Matcher found too many candidates to check (maxedQueries)`});
     }
 
     // Fail if we got conversionFailures and no matches
@@ -185,7 +189,7 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
       logger.debug(`Non-zero conversionFailureIds: ${JSON.stringify(nonZeroConversionFailureIds)}`);
       logger.debug(`Unique conversionFailureIds: ${JSON.stringify(uniqConversionFailureIds)}`);
 
-      throw new ValidationError(HttpStatus.UNPROCESSABLE_ENTITY, {message: `Matcher found only non-convertable candidates to check`, ids: uniqConversionFailureIds});
+      throw new ValidationError(httpStatus.UNPROCESSABLE_ENTITY, {message: `Matcher found only non-convertable candidates to check`, ids: uniqConversionFailureIds});
     }
     logger.debug(`No reasons to suspect the results with 0 matches.`);
   }
@@ -213,26 +217,20 @@ function checkStopReasonForZeroMatches({matchAmount, matcherSequence, matcherNam
     // - currently stopReason can be non-empty also in cases where status is true, if matcher hit the stop reason when handling the last available candidate record
 
 
-    // eslint-disable-next-line functional/no-conditional-statements
     if (matchStatus.status === false && matchStatus.stopReason === 'maxCandidates') {
       logger.verbose(`Matcher ${matcherName} resulted in ${matchStatus.status}, stopReason ${matchStatus.stopReason}`);
-      // eslint-disable-next-line no-param-reassign, functional/immutable-data
       matcherFalseZeroCounts.maxCandidates += 1;
     }
 
 
-    // eslint-disable-next-line functional/no-conditional-statements
     if (matchStatus.status === false && matchStatus.stopReason === 'maxedQueries') {
       logger.verbose(`Matcher ${matcherName} resulted in ${matchStatus.status}, stopReason ${matchStatus.stopReason}`);
-      // eslint-disable-next-line no-param-reassign, functional/immutable-data
       matcherFalseZeroCounts.maxedQueries += 1;
     }
 
 
-    // eslint-disable-next-line functional/no-conditional-statements
     if (matchStatus.status === false && matchStatus.stopReason === 'conversionFailures') {
       logger.verbose(`Matcher ${matcherName} resulted in ${matchStatus.status}, stopReason ${matchStatus.stopReason}`);
-      // eslint-disable-next-line no-param-reassign, functional/immutable-data
       matcherFalseZeroCounts.conversionFailures += 1;
     }
   }
