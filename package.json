@@ -36,7 +36,7 @@
 		"@natlibfi/marc-record": "^10.0.1",
 		"@natlibfi/marc-record-merge": "^8.0.1",
 		"@natlibfi/marc-record-serializers": "^11.0.1",
-		"@natlibfi/melinda-backend-commons": "^3.0.4",
+		"@natlibfi/melinda-backend-commons": "^3.0.5",
 		"@natlibfi/melinda-commons": "^14.0.2",
 		"@natlibfi/melinda-marc-record-merge-reducers": "^3.1.5",
 		"@natlibfi/melinda-record-match-validator": "^3.2.2",
