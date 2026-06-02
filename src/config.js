@@ -190,6 +190,7 @@ function generateStrategy(validatorMatchPackage) {
         matchDetection.features.bib.hostComponent(),
         matchDetection.features.bib.isbn(),
         matchDetection.features.bib.issn(),
+        matchDetection.features.bib.publisherNumber(),
         matchDetection.features.bib.otherStandardIdentifier(),
         // Let's not use the same title matchDetection here
         //matchDetection.features.bib.title(),
@@ -212,6 +213,7 @@ function generateStrategy(validatorMatchPackage) {
         matchDetection.features.bib.hostComponent(),
         matchDetection.features.bib.isbn(),
         matchDetection.features.bib.issn(),
+        matchDetection.features.bib.publisherNumber(),
         matchDetection.features.bib.otherStandardIdentifier(),
         matchDetection.features.bib.title(),
         matchDetection.features.bib.authors(),
