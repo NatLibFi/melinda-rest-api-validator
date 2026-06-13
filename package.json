@@ -52,7 +52,7 @@
 		"@natlibfi/fixugen": "^3.0.1",
 		"@natlibfi/fixura": "^4.0.1",
 		"cross-env": "^10.1.0",
-		"esbuild": "^0.28.0",
+		"esbuild": "^0.28.1",
 		"eslint": "^10.4.1"
 	},
 	"overrides": {
