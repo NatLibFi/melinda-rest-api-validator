@@ -78,6 +78,14 @@ describe('own-authorization', () => {
       }
     });
 
+    it('Should pass when ownTags is missing even if the record has LOW tags', () => {
+      const record = new MarcRecord(JSON.parse(record1), {subfieldValues: false});
+
+      const result = validateOwnChanges({ownTags: undefined, incomingRecord: record, operation: OPERATIONS.CREATE});
+
+      assert.equal(result, undefined);
+    });
+
     it('Should skip validation if validate param is false', () => {
       const tags = JSON.parse(tags4);
       const recordA = new MarcRecord(JSON.parse(record4a), {subfieldValues: false});

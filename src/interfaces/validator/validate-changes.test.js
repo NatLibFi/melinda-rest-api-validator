@@ -1,5 +1,5 @@
 import assert from 'node:assert';
-import {describe} from 'node:test';
+import {describe, it} from 'node:test';
 import createDebugLogger from 'debug';
 
 import generateTests from '@natlibfi/fixugen';
@@ -62,6 +62,69 @@ describe('validateChanges', () => {
       }
     }
 
+  });
+
+  describe('leader and Aleph-internal field normalization', () => {
+    const LEADER = '00000nam a2200000 a 4500';
+
+    function makeRecord(leader = LEADER, extraFields = []) {
+      return new MarcRecord({leader, fields: [{tag: '245', ind1: '1', ind2: ' ', subfields: [{code: 'a', value: 'foo.'}]}, ...extraFields]}, {subfieldValues: false});
+    }
+
+    function lowField(a) {
+      return {tag: 'LOW', ind1: ' ', ind2: ' ', subfields: [{code: 'a', value: a}]};
+    }
+
+    function sidField(b) {
+      return {tag: 'SID', ind1: ' ', ind2: ' ', subfields: [{code: 'b', value: b}]};
+    }
+
+    function catField(c) {
+      return {tag: 'CAT', ind1: ' ', ind2: ' ', subfields: [{code: 'c', value: c}]};
+    }
+
+    function hidField(a) {
+      return {tag: 'HID', ind1: ' ', ind2: ' ', subfields: [{code: 'a', value: a}]};
+    }
+
+    it('Should treat records as changed when the existing record has a too short LDR', () => {
+      const existing = makeRecord();
+      existing.leader = 'short';
+
+      const result = validateChanges({incomingRecord: makeRecord(), existingRecord: existing});
+
+      assert.equal(result.changeValidationResult, true);
+    });
+
+    it('Should treat records with identical LOW $a values as unchanged', () => {
+      const result = validateChanges({incomingRecord: makeRecord(undefined, [lowField('a'), lowField('a')]), existingRecord: makeRecord(undefined, [lowField('a'), lowField('a')])});
+
+      assert.equal(result.changeValidationResult, false);
+    });
+
+    it('Should treat records with identical SID $b values as unchanged', () => {
+      const result = validateChanges({incomingRecord: makeRecord(undefined, [sidField('b'), sidField('b')]), existingRecord: makeRecord(undefined, [sidField('b'), sidField('b')])});
+
+      assert.equal(result.changeValidationResult, false);
+    });
+
+    it('Should ignore changes in CAT fields when detecting changes', () => {
+      const result = validateChanges({incomingRecord: makeRecord(undefined, [catField('a')]), existingRecord: makeRecord(undefined, [catField('b')])});
+
+      assert.equal(result.changeValidationResult, false);
+    });
+
+    it('Should treat records with identical HID fields as unchanged', () => {
+      const result = validateChanges({incomingRecord: makeRecord(undefined, [hidField('a'), hidField('b')]), existingRecord: makeRecord(undefined, [hidField('a'), hidField('b')])});
+
+      assert.equal(result.changeValidationResult, false);
+    });
+
+    it('Should treat records differing only in LDR/05 n vs c as unchanged', () => {
+      const result = validateChanges({incomingRecord: makeRecord('00000cam a2200000 a 4500'), existingRecord: makeRecord('00000nam a2200000 a 4500')});
+
+      assert.equal(result.changeValidationResult, false);
+    });
   });
 });
 
