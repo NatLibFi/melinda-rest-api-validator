@@ -236,7 +236,6 @@ export default async function ({
     logger.silly(`app/processValidated: noop ${noop}`);
 
     if (noop) {
-      logger.debug(`FOO`);
       return setNoopResult({correlationId, processResult, mongoOperator, prio});
     }
 
@@ -506,7 +505,7 @@ export default async function ({
         // setState to IMPORTER.IN_QUEUE if we're not validating the bulk job
 
         if (noop && !validateRecords) {
-          await await mongoOperator.setState({correlationId, state: 'DONE'});
+          await mongoOperator.setState({correlationId, state: 'DONE'});
           return initCheck();
         }
 
