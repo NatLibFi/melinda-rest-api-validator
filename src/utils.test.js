@@ -66,12 +66,7 @@ describe('utils', () => {
       });
 
       assert.equal(result.blobSequence, 7);
-      // KNOWN BUG (see notes in workspace coverage report): the recordMetadata
-      // sourceIds/title/standardIdentifiers are silently ignored because the
-      // expression `recordMetadata.sourceIds || record ? ... : undefined` is
-      // parsed as `(recordMetadata.sourceIds || record) ? ... : undefined`.
-      // The values below assert the CURRENT behavior, not the intended one.
-      assert.deepStrictEqual(result, {sourceIds: [], blobSequence: 7, title: 'foo', standardIdentifiers: []});
+      assert.deepStrictEqual(result, {sourceIds: ['(BIB)123'], blobSequence: 7, title: 'from metadata', standardIdentifiers: ['(035)999']});
     });
 
     it('Should derive title and identifiers from the record', () => {
@@ -79,6 +74,8 @@ describe('utils', () => {
 
       const result = getRecordMetadata({record, recordMetadata: {sourceIds: ['(BIB)123']}});
 
+      // recordMetadata sourceIds take precedence over the record-derived ids
+      assert.deepStrictEqual(result.sourceIds, ['(BIB)123']);
       // getRecordTitle strips the trailing period; standard identifiers only
       // come from 020/022/024 fields, which this record has none of
       assert.equal(result.title, 'foo');
