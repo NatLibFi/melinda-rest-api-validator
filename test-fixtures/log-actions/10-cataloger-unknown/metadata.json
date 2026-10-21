@@ -1,0 +1,6 @@
+{
+  "description": "getCatalogerForLog falls back to unknown for an empty string cataloger",
+  "logFunction": "getCatalogerForLog",
+  "expectedCataloger": "unknown",
+  "cataloger": ""
+}

@@ -1,0 +1,11 @@
+{
+  "cataloger": {
+    "id": "u6"
+  },
+  "correlationId": "corr-6",
+  "recordMetadata": {
+    "blobSequence": 1,
+    "operation": "CREATE",
+    "mergeOption": "unique"
+  }
+}

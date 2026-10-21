@@ -1,0 +1,8 @@
+{
+  "cataloger": "string-cat",
+  "correlationId": "corr-2",
+  "recordMetadata": {
+    "blobSequence": 3,
+    "operation": "UPDATE"
+  }
+}

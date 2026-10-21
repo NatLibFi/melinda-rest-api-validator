@@ -1,0 +1,8 @@
+{
+  "description": "keeps the input order as tie breaker for equal probabilities",
+  "expectedBestId": "cand1",
+  "expectedOrder": [
+    "cand1",
+    "cand2"
+  ]
+}

@@ -1,0 +1,5 @@
+{
+  "description": "returns an empty matchValidationResult for an empty match list",
+  "expectedBestId": null,
+  "expectedOrder": []
+}

@@ -1,0 +1,32 @@
+{
+  "description": "logMergeAction logs a MERGE_LOG item with the incoming record preferred (value A)",
+  "logFunction": "logMergeAction",
+  "id": "dbId-6",
+  "preference": {
+    "name": "incoming record preferred",
+    "value": "A"
+  },
+  "expectedLogItem": {
+    "logItemType": "MERGE_LOG",
+    "cataloger": "u6",
+    "correlationId": "corr-6",
+    "blobSequence": 1,
+    "operation": "CREATE",
+    "mergeOption": "unique",
+    "databaseId": "dbId-6",
+    "preference": {
+      "name": "incoming record preferred",
+      "value": "A",
+      "recordName": "incomingRecord"
+    },
+    "incomingRecord": {
+      "001": "in-6"
+    },
+    "databaseRecord": {
+      "001": "db-6"
+    },
+    "mergedRecord": {
+      "001": "merged-6"
+    }
+  }
+}
