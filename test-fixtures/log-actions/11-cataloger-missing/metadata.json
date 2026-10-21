@@ -1,0 +1,5 @@
+{
+  "description": "getCatalogerForLog throws for a missing cataloger (pins current behavior)",
+  "logFunction": "getCatalogerForLog",
+  "expectToThrow": true
+}

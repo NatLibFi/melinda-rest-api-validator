@@ -32,3 +32,6 @@ coverage
 temp-test-data
 
 .DS_Store
+
+# Private agent workspace (nested repo, never publish)
+workspace/

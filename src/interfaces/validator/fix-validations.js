@@ -7,9 +7,12 @@ import {getRecord} from '../../utils.js';
 
 const logger = createLogger();
 
-export function fixValidationsFactory(mongoLogOperator, {sruUrl}) {
+export function fixValidationsFactory(mongoLogOperator, {sruUrl, sruClient: sruClientParam}) {
   logger.debug(`Creating fixValidations. sruUrl: ${sruUrl}}`);
-  const sruClient = createSruClient({url: sruUrl, recordSchema: 'marcxml', retrieveAll: false, maximumRecordsPerRequest: 1});
+  const sruClient = sruClientParam ?? createSruClient({
+    url: sruUrl, recordSchema: 'marcxml',
+    retrieveAll: false, maximumRecordsPerRequest: 1
+  });
 
   return {fixValidations};
 

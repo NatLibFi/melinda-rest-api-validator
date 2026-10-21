@@ -1,0 +1,7 @@
+{
+  "description": "logRecord does not log anything when logConfig is off",
+  "logFunction": "logRecord",
+  "logItemType": "RESULT_RECORD_LOG",
+  "logConfig": false,
+  "expectedLogItem": null
+}

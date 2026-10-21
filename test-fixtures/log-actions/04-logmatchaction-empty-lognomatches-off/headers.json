@@ -1,0 +1,10 @@
+{
+  "cataloger": {
+    "id": "u4"
+  },
+  "correlationId": "corr-4",
+  "recordMetadata": {
+    "blobSequence": 1,
+    "operation": "CREATE"
+  }
+}

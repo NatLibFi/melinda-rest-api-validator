@@ -1,0 +1,54 @@
+{
+  "description": "empty json array rejects with 422 and (no return after the reject) writes the splitter report twice",
+  "contentType": "application/json",
+  "operation": "CREATE",
+  "failOnError": false,
+  "keepSplitterReport": "ALL",
+  "rawPayload": "[]",
+  "expected": {
+    "result": "rejected",
+    "rejectStatus": 422,
+    "rejectPayload": "Invalid payload!",
+    "checked": [
+      {
+        "queue": "CREATE.corr-1",
+        "style": "messages",
+        "purge": true
+      }
+    ],
+    "splitterReports": [
+      {
+        "recordNumber": 0,
+        "sequenceNumber": 0,
+        "readerErrors": []
+      },
+      {
+        "recordNumber": 0,
+        "sequenceNumber": 0,
+        "readerErrors": []
+      }
+    ],
+    "logItems": [
+      {
+        "logItemType": "SPLITTER_LOG",
+        "correlationId": "corr-1",
+        "recordNumber": 0,
+        "sequenceNumber": 0,
+        "readerErrors": []
+      },
+      {
+        "logItemType": "SPLITTER_LOG",
+        "correlationId": "corr-1",
+        "recordNumber": 0,
+        "sequenceNumber": 0,
+        "readerErrors": []
+      }
+    ],
+    "blobSizes": [
+      {
+        "correlationId": "corr-1",
+        "blobSize": 0
+      }
+    ]
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "description": "failOnError omitted: falls back to splitterOptions.failBulkOnError=true and rejects",
+  "contentType": "application/json",
+  "operation": "UPDATE",
+  "useDefaultFailOnError": true,
+  "failBulkOnError": true,
+  "keepSplitterReport": "NONE",
+  "rawPayload": "[{\"leader\":\"00000nam a2200000 a 4500\",\"fields\":[{\"tag\":\"245\",\"ind1\":\"1\",\"ind2\":\" \",\"subfields\":[{\"code\":\"a\",\"value\":\"foo.\"}]}]}]",
+  "expected": {
+    "result": "rejected",
+    "rejectStatus": 422,
+    "rejectPayload": {
+      "message": "Invalid payload! Record 1 has no valid id for UPDATE. Available id: <undefined>."
+    },
+    "checked": [
+      {
+        "queue": "UPDATE.corr-1",
+        "style": "messages",
+        "purge": true
+      }
+    ],
+    "recordItems": [
+      {
+        "databaseId": "000000000",
+        "recordMetadata": {
+          "sourceIds": [],
+          "blobSequence": 1,
+          "title": "foo",
+          "standardIdentifiers": []
+        },
+        "recordStatus": "INVALID",
+        "detailedRecordStatus": "UNPROCESSABLE_ENTITY",
+        "message": "Invalid payload! Record 1 has no valid id for UPDATE. Available id: <undefined>."
+      }
+    ],
+    "logItems": [
+      {
+        "logItemType": "SPLITTER_LOG",
+        "correlationId": "corr-1",
+        "recordNumber": 1,
+        "sequenceNumber": 1,
+        "readerErrors": [
+          {
+            "sequenceNumber": 1,
+            "error": {
+              "message": "Invalid payload! Record 1 has no valid id for UPDATE. Available id: <undefined>."
+            }
+          }
+        ]
+      }
+    ],
+    "blobSizes": [
+      {
+        "correlationId": "corr-1",
+        "blobSize": 1
+      }
+    ],
+    "removed": [
+      "UPDATE.corr-1"
+    ]
+  }
+}

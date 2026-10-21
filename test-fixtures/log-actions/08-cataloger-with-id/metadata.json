@@ -1,0 +1,9 @@
+{
+  "description": "getCatalogerForLog picks the cataloger id",
+  "logFunction": "getCatalogerForLog",
+  "cataloger": {
+    "id": "u8",
+    "name": "User Eight"
+  },
+  "expectedCataloger": "u8"
+}

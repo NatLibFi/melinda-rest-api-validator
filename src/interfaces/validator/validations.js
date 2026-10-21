@@ -32,14 +32,18 @@ export async function validationsFactory(
     acceptZeroWithMaxCandidates,
     matchFailuresAsNew,
     logOptions
-  }
+  },
+  {sruClient: sruClientParam, matchers: matchersParam} = {}
 ) {
   logger.debug(`postMergeFixOptions: ${JSON.stringify(postMergeFixOptions)}`);
 
   // validationService: marc-record-validate validations from melinda-rest-api-commons
   const validationService = await validations();
-  const sruClient = createSruClient({url: sruUrl, recordSchema: 'marcxml', retrieveAll: false, maximumRecordsPerRequest: 1});
-  const matchers = matchOptionsList.map(matchOptions => createMatchInterface(matchOptions));
+  const sruClient = sruClientParam ?? createSruClient({
+    url: sruUrl, recordSchema: 'marcxml',
+    retrieveAll: false, maximumRecordsPerRequest: 1
+  });
+  const matchers = matchersParam ?? matchOptionsList.map(matchOptions => createMatchInterface(matchOptions));
   logger.debug(`We created ${matchers.length} matchers`);
 
   return {updateValidations, createValidations};

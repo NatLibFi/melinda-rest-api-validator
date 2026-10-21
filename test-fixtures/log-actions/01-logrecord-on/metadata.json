@@ -1,0 +1,17 @@
+{
+  "description": "logRecord logs the record item when logConfig is on",
+  "logFunction": "logRecord",
+  "logItemType": "INPUT_RECORD_LOG",
+  "logConfig": true,
+  "expectedLogItem": {
+    "logItemType": "INPUT_RECORD_LOG",
+    "cataloger": "user1",
+    "correlationId": "corr-1",
+    "blobSequence": 7,
+    "operation": "CREATE",
+    "id": "abc123",
+    "record": {
+      "001": "123"
+    }
+  }
+}

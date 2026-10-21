@@ -18,7 +18,7 @@ import {updateField001ToParamId, getRecordMetadata, getIdFromRecord, isValidAlep
 //const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator');
 //const debugData = debug.extend('data');
 
-export default async function ({validatorOptions, mongoLogOperator}) {
+export default async function ({validatorOptions, mongoLogOperator, sruClient, matchers}) {
   const logger = createLogger();
   const {preValidationFixOptions, preImportFixOptions, recordType} = validatorOptions;
   logger.debug(`preValidationFixOptions: ${JSON.stringify(preValidationFixOptions)}`);
@@ -39,8 +39,12 @@ export default async function ({validatorOptions, mongoLogOperator}) {
 
   const conversionService = conversions();
   // should we have here matcherService? commons mongo/amqp
-  const {updateValidations, createValidations} = await validationsFactory(mongoLogOperator, fixRecord, validatorOptions);
-  const {fixValidations} = await fixValidationsFactory(mongoLogOperator, {sruUrl: validatorOptions.sruUrl});
+  const {updateValidations, createValidations} = await validationsFactory(
+    mongoLogOperator, fixRecord, validatorOptions, {sruClient, matchers}
+  );
+  const {fixValidations} = await fixValidationsFactory(
+    mongoLogOperator, {sruUrl: validatorOptions.sruUrl, sruClient}
+  );
   //logger.debug(`Creating mongoLogOperator in ${mongoUri}`);
   //const mongoLogOperator = await mongoLogFactory(mongoUri);
 

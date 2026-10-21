@@ -1,0 +1,17 @@
+{
+  "description": "logMatchAction logs an empty match item when there are no matches and logNoMatches is on",
+  "logFunction": "logMatchAction",
+  "logNoMatches": true,
+  "expectedLogItem": {
+    "logItemType": "MATCH_LOG",
+    "cataloger": "u5",
+    "correlationId": "corr-5",
+    "blobSequence": 2,
+    "operation": "CREATE",
+    "incomingRecord": {
+      "a": 1
+    },
+    "matchResult": [],
+    "matcherReports": []
+  }
+}

@@ -1,0 +1,32 @@
+[
+  {
+    "action": "merge",
+    "preference": {
+      "name": "first",
+      "value": "A"
+    },
+    "message": "matched",
+    "candidate": {
+      "id": "cand1",
+      "record": {
+        "f1": true
+      }
+    },
+    "probability": 0.95
+  },
+  {
+    "action": "merge",
+    "preference": {
+      "name": "second",
+      "value": "B"
+    },
+    "message": "matched",
+    "candidate": {
+      "id": "cand2",
+      "record": {
+        "f2": true
+      }
+    },
+    "probability": 0.9
+  }
+]

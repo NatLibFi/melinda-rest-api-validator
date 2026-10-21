@@ -1,0 +1,17 @@
+[
+  {
+    "matchIds": [
+      "cand1"
+    ],
+    "matcher": "IDS",
+    "queries": 2
+  },
+  null,
+  {
+    "matchIds": [
+      "cand9"
+    ],
+    "matcher": "CONTENT",
+    "queries": 1
+  }
+]

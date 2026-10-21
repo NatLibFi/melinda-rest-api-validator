@@ -18,16 +18,18 @@ const setTimeoutPromise = promisify(setTimeout);
 
 // eslint-disable-next-line max-lines-per-function
 export default async function ({
-  pollRequest, pollWaitTime, amqpUrl, mongoUri, validatorOptions, splitterOptions, recordType
+  pollRequest, pollWaitTime, amqpUrl, mongoUri, validatorOptions, splitterOptions, recordType, deps = {}
 }) {
   const logger = createLogger();
   const collection = pollRequest ? 'prio' : 'bulk';
   const prio = pollRequest;
-  const mongoOperator = await mongoFactory(mongoUri, collection);
+  const mongoOperator = deps.mongoOperator ?? await mongoFactory(mongoUri, collection);
   // secord parameter is true for running amqpHealthCheck, which errors if channel and/or connection gets closed
-  const amqpOperator = await amqpFactory(amqpUrl, true);
-  const mongoLogOperator = await mongoLogFactory(mongoUri);
-  const validator = await validatorFactory({validatorOptions, mongoLogOperator});
+  const amqpOperator = deps.amqpOperator ?? await amqpFactory(amqpUrl, true);
+  const mongoLogOperator = deps.mongoLogOperator ?? await mongoLogFactory(mongoUri);
+  const validator = await validatorFactory({
+    validatorOptions, mongoLogOperator, sruClient: deps.sruClient, matchers: deps.matchers
+  });
   const toMarcRecords = await toMarcRecordFactory({amqpOperator, mongoOperator, mongoLogOperator, splitterOptions});
 
   logger.info(`Started Melinda-rest-api-validator: ${pollRequest ? 'PRIORITY' : 'BULK'} for ${recordType} records`);
@@ -236,7 +238,6 @@ export default async function ({
     logger.silly(`app/processValidated: noop ${noop}`);
 
     if (noop) {
-      logger.debug(`FOO`);
       return setNoopResult({correlationId, processResult, mongoOperator, prio});
     }
 
@@ -506,7 +507,7 @@ export default async function ({
         // setState to IMPORTER.IN_QUEUE if we're not validating the bulk job
 
         if (noop && !validateRecords) {
-          await await mongoOperator.setState({correlationId, state: 'DONE'});
+          await mongoOperator.setState({correlationId, state: 'DONE'});
           return initCheck();
         }
 
