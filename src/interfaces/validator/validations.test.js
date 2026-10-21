@@ -75,6 +75,21 @@ function fixture(dir, file) {
   return JSON.parse(readFileSync(path, 'utf8'));
 }
 
+function catField(value) {
+  return {tag: 'CAT', ind1: ' ', ind2: ' ', subfields: [{code: 'a', value: value}]};
+}
+
+async function makeUpdateValidations({sruClient, fixRecord = async (r) => r.toObject(), options = {}}) {
+  const logOperator = makeLogOperator();
+  const {updateValidations} = await validationsFactory(
+    logOperator,
+    fixRecord,
+    {...baseValidatorOptions, ...options},
+    {sruClient, matchers: [async () => matchResult()]}
+  );
+  return {updateValidations, logOperator};
+}
+
 function incomingRecord(dir) {
   return new MarcRecord(fixture(dir, 'record.json'), {subfieldValues: false});
 }
@@ -511,6 +526,285 @@ describe('createValidations (LOW-tag authorization)', () => {
     await assert.rejects(createValidations({record, headers}), (err) => {
       assert.equal(err.status, 409);
       assert.equal(err.payload.message, 'Duplicates in database');
+      return true;
+    });
+  });
+});
+
+describe('updateValidations (entry)', () => {
+  const updateId = '000020001';
+  const existing = makeRecord([titleField('foo.', 'bar'), catField('u1 20240101120000')]);
+
+  it('Should throw 400 BAD_REQUEST when no update id is given', async () => {
+    const headers = makeHeaders({operation: 'UPDATE'}, {unique: false, merge: false});
+    const {updateValidations} = await makeUpdateValidations({sruClient: makeSruClient({})});
+
+    await assert.rejects(updateValidations({updateRecord: existing, headers}), (err) => {
+      assert.equal(err.status, 400);
+      assert.equal(err.payload.message, 'Update id missing!');
+      return true;
+    });
+  });
+
+  it('Should throw 404 NOT_FOUND when the existing record is not found in the SRU', async () => {
+    const headers = makeHeaders({operation: 'UPDATE', id: updateId}, {unique: false, merge: false});
+    const {updateValidations} = await makeUpdateValidations({sruClient: makeSruClient({})});
+
+    await assert.rejects(updateValidations({updateId, updateRecord: existing, headers}), (err) => {
+      assert.equal(err.status, 404);
+      assert.equal(err.payload.message, `Cannot find record ${updateId} to update`);
+      return true;
+    });
+  });
+
+  it('Should reject with the SRU error when the SRU search fails', async () => {
+    const sruClient = {
+      searchRetrieve() {
+        const emitter = new EventEmitter();
+        setImmediate(() => emitter.emit('error', new Error('SRU is down')));
+        return emitter;
+      }
+    };
+    const headers = makeHeaders({operation: 'UPDATE', id: updateId}, {unique: false, merge: false});
+    const {updateValidations} = await makeUpdateValidations({sruClient});
+
+    await assert.rejects(updateValidations({updateId, updateRecord: existing, headers}), /SRU is down/u);
+  });
+});
+
+describe('updateValidations (existing record)', () => {
+  const updateId = '000020001';
+
+  it('Should throw 404 NOT_FOUND when the existing record is deleted', async () => {
+    const base = makeRecord([titleField('foo.', 'bar'), catField('u1 20240101120000')]);
+    const deleted = new MarcRecord({...base.toObject(), leader: `${base.leader.slice(0, 5)}d${base.leader.slice(6)}`}, {subfieldValues: false});
+    const sruClient = makeSruClient({[updateId]: deleted});
+    const headers = makeHeaders({operation: 'UPDATE', id: updateId}, {unique: false, merge: false});
+    const {updateValidations} = await makeUpdateValidations({sruClient});
+
+    await assert.rejects(updateValidations({updateId, updateRecord: base, headers}), (err) => {
+      assert.equal(err.status, 404);
+      assert.equal(err.payload.message, 'Existing record is deleted');
+      return true;
+    });
+  });
+});
+
+describe('updateValidations (no merge)', () => {
+  const updateId = '000020001';
+  const makeHeadersForUpdate = () => makeHeaders({operation: 'UPDATE', id: updateId}, {unique: false, merge: false});
+
+  it('Should return the validated incoming record when the update changes the record', async () => {
+    const existing = makeRecord([titleField('foo.', 'bar'), catField('u1 20240101120000')]);
+    const incoming = makeRecord([titleField('foo.', 'baz'), catField('u1 20240101120000')]);
+    const sruClient = makeSruClient({[updateId]: existing});
+    const headers = makeHeadersForUpdate();
+    const {updateValidations, logOperator} = await makeUpdateValidations({sruClient});
+
+    const {result, headers: newHeaders, recordMetadata} = await updateValidations({updateId, updateRecord: incoming, headers});
+
+    assert.equal(result.failed, false);
+    assert.deepStrictEqual(result.record, incoming);
+    assert.deepStrictEqual(recordMetadata, headers.recordMetadata);
+    assert.strictEqual(newHeaders, headers);
+    assert.deepStrictEqual(logOperator.logItems, []);
+  });
+
+  it('Should throw 409 CONFLICT when the CAT modification histories do not match', async () => {
+    const existing = makeRecord([titleField('foo.', 'bar'), catField('u1 20240101120000')]);
+    const incoming = makeRecord([titleField('foo.', 'baz'), catField('u2 20240102120000')]);
+    const sruClient = makeSruClient({[updateId]: existing});
+    const headers = makeHeadersForUpdate();
+    const {updateValidations} = await makeUpdateValidations({sruClient});
+
+    await assert.rejects(updateValidations({updateId, updateRecord: incoming, headers}), (err) => {
+      assert.equal(err.status, 409);
+      assert.match(err.payload.message, /Modification history mismatch \(CAT\)/u);
+      assert.deepStrictEqual(err.payload.ids, [updateId]);
+      return true;
+    });
+  });
+
+  it('Should report a validation failure when the 003 field is not FI-MELINDA', async () => {
+    const existing = makeRecord([titleField('foo.', 'bar'), {tag: '003', value: 'FI-MELINDA'}, catField('u1 20240101120000')]);
+    const incoming = makeRecord([titleField('foo.', 'baz'), {tag: '003', value: 'FI-OTHER'}, catField('u1 20240101120000')]);
+    const sruClient = makeSruClient({[updateId]: existing});
+    const headers = makeHeadersForUpdate();
+    const {updateValidations} = await makeUpdateValidations({sruClient});
+
+    const {result} = await updateValidations({updateId, updateRecord: incoming, headers});
+
+    assert.equal(result.failed, true);
+    assert(result.messages.length > 0);
+  });
+});
+
+describe('updateValidations (no-change updates)', () => {
+  const updateId = '000020001';
+  const makeUpdateHeaders = (settings = {}, overrides = {}) => makeHeaders(
+    {operation: 'UPDATE', id: updateId, ...overrides}, {unique: false, merge: false, ...settings}
+  );
+  const makePair = () => {
+    const existing = makeRecord([titleField('foo.', 'bar'), catField('u1 20240101120000')]);
+    const incoming = makeRecord([titleField('foo.', 'baz'), catField('u1 20240101120000')]);
+    return {existing, incoming};
+  };
+
+  it('Should skip the update and mark the operation SKIPPED_CHANGE when nothing changes', async () => {
+    const {existing} = makePair();
+    const sruClient = makeSruClient({[updateId]: existing});
+    const headers = makeUpdateHeaders({skipNoChangeUpdates: true});
+    const {updateValidations} = await makeUpdateValidations({sruClient});
+
+    const {result, headers: newHeaders} = await updateValidations({updateId, updateRecord: existing, headers});
+
+    assert.equal(result.failed, false);
+    assert.equal(newHeaders.operation, 'SKIPPED_CHANGE');
+    assert.deepStrictEqual(newHeaders.notes, [`No changes detected while trying to update existing record ${updateId}, update skipped.`]);
+  });
+
+  it('Should append the no-change note to the existing header notes', async () => {
+    const {existing} = makePair();
+    const sruClient = makeSruClient({[updateId]: existing});
+    const headers = makeUpdateHeaders({skipNoChangeUpdates: true}, {notes: ['previous note']});
+    const {updateValidations} = await makeUpdateValidations({sruClient});
+
+    const {headers: newHeaders} = await updateValidations({updateId, updateRecord: existing, headers});
+
+    assert.equal(newHeaders.operation, 'SKIPPED_CHANGE');
+    assert.equal(newHeaders.notes[0], 'previous note');
+    assert.match(newHeaders.notes[1], /No changes detected/u);
+  });
+
+  it('Should update the record normally when the update changes the record and skipNoChangeUpdates is on', async () => {
+    const {existing, incoming} = makePair();
+    const sruClient = makeSruClient({[updateId]: existing});
+    const headers = makeUpdateHeaders({skipNoChangeUpdates: true});
+    const {updateValidations} = await makeUpdateValidations({sruClient});
+
+    const {result, headers: newHeaders} = await updateValidations({updateId, updateRecord: incoming, headers});
+
+    assert.equal(result.failed, false);
+    assert.deepStrictEqual(result.record, incoming);
+    assert.equal(newHeaders.operation, 'UPDATE');
+    assert.strictEqual(newHeaders, headers);
+  });
+
+  it('Should not run the change check by default when skipNoChangeUpdates is off', async () => {
+    const {existing} = makePair();
+    const sruClient = makeSruClient({[updateId]: existing});
+    const headers = makeUpdateHeaders({skipNoChangeUpdates: false});
+    const {updateValidations} = await makeUpdateValidations({sruClient});
+
+    const {headers: newHeaders} = await updateValidations({updateId, updateRecord: existing, headers});
+
+    // identical records are not detected as no-change, the update is processed normally
+    assert.equal(newHeaders.operation, 'UPDATE');
+    assert.strictEqual(newHeaders, headers);
+  });
+});
+
+describe('updateValidations (LOW-tag authorization)', () => {
+  const updateId = '000020001';
+
+  it('Should throw 403 FORBIDDEN when the update record has a non-authorized LOW tag', async () => {
+    const existing = makeRecord([titleField('foo.', 'bar'), catField('u1 20240101120000')]);
+    const incoming = makeRecord([titleField('foo.', 'baz'), lowField('FIN01-LOW-123456'), catField('u1 20240101120000')]);
+    const sruClient = makeSruClient({[updateId]: existing});
+    const headers = makeHeaders({operation: 'UPDATE', id: updateId, cataloger: {id: 'u1', authorization: ['OTHER']}}, {unique: false, merge: false});
+    const {updateValidations} = await makeUpdateValidations({sruClient});
+
+    await assert.rejects(updateValidations({updateId, updateRecord: incoming, headers}), (err) => {
+      assert.equal(err.status, 403);
+      assert.equal(err.payload.message, 'Own authorization error');
+      return true;
+    });
+  });
+
+  it('Should skip the LOW-tag check when skipLowValidation is on', async () => {
+    const existing = makeRecord([titleField('foo.', 'bar'), catField('u1 20240101120000')]);
+    const incoming = makeRecord([titleField('foo.', 'baz'), lowField('FIN01-LOW-123456'), catField('u1 20240101120000')]);
+    const sruClient = makeSruClient({[updateId]: existing});
+    const headers = makeHeaders({operation: 'UPDATE', id: updateId, cataloger: {id: 'u1', authorization: ['OTHER']}}, {unique: false, merge: false, skipLowValidation: true});
+    const {updateValidations} = await makeUpdateValidations({sruClient});
+
+    const {result} = await updateValidations({updateId, updateRecord: incoming, headers});
+
+    assert.equal(result.failed, false);
+  });
+});
+
+describe('updateValidations (merge for updates)', () => {
+  const updateId = '000020001';
+  const makePair = () => {
+    const existing = makeRecord([titleField('foo.', 'bar'), catField('u1 20240101120000')]);
+    const incoming = makeRecord([titleField('foo.', 'baz'), catField('u1 20240101120000')]);
+    return {existing, incoming};
+  };
+  const mergeHeaders = () => makeHeaders({operation: 'UPDATE', id: updateId}, {unique: false, merge: true});
+
+  it('Should merge the incoming record into the existing record and return an UPDATE result', async () => {
+    const {existing, incoming} = makePair();
+    const sruClient = makeSruClient({[updateId]: existing});
+    const headers = mergeHeaders();
+    const {updateValidations, logOperator} = await makeUpdateValidations({sruClient});
+
+    const {result, headers: newHeaders} = await updateValidations({updateId, updateRecord: incoming, headers});
+
+    assert.equal(result.failed, false);
+    assert(result.record instanceof MarcRecord);
+    // the database record is preferred in update merges
+    const mergedTitle = result.record.get(/^245$/u)[0];
+    assert.deepStrictEqual(mergedTitle.subfields[0], {code: 'a', value: 'foo.'});
+    assert.equal(newHeaders.operation, 'UPDATE');
+    assert.equal(newHeaders.id, updateId);
+    assert.deepStrictEqual(newHeaders.notes, [`Merged to ${updateId} preferring database record.`]);
+    const mergeLog = logOperator.logItems.find(({logItemType}) => logItemType === 'MERGE_LOG');
+    assert.equal(mergeLog.databaseId, updateId);
+    assert.equal(mergeLog.preference.value, 'B');
+  });
+
+  it('Should append the merge note to the existing header notes', async () => {
+    const {existing, incoming} = makePair();
+    const sruClient = makeSruClient({[updateId]: existing});
+    const headers = mergeHeaders();
+    headers.notes = ['previous note'];
+    const {updateValidations} = await makeUpdateValidations({sruClient});
+
+    const {headers: newHeaders} = await updateValidations({updateId, updateRecord: incoming, headers});
+
+    assert.equal(newHeaders.notes[0], 'previous note');
+    assert.match(newHeaders.notes[1], /^Merged to \S+ preferring database record\.$/u);
+  });
+
+  it('Should not merge when the update operation is updateAfterMerge', async () => {
+    const {existing, incoming} = makePair();
+    const sruClient = makeSruClient({[updateId]: existing});
+    const headers = mergeHeaders();
+    const {updateValidations, logOperator} = await makeUpdateValidations({sruClient});
+
+    const {result, headers: newHeaders} = await updateValidations({
+      updateId, updateRecord: incoming, updateOperation: 'updateAfterMerge', headers
+    });
+
+    assert.equal(result.failed, false);
+    assert.deepStrictEqual(result.record, incoming);
+    assert.strictEqual(newHeaders, headers);
+    assert.deepStrictEqual(logOperator.logItems, []);
+  });
+
+  it('Should throw 422 UNPROCESSABLE_ENTITY when the post-merge fixing fails', async () => {
+    const {existing, incoming} = makePair();
+    const sruClient = makeSruClient({[updateId]: existing});
+    const headers = mergeHeaders();
+    const fixRecord = async () => {throw new Error('fix boom');};
+    const {updateValidations} = await makeUpdateValidations({sruClient, fixRecord});
+
+    await assert.rejects(updateValidations({updateId, updateRecord: incoming, headers}), (err) => {
+      assert.equal(err.status, 422);
+      // BUG (pinned, not fixed): mergeRecordForUpdates sets `errorMessage = err` (the Error
+      // object), so the message is the stringified object instead of err.message
+      assert.match(err.payload.message, /Merge errored: Error: fix boom/u);
       return true;
     });
   });
