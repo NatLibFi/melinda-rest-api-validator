@@ -1,0 +1,36 @@
+{
+  "description": "UNDEL: skips the deleted check even for a deleted record",
+  "fixType": "UNDEL",
+  "validate": true,
+  "sruScenario": "found",
+  "leader": "00000dam a2200000 a 4500",
+  "recordFields": [
+    {
+      "tag": "001",
+      "value": "000019640"
+    },
+    {
+      "tag": "245",
+      "ind1": "1",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "foo."
+        }
+      ]
+    }
+  ],
+  "expected": {
+    "result": true,
+    "recordMetadata": {},
+    "headers": {
+      "operationSettings": {
+        "fixType": "UNDEL",
+        "validate": true
+      },
+      "id": "000019640",
+      "correlationId": "corr-1"
+    }
+  }
+}

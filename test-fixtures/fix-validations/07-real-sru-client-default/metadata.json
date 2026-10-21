@@ -1,0 +1,11 @@
+{
+  "description": "sruClient omitted: the factory builds the real SRU client; connection to the closed port fails fast",
+  "fixType": "FIX",
+  "validate": true,
+  "sruScenario": "notfound",
+  "useRealSruClient": true,
+  "sruUrl": "http://127.0.0.1:9",
+  "expectedError": {
+    "message": "fetch failed"
+  }
+}

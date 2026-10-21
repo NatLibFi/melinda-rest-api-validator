@@ -1,0 +1,31 @@
+{
+  "description": "validate=false still validates: runValidations is validate || true, so a deleted record is rejected",
+  "fixType": "FIX",
+  "validate": false,
+  "sruScenario": "found",
+  "leader": "00000dam a2200000 a 4500",
+  "recordFields": [
+    {
+      "tag": "001",
+      "value": "000019640"
+    },
+    {
+      "tag": "245",
+      "ind1": "1",
+      "ind2": " ",
+      "subfields": [
+        {
+          "code": "a",
+          "value": "foo."
+        }
+      ]
+    }
+  ],
+  "expectedError": {
+    "status": 404,
+    "payload": {
+      "message": "Existing record is deleted",
+      "recordMetadata": {}
+    }
+  }
+}

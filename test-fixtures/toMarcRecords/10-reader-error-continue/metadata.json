@@ -1,0 +1,107 @@
+{
+  "description": "reader record error with failOnError off: the valid record is still queued (id = sequence number) and an INVALID response item is written",
+  "contentType": "application/json",
+  "operation": "CREATE",
+  "failOnError": false,
+  "keepSplitterReport": "ALL",
+  "rawPayload": "[{\"leader\":\"x\",\"fields\":[]},{\"leader\":\"00000nam a2200000 a 4500\",\"fields\":[{\"tag\":\"001\",\"value\":\"000019640\"},{\"tag\":\"003\",\"value\":\"BIB\"},{\"tag\":\"245\",\"ind1\":\"1\",\"ind2\":\" \",\"subfields\":[{\"code\":\"a\",\"value\":\"foo.\"}]}]}]",
+  "expected": {
+    "result": "resolved",
+    "checked": [
+      {
+        "queue": "CREATE.corr-1",
+        "style": "messages",
+        "purge": true
+      }
+    ],
+    "sent": [
+      {
+        "queue": "CREATE.corr-1",
+        "correlationId": "corr-1",
+        "headers": {
+          "operation": "CREATE",
+          "correlationId": "corr-1",
+          "cataloger": {
+            "id": "user1"
+          },
+          "recordMetadata": {
+            "sourceIds": [
+              "(BIB)000019640"
+            ],
+            "blobSequence": 2,
+            "title": "foo",
+            "standardIdentifiers": []
+          },
+          "id": "000000002"
+        },
+        "data": {
+          "leader": "00000nam a2200000 a 4500",
+          "fields": [
+            {
+              "tag": "001",
+              "value": "000000002"
+            },
+            {
+              "tag": "003",
+              "value": "BIB"
+            },
+            {
+              "tag": "245",
+              "ind1": "1",
+              "ind2": " ",
+              "subfields": [
+                {
+                  "code": "a",
+                  "value": "foo."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "recordItems": [
+      {
+        "databaseId": "000000000",
+        "recordMetadata": {
+          "blobSequence": 1
+        },
+        "recordStatus": "INVALID",
+        "detailedRecordStatus": "UNPROCESSABLE_ENTITY",
+        "message": "Record is invalid: instance.fields does not meet minimum length of 1"
+      }
+    ],
+    "splitterReports": [
+      {
+        "recordNumber": 1,
+        "sequenceNumber": 2,
+        "readerErrors": [
+          {
+            "sequenceNumber": 1,
+            "error": "Record is invalid: instance.fields does not meet minimum length of 1"
+          }
+        ]
+      }
+    ],
+    "logItems": [
+      {
+        "logItemType": "SPLITTER_LOG",
+        "correlationId": "corr-1",
+        "recordNumber": 1,
+        "sequenceNumber": 2,
+        "readerErrors": [
+          {
+            "sequenceNumber": 1,
+            "error": "Record is invalid: instance.fields does not meet minimum length of 1"
+          }
+        ]
+      }
+    ],
+    "blobSizes": [
+      {
+        "correlationId": "corr-1",
+        "blobSize": 2
+      }
+    ]
+  }
+}
