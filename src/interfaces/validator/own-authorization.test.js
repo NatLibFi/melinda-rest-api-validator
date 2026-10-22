@@ -3,7 +3,7 @@ import {describe, it} from 'node:test';
 import fs from 'fs';
 import path from 'path';
 import {MarcRecord} from '@natlibfi/marc-record';
-import {Error as ValidationError} from '@natlibfi/melinda-commons';
+import httpStatus from 'http-status';
 import {OPERATIONS} from '@natlibfi/melinda-rest-api-commons';
 import validateOwnChanges from './own-authorization.js';
 
@@ -49,8 +49,9 @@ describe('own-authorization', () => {
 
       try {
         validateOwnChanges({ownTags: tags, incomingRecord: record, operation: OPERATIONS.CREATE});
+        throw new Error('Expected an error');
       } catch (error) {
-        assert(error instanceof ValidationError);
+        assert.equal(error.status, httpStatus.FORBIDDEN);
       }
     });
 
@@ -60,8 +61,9 @@ describe('own-authorization', () => {
 
       try {
         validateOwnChanges({ownTags: tags, incomingRecord: record, operation: OPERATIONS.UPDATE});
+        throw new Error('Expected an error');
       } catch (error) {
-        assert(error instanceof ValidationError);
+        assert.equal(error.status, httpStatus.INTERNAL_SERVER_ERROR);
       }
     });
 
@@ -73,8 +75,9 @@ describe('own-authorization', () => {
 
       try {
         validateOwnChanges({ownTags: tags, incomingRecord: recordA, existingRecord: recordB});
+        throw new Error('Expected an error');
       } catch (error) {
-        assert(error instanceof ValidationError);
+        assert.equal(error.status, httpStatus.FORBIDDEN);
       }
     });
 

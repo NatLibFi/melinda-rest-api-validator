@@ -1,5 +1,5 @@
 import httpStatus from 'http-status';
-import {Error as ValidationError, Error as ApiError} from '@natlibfi/melinda-commons';
+import {Error as ApiError} from '@natlibfi/melinda-commons';
 import {OPERATIONS} from '@natlibfi/melinda-rest-api-commons';
 
 import createDebugLogger from 'debug';
@@ -20,7 +20,7 @@ export default ({ownTags, incomingRecord, existingRecord, recordMetadata, operat
 
   if (lowTags && ownTags && lowTags.some(t => !ownTags.includes(t))) {
     debug(`There's a difference including one or more non-authorized lows.`);
-    throw new ValidationError(httpStatus.FORBIDDEN, {message: 'Own authorization error', recordMetadata});
+    throw new ApiError(httpStatus.FORBIDDEN, {message: 'Own authorization error', recordMetadata});
   }
   debug(`There's are no differences including non-authorized lows.`);
 
