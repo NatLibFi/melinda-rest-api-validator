@@ -165,7 +165,7 @@ export default async function ({validatorOptions, mongoLogOperator, sruClient, m
         logger.debug(`New payload: ${JSON.stringify(newPayload)}`);
         throw new ValidationError(status, newPayload);
       }
-      throw new Error(err);
+      throw err;
     }
 
     function alephValidateRecord(recordObject) {

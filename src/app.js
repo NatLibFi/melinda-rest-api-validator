@@ -529,7 +529,7 @@ export default async function ({
         }
         // If error is not ApiError, queueItem is stuck in QUEUEING_IN_PROGRESS - should this be handled somehow
         logError(error);
-        throw new Error(error);
+        throw error;
       }
 
       return initCheck();

@@ -266,7 +266,7 @@ describe('processLoad (error routing)', () => {
     });
   });
 
-  it('Should wrap an unexpected error in a plain Error, not a ValidationError', async () => {
+  it('Should rethrow an unexpected error as a plain Error, not a ValidationError', async () => {
     const sruClient = makeSruClient({[updateId]: new Error('SRU is down')});
     const {process} = await makeProcess({sruClient});
     const headers = makeHeaders({operation: 'UPDATE', id: updateId}, {unique: false, merge: false});
@@ -275,12 +275,11 @@ describe('processLoad (error routing)', () => {
     }, titleField('baz.'), catField('u1 20240101120000')]);
 
     await assert.rejects(process(headers, data), (err) => {
-      // BUG (pinned, not fixed): processLoad's catch does `throw new Error(err)` for any
-      // non-ValidationError, so an unexpected error becomes a plain Error whose message is
-      // the stringified original error instead of a 5xx ValidationError with a payload.
+      // processLoad's catch rethrows the original error for any non-ValidationError,
+      // so the mock's plain Error surfaces unchanged (not a 5xx ValidationError with a payload).
       assert(!(err instanceof ValidationError));
       assert(err instanceof Error);
-      assert.equal(err.message, 'Error: SRU is down');
+      assert.equal(err.message, 'SRU is down');
       return true;
     });
   });

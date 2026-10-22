@@ -673,9 +673,10 @@ describe('prio mode (stale items and errors)', () => {
       const response = queueItem.recordResponses[0];
       // 500 is not mapped to a status name by the commons, it stays numeric
       assert.equal(response.detailedRecordStatus, 500);
-      // BUG (pinned, not fixed): the facade wraps non-ValidationErrors with
-      // `throw new Error(err)`, so the surfaced message is the stringified error
-      assert.match(response.message, /^Error: /u);
+      // the facade rethrows the original plain Error (no status/payload), so the
+      // surfaced message is the original error's message (status stays 500, which
+      // commons does not map, so it appends the unknown-status suffix)
+      assert.equal(response.message, 'SRU is down - Unknown recordStatus: 500');
       // no recordMetadata in the payload -> the message headers metadata is used
       assert.equal(response.recordMetadata.blobSequence, 1);
       assert.equal(response.databaseId, '000020001');
@@ -692,8 +693,8 @@ describe('prio mode (stale items and errors)', () => {
       queueItems: [{correlationId: 'corr1', state: 'PENDING_VALIDATION', operationSettings: {}}],
       sruClient: makeSruClient({'000020001': new Error('SRU is down')})
     });
-    // headers deliberately omit recordMetadata; the facade wraps the plain
-    // SRU error with `throw new Error(err)`, so the payload has no
+    // headers deliberately omit recordMetadata; the facade rethrows the plain
+    // SRU error as-is, so the payload (built from error.message) has no
     // recordMetadata either
     const headers = makePrioHeaders(
       {operation: 'UPDATE', id: '000020001', recordMetadata: undefined},
@@ -715,7 +716,7 @@ describe('prio mode (stale items and errors)', () => {
       assert.equal(errorState.state, 'ERROR');
       assert.equal(errorState.errorStatus, 500);
       const response = queueItem.recordResponses[0];
-      assert.match(response.message, /^Error: /u);
+      assert.equal(response.message, 'SRU is down - Unknown recordStatus: 500');
       // neither the message headers nor the error payload carry
       // recordMetadata, so the response has none either
       assert.strictEqual(response.recordMetadata, undefined);
@@ -1117,8 +1118,8 @@ describe('bulk mode (stream to records and validation)', () => {
 
     try {
       await assert.rejects(promise, (err) => {
-        assert.equal(err.constructor.name, 'Error');
-        assert.match(err.message, /TypeError/u);
+        assert(err instanceof TypeError);
+        assert.equal(err.message, 'stream.on is not a function');
         return true;
       });
       const queueItem = mongoOperator.items.get(correlationId);
