@@ -284,6 +284,25 @@ describe('processLoad (error routing)', () => {
       return true;
     });
   });
+
+  it('Should throw 422 UNPROCESSABLE_ENTITY when the validated record is not AlephSEQ-serializable', async () => {
+    // a newline inside a subfield passes the MarcRecord constructor and the
+    // validations, but the final ALEPHSEQ serialization check fails
+    const {process} = await makeProcess();
+    const headers = makeHeaders();
+    const data = makeRecordObject([
+      titleField('foo.'),
+      {tag: '500', ind1: ' ', ind2: ' ', subfields: [{code: 'a', value: 'line1\nline2'}]}
+    ]);
+
+    await assert.rejects(process(headers, data), (err) => {
+      assert(err instanceof ValidationError);
+      assert.equal(err.status, 422);
+      assert.match(err.payload.message, /^Error in record\./u);
+      assert.ok(err.payload.recordMetadata);
+      return true;
+    });
+  });
 });
 
 describe('log items per path', () => {

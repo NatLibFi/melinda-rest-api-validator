@@ -18,9 +18,9 @@ const BASE_ENV = {RECORD_TYPE: 'bib', SRU_URL: 'http://sru.test'};
 // Runs src/index.js in a subprocess and resolves with its exit code and
 // combined output. Optionally kills the child after a delay so signal
 // handlers can be exercised while the app loop is pending.
-const runIndex = (env, {signalAfterMs = null, signal = null} = {}) =>
+const runIndex = (env, {signalAfterMs = null, signal = null, nodeArgs = []} = {}) =>
   new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [INDEX_PATH], {env: {...process.env, ...env}});
+    const child = spawn(process.execPath, [...nodeArgs, INDEX_PATH], {env: {...process.env, ...env}});
     let output = '';
     child.stdout.on('data', (chunk) => {output += chunk;});
     child.stderr.on('data', (chunk) => {output += chunk;});
@@ -89,5 +89,17 @@ describe('index (subprocess: process entry wiring)', () => {
     assert.strictEqual(exitCode, 1);
     assert.ok(output.includes('MongoServerSelectionError: connect ECONNREFUSED 127.0.0.1:1'),
       `output was:\n${output}`);
+  });
+
+  it('exits with code 1 and logs the stack on an uncaught exception', async () => {
+    // A --import data-URL module throws after a delay: the handler registered
+    // in index.js is in place by then (the app loop is pending on the dumb
+    // mongo socket), so the uncaughtException handler logs the stack and
+    // exits with code 1.
+    const dataUrl = `data:text/javascript,setTimeout(() => { throw new Error('Simulated uncaught exception'); }, 3000);`;
+    const {exitCode, output} = await runIndex({...BASE_ENV, MONGO_URI: mongoUri},
+      {nodeArgs: ['--import', dataUrl]});
+    assert.strictEqual(exitCode, 1);
+    assert.ok(output.includes('Simulated uncaught exception'), `output was:\n${output}`);
   });
 });

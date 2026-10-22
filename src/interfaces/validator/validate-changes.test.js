@@ -4,7 +4,7 @@ import createDebugLogger from 'debug';
 
 import generateTests from '@natlibfi/fixugen';
 import {READERS} from '@natlibfi/fixura';
-import {MarcRecord} from '@natlibfi/marc-record';
+import {MarcRecord, MarcRecordError} from '@natlibfi/marc-record';
 import {validateChanges} from './validate-changes.js';
 
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator:validate-changes:test');
@@ -94,6 +94,22 @@ describe('validateChanges', () => {
       const result = validateChanges({incomingRecord: makeRecord(), existingRecord: existing});
 
       assert.equal(result.changeValidationResult, true);
+    });
+
+    it('Should throw a MarcRecord validation error when the existing record has a non-string LDR', () => {
+      const existing = makeRecord();
+      existing.leader = 42;
+
+      // the non-string guard skips LDR normalization, and the normalized record
+      // construction then fails with a clean MarcRecordError instead of a TypeError
+      assert.throws(
+        () => validateChanges({incomingRecord: makeRecord(), existingRecord: existing}),
+        (err) => {
+          assert(err instanceof MarcRecordError);
+          assert.match(err.message, /Record is invalid: instance\.leader is not of a type\(s\) string/u);
+          return true;
+        }
+      );
     });
 
     it('Should treat records with identical LOW $a values as unchanged', () => {

@@ -1,6 +1,6 @@
 import assert from 'node:assert';
 import {Readable} from 'node:stream';
-import {describe} from 'node:test';
+import {describe, it} from 'node:test';
 import {AlephSequential, ISO2709, MARCXML} from '@natlibfi/marc-record-serializers';
 import {MarcRecord} from '@natlibfi/marc-record';
 import generateTests from '@natlibfi/fixugen';
@@ -148,5 +148,43 @@ describe('toMarcRecords (stream splitting)', () => {
       assertState(mongoOperator.state.blobSizes, expected.blobSizes);
       assertState(mongoLogOperator.state.logItems, expected.logItems);
     }
+  });
+
+  describe('toMarcRecords (100th record logging)', () => {
+    it('Should log the 100th record at debug level and queue all records', async () => {
+      // 100 programmatically generated records: the 100th triggers the
+      // log100thQueue debug branch (record % 100 === 0)
+      const records = Array.from({length: 100}, (_, i) => makeRecord([
+        {tag: '245', ind1: '1', ind2: ' ', subfields: [{code: 'a', value: `title ${i + 1}.`}]}
+      ]));
+      const amqpOperator = createFakeAmqpOperator();
+      const mongoOperator = createFakeMongoOperator();
+      const mongoLogOperator = createFakeMongoLogOperator();
+      // LOG_LEVEL is read by createLogger() when the factory runs, so it must
+      // be set before. Capture stdout while forwarding every chunk to the
+      // original write: the test runner itself speaks a protocol on stdout,
+      // so swallowing writes would corrupt the test results.
+      const previousLogLevel = process.env.LOG_LEVEL;
+      process.env.LOG_LEVEL = 'debug';
+      const {streamToRecords} = streamToRecordsFactory({
+        amqpOperator, mongoOperator, mongoLogOperator,
+        splitterOptions: {failBulkOnError: false, keepSplitterReport: 'NONE'}
+      });
+      const captured = [];
+      const stdoutStream = process.stdout;
+      const originalWrite = stdoutStream.write.bind(stdoutStream);
+      process.stdout.write = (chunk, ...args) => {captured.push(String(chunk)); return originalWrite(chunk, ...args);};
+      try {
+        const stream = Readable.from([JSON.stringify(records)]);
+        const headers = {operation: 'CREATE', correlationId: 'corr-100', cataloger: {id: 'user1'}};
+        await streamToRecords({correlationId: 'corr-100', headers, contentType: 'application/json', stream, validateRecords: false, noop: false});
+      } finally {
+        process.stdout.write = originalWrite;
+        if (previousLogLevel === undefined) delete process.env.LOG_LEVEL; else process.env.LOG_LEVEL = previousLogLevel;
+      }
+      const output = captured.join('');
+      assert.ok(output.includes('Record 100 has been read'), 'output did not contain the 100th record debug line');
+      assert.equal(amqpOperator.state.sent.length, 100);
+    });
   });
 });

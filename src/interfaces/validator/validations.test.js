@@ -101,11 +101,11 @@ function matchesFromFixture(dir) {
   }));
 }
 
-async function makeCreateValidations({matchers, sruClient, options = {}, record}) {
+async function makeCreateValidations({matchers, sruClient, options = {}, record, fixRecord = async (r) => r.toObject()}) {
   const logOperator = makeLogOperator();
   const {createValidations} = await validationsFactory(
     logOperator,
-    async (r) => r.toObject(),
+    fixRecord,
     {...baseValidatorOptions, ...options},
     {sruClient, matchers}
   );
@@ -128,6 +128,29 @@ describe('createValidations (no unique/merge)', () => {
     assert.deepStrictEqual(recordMetadata, headers.recordMetadata);
     assert.strictEqual(newHeaders, headers);
     assert.deepStrictEqual(logOperator.logItems, []);
+  });
+});
+
+describe('validationsFactory (DI seams)', () => {
+  it('Should fall back to creating a real SRU client when no sruClient is injected', async () => {
+    // no sruClient passed to the factory: the createSruClient() fallback runs.
+    // The client is a pure constructor, safe offline; this scenario (no
+    // unique/merge) never touches it, so no SRU traffic is needed.
+    const record = makeRecord([titleField('foo.', 'bar')]);
+    const matchers = [async () => matchResult()];
+    const logOperator = makeLogOperator();
+    const {createValidations} = await validationsFactory(
+      logOperator,
+      async (r) => r.toObject(),
+      baseValidatorOptions,
+      {matchers}
+    );
+    const headers = makeHeaders({}, {unique: false, merge: false});
+
+    const {result} = await createValidations({record, headers});
+
+    assert.equal(result.failed, false);
+    assert.deepStrictEqual(result.record, record);
   });
 });
 
@@ -295,6 +318,45 @@ describe('createValidations (merge, valid match)', () => {
     const mergeLog = logOperator.logItems.find(({logItemType}) => logItemType === 'MERGE_LOG');
     assert.equal(mergeLog.preference.value, true);
     assert.equal(mergeLog.preference.recordName, 'databaseRecord');
+  });
+
+  it('Should prefer the incoming record when matchValidation gives preference A', async () => {
+    // the candidate has an abbreviated encoding level (LDR/17 'a') while the
+    // incoming record is at full level (' '), so matchValidation prefers A
+    // -> mergeValidatedMatchResults uses the incoming record as base
+    const record = incomingRecord('01-single-valid');
+    const candidateObject = fixture('01-single-valid', 'candidates.json')[0].record;
+    const candidateLeader = `${candidateObject.leader.slice(0, 17)}a${candidateObject.leader.slice(18)}`;
+    const candidateRecord = new MarcRecord({...candidateObject, leader: candidateLeader}, {subfieldValues: false});
+    const matches = [{candidate: {id: 'cand1', record: candidateRecord}, probability: 100}];
+    const matchers = [async () => matchResult({matches, candidateCount: 1})];
+    const sruClient = makeSruClient({cand1: candidateRecord});
+    const headers = makeHeaders({}, {merge: true});
+    const {createValidations, logOperator} = await makeCreateValidations({matchers, sruClient, record});
+
+    const {headers: newHeaders} = await createValidations({record, headers});
+
+    assert.equal(newHeaders.operation, 'UPDATE');
+    assert.equal(newHeaders.id, 'cand1');
+    assert.match(newHeaders.notes[1], /^Merged to cand1 preferring incoming record\.$/u);
+    const mergeLog = logOperator.logItems.find(({logItemType}) => logItemType === 'MERGE_LOG');
+    assert.equal(mergeLog.preference.value, 'A');
+  });
+
+  it('Should throw 422 UNPROCESSABLE_ENTITY when the post-merge fixing fails', async () => {
+    const record = incomingRecord('01-single-valid');
+    const matches = matchesFromFixture('01-single-valid');
+    const matchers = [async () => matchResult({matches, candidateCount: matches.length})];
+    const sruClient = makeSruClient({cand1: matches[0].candidate.record});
+    const headers = makeHeaders({}, {merge: true});
+    const fixRecord = async () => {throw new Error('fix boom');};
+    const {createValidations} = await makeCreateValidations({matchers, sruClient, record, fixRecord});
+
+    await assert.rejects(createValidations({record, headers}), (err) => {
+      assert.equal(err.status, 422);
+      assert.match(err.payload.message, /Merge errored: fix boom/u);
+      return true;
+    });
   });
 });
 
