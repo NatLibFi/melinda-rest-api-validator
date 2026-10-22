@@ -163,7 +163,7 @@ export async function validationsFactory(
         // Should we also validate the matches before erroring? Now we error also those cases, where the match would fail matchValidation
         const matchResultsForLog = matches.map((match, index) => ({action: false, preference: false, message: 'Validation not run', matchSequence: index, ...match}));
 
-        logMatchAction(mongoLogOperator, {headers, record, matchResultsForLog, matcherReports, logNoMatches: logOptions.logNoMatches});
+        await logMatchAction(mongoLogOperator, {headers, record, matchResultsForLog, matcherReports, logNoMatches: logOptions.logNoMatches});
         throw new ValidationError(httpStatus.CONFLICT, {message: 'Duplicates in database', ids: matches.map(({candidate: {id}}) => id), recordMetadata});
       }
 
@@ -175,7 +175,7 @@ export async function validationsFactory(
 
       logger.verbose('No matching records');
       // MATCH_LOG for no matches
-      logMatchAction(mongoLogOperator, {headers, record, matchResultsForLog: [], matcherReports, logNoMatches: logOptions.logNoMatches});
+      await logMatchAction(mongoLogOperator, {headers, record, matchResultsForLog: [], matcherReports, logNoMatches: logOptions.logNoMatches});
       return noValidMatches({record, recordMetadata, headers: newHeaders});
     }
 
@@ -219,7 +219,7 @@ export async function validationsFactory(
       const mergeValidationResult = {merged: mergeResult.status, mergedId: id, preference: preference.value};
 
       // Log merge-action here
-      logMergeAction(mongoLogOperator, {headers, record, existingRecord, id, preference, mergeResult});
+      await logMergeAction(mongoLogOperator, {headers, record, existingRecord, id, preference, mergeResult});
 
       logger.verbose(`PostMergeFixing merged record: ${JSON.stringify(postMergeFixOptions)}`);
       const postMergeFixedRecordObject = await fixRecord(mergeResult.record, postMergeFixOptions);
@@ -260,7 +260,7 @@ export async function validationsFactory(
       const {matchValidationResult, sortedValidatedMatchResults} = await matchValidationForMatchResults(record, matchResults);
       logger.silly(`MatchValidationResult: ${inspect(matchValidationResult, {colors: true, maxArrayLength: 3, depth: 3})}}`);
 
-      logMatchAction(mongoLogOperator, {headers, record, matchResultsForLog: sortedValidatedMatchResults, matcherReports});
+      await logMatchAction(mongoLogOperator, {headers, record, matchResultsForLog: sortedValidatedMatchResults, matcherReports});
 
       // Check error cases
       // Note that if we had stopWhenFound active, and did not run all the matchers because a match was found, we'll probably have cases, where we error records, that might
@@ -375,7 +375,7 @@ export async function validationsFactory(
       // Should we write merge-note here?
 
       // Log merge-action here
-      logMergeAction(mongoLogOperator, {headers, record, existingRecord: validatedMatchResult.candidate.record, id: validatedMatchResult.candidate.id, preference: validatedMatchResult.preference, mergeResult});
+      await logMergeAction(mongoLogOperator, {headers, record, existingRecord: validatedMatchResult.candidate.record, id: validatedMatchResult.candidate.id, preference: validatedMatchResult.preference, mergeResult});
 
       const newHeaders = updateHeadersAfterMerge({mergeValidationResult, headers});
 

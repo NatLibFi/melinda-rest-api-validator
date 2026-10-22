@@ -130,7 +130,7 @@ export default async function ({
 
       await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.IMPORTER.IN_QUEUE});
 
-      amqpOperator.removeQueue(validatorQueue);
+      await amqpOperator.removeQueue(validatorQueue);
       return initCheck();
 
     } catch (error) {
@@ -231,7 +231,7 @@ export default async function ({
 
     // logResultRecord
     logger.silly(`app/processValidated: processResult: ${inspect(processResult)}`);
-    logRecord(mongoLogOperator, {headers: processResult.headers, record: processResult.data, recordMetadata: processResult.headers.recordMetadata, logItemType: LOG_ITEM_TYPE.RESULT_RECORD_LOG, logConfig: validatorOptions.logOptions.logResultRecord});
+    await logRecord(mongoLogOperator, {headers: processResult.headers, record: processResult.data, recordMetadata: processResult.headers.recordMetadata, logItemType: LOG_ITEM_TYPE.RESULT_RECORD_LOG, logConfig: validatorOptions.logOptions.logResultRecord});
 
     // check if validation changed operation
     await setOperationsInQueueItem({correlationId, mongoOperator, prio, addOperation: processResult.headers.operation, removeOperation: headers.operation});
@@ -338,7 +338,7 @@ export default async function ({
     // (Move to an independent function)
     // We probably remove also inputRecordLogs here?
     const {blobSequence} = processResult.headers.recordMetadata;
-    mongoLogOperator.removeBySequences(correlationId, [blobSequence]);
+    await mongoLogOperator.removeBySequences(correlationId, [blobSequence]);
 
     if (prio) {
       await mongoOperator.checkAndSetState({correlationId, state: QUEUE_ITEM_STATE.DONE});
