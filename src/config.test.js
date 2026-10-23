@@ -33,7 +33,8 @@ const MANAGED_VARIABLES = [
   'MATCHING_THRESHOLD',
   'MATCHING_TRESHOLD',
   'MAX_MATCHES',
-  'MAX_CANDIDATES'
+  'MAX_CANDIDATES',
+  'MATCH_SELECTOR_RULES'
 ];
 
 const createChildEnv = (overrides) => {
@@ -131,6 +132,16 @@ const BIB_MAX_CANDIDATES = {IDS: 50, STANDARD_IDS: 50, CONTENT: 50, CONTENTALT: 
 // defaults, so unset boolean switches stay numeric 0/1 (not false/true).
 const DEFAULT_LOG_OPTIONS = {logNoMatches: 0, logInputRecord: 0, logResultRecord: 0};
 
+const DEFAULT_MATCH_SELECTOR_RULES = [
+  'MELINDA_ID',
+  'LOCAL_SID',
+  'SAME_LOW',
+  'NAT_BIB',
+  'LOW_COUNT',
+  'ENCODING_LEVEL',
+  'PREPUB_LEVEL'
+];
+
 const getExpectedMatchOptions = (packages, {sruUrl, threshold = 0.8999}) =>
   packages.map((matchPackageName) => ({
     matchPackageName,
@@ -154,7 +165,8 @@ const getExpectedValidatorOptions = ({
   stopWhenFound,
   acceptZeroWithMaxCandidates,
   matchFailuresAsNew,
-  logOptions
+  logOptions,
+  matchSelectorRules = DEFAULT_MATCH_SELECTOR_RULES
 }) => ({
   recordType,
   preValidationFixOptions,
@@ -163,6 +175,7 @@ const getExpectedValidatorOptions = ({
   preImportFixOptions: fixes.BIB_PREIMPORT_FIX_SETTINGS,
   sruUrl,
   matchOptionsList: getExpectedMatchOptions(matchPackages, {sruUrl, threshold}),
+  matchSelectorRules,
   stopWhenFound,
   acceptZeroWithMaxCandidates,
   matchFailuresAsNew,
