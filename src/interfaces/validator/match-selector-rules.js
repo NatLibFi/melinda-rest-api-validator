@@ -4,6 +4,10 @@ import {getSidsFromRecord, getSubfieldValues} from '../../utils.js';
 const MELINDA_ID_VALUE_REGEX = /^FI-MELINDA\s*(\d+)$/u;
 
 // Encoding level (LDR/17) preference: index 0 = best, higher index = worse
+import {getEncodingLevel} from '@natlibfi/marc-record-validators-melinda';
+
+// TODO: remove local copy when marc-record-validators-melinda exports
+// encodingLevelPreferenceArray
 const ENCODING_LEVEL_PREFERENCE = [' ', '1', '3', '4', '5', '2', '7', 'u', 'z', '8'];
 
 // 594 $5 values that mark a 594 field as a prepublication level source
@@ -130,12 +134,12 @@ function computeLowCountKey(candidateRecord) {
 // preference array. Smaller index = better (sorted ASC).
 // null if the leader is too short or the character is not in the preference array.
 function computeEncodingLevelKey(candidateRecord) {
-  const leader = candidateRecord.leader;
-  if (!leader || leader.length < 18) {
+  const level = getEncodingLevel(candidateRecord);
+  if (!level || level.length === 0) {
     return null;
   }
 
-  const index = ENCODING_LEVEL_PREFERENCE.indexOf(leader[17]);
+  const index = ENCODING_LEVEL_PREFERENCE.indexOf(level);
   return index === -1 ? null : index;
 }
 
