@@ -18,13 +18,14 @@ export function fixValidationsFactory(mongoLogOperator, {sruUrl, sruClient: sruC
 
   async function fixValidations({headers}) {
     const {operationSettings, id, correlationId} = headers;
-    const {fixType, validate} = operationSettings;
+    const {fixType} = operationSettings;
 
     logger.verbose(`Validations for FIX operation (${fixType}) ${id} for ${correlationId}`);
     logger.debug(`fixValidation, headers (${JSON.stringify(headers)})`);
 
+    // operationSettings.validate is the pipeline-entry switch (see the checkMongo/processLoad gates);
+    // once the pipeline runs, all checks run unconditionally
     // Currently also melinda-api-http forces all validations (validate=true) for prio and batchBulk
-    const runValidations = validate || true;
 
     logger.verbose(`Reading record ${id} from SRU for ${correlationId}`);
     const existingRecord = await getRecord(sruClient, id);
@@ -38,7 +39,7 @@ export function fixValidationsFactory(mongoLogOperator, {sruUrl, sruClient: sruC
     if (fixType !== 'UNDEL') {
       // We don't want to fix deleted records unless our fix is UNDEL
       logger.verbose('Checking whether the existing record is deleted');
-      validateExistingRecord(existingRecord, {}, runValidations);
+      validateExistingRecord(existingRecord, {});
       return {result: true, recordMetadata: {}, headers};
     }
 

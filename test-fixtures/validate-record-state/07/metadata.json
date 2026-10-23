@@ -1,7 +1,0 @@
-{
-    "description": "It should skip the validation if validate (4th param) is false",
-    "expectedToThrow": false,
-    "skipValidation": true,
-    "skip": false,
-    "only": false
-  }

@@ -89,15 +89,6 @@ describe('own-authorization', () => {
       assert.equal(result, undefined);
     });
 
-    it('Should skip validation if validate param is false', () => {
-      const tags = JSON.parse(tags4);
-      const recordA = new MarcRecord(JSON.parse(record4a), {subfieldValues: false});
-      const recordB = new MarcRecord(JSON.parse(record4b), {subfieldValues: false});
-
-      const result = validateOwnChanges({ownTags: tags, incomingRecord: recordA, existingRecord: recordB, validate: false});
-      assert.equal(result, 'skipped');
-    });
-
 
   });
 });

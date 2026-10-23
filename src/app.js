@@ -524,6 +524,8 @@ export default async function ({
         const stream = await mongoOperator.getStream(correlationId);
 
         logger.debug(`OperationSettings: ${JSON.stringify(operationSettings)}`);
+        // Two-layer semantics: validate/merge/unique decide whether a record enters the validation
+        // pipeline at all; once the pipeline runs, all checks run unconditionally (no granular skipping)
         const validateRecords = operationSettings.validate || operationSettings.merge || operationSettings.unique || false;
         const failOnError = operationSettings.failOnError === undefined ? undefined : operationSettings.failOnError;
         const noop = operationSettings.noop || false;

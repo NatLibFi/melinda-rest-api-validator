@@ -56,8 +56,9 @@ export async function validationsFactory(
 
     const {recordMetadata, operationSettings, cataloger} = headers;
 
+    // operationSettings.validate is the pipeline-entry switch (see the checkMongo/processLoad gates);
+    // once the pipeline runs, all checks run unconditionally
     // Currently also melinda-api-http forces all validations (validate=true) for prio and batchBulk
-    const runValidations = operationSettings.validate || true;
     const skipLowValidation = operationSettings.skipLowValidation || false;
 
     if (updateId) {
@@ -75,7 +76,7 @@ export async function validationsFactory(
 
       // aleph-record-load-api cannot currently update a record if the existing record is deleted
       logger.verbose('Checking whether the existing record is deleted');
-      validateExistingRecord(existingRecord, recordMetadata, runValidations);
+      validateExistingRecord(existingRecord, recordMetadata);
 
       // Merge for updates (do not run if record is already merged CREATE)
       logger.debug(`Check whether merge is needed for update`);
@@ -83,10 +84,10 @@ export async function validationsFactory(
       const updateMergeNeeded = operationSettings.merge && updateOperation !== 'updateAfterMerge';
       const {mergedRecord: updatedRecordAfterMerge, headers: newHeaders} = updateMergeNeeded ? await mergeRecordForUpdates({record: updateRecord, existingRecord, id: updateId, headers}) : {mergedRecord: updateRecord, headers};
 
-      runValidateOwnChanges({cataloger, incomingRecord: updatedRecordAfterMerge, existingRecord, operation: headers.operation, recordMetadata, runValidations, skipLowValidation});
+      runValidateOwnChanges({cataloger, incomingRecord: updatedRecordAfterMerge, existingRecord, operation: headers.operation, recordMetadata, skipLowValidation});
 
       logger.verbose('Checking CAT field history');
-      validateRecordState({incomingRecord: updatedRecordAfterMerge, existingRecord, existingId: updateId, recordMetadata, validate: runValidations, mergedIncomingRecord: operationSettings.merge});
+      validateRecordState({incomingRecord: updatedRecordAfterMerge, existingRecord, existingId: updateId, recordMetadata, mergedIncomingRecord: operationSettings.merge});
       // Note validationService = validation.js from melinda-rest-api-commons
       // which uses marc-record-validate
       // currently checks only that possible f003 has value FI-MELINDA
@@ -96,14 +97,15 @@ export async function validationsFactory(
       logger.debug(`mergeValidationResult: ${JSON.stringify(mergeValidationResult)}`);
 
       // validationResults: {record, failed: true/false, messages: []}
-      const validationResults = runValidations ? await validationService(updatedRecordAfterMerge) : {record: updatedRecordAfterMerge, failed: false};
+      const validationResults = await validationService(updatedRecordAfterMerge);
 
       // Validator checks here (if needed), if the update would actually change the database record
       logger.verbose(`Checking if the update actually changes the existing record. (skipNoChangeUpdates: ${operationSettings.skipNoChangeUpdates})`);
 
-      const {changeValidationResult} = validateChanges({incomingRecord: updatedRecordAfterMerge, existingRecord, validate: operationSettings.skipNoChangeUpdates && runValidations});
+      // skipNoChangeUpdates gates the change check: when it is off, no-change updates are not skipped
+      const {changeValidationResult} = operationSettings.skipNoChangeUpdates ? validateChanges({incomingRecord: updatedRecordAfterMerge, existingRecord}) : {};
 
-      logger.debug(changeValidationResult === 'skipped' ? `-- ChangeValidation not needed` : `-- ChangeValidationResult: ${JSON.stringify(changeValidationResult)}`);
+      logger.debug(`-- ChangeValidationResult: ${JSON.stringify(changeValidationResult)}`);
 
       if (changeValidationResult === false) {
         const newNote = `No changes detected while trying to update existing record ${updateId}, update skipped.`;
@@ -125,14 +127,15 @@ export async function validationsFactory(
 
   async function createValidations({record, headers}) {
     const {recordMetadata, cataloger, operationSettings} = headers;
+    // operationSettings.validate is the pipeline-entry switch (see the checkMongo/processLoad gates);
+    // once the pipeline runs, all checks run unconditionally
     // Currently force all validations for prio and batchBulk
-    const runValidations = operationSettings.validate || true;
     const skipLowValidation = operationSettings.skipLowValidation || false;
     const handleMatchFailuresAsNew = operationSettings.matchFailuresAsNew ? operationSettings.matchFailuresAsNew : matchFailuresAsNew;
 
     logger.verbose(`Validations for CREATE operation. Unique: ${operationSettings.unique}, merge: ${operationSettings.merge}`);
 
-    runValidateOwnChanges({cataloger, incomingRecord: record, operation: headers.operation, recordMetadata, runValidations, skipLowValidation});
+    runValidateOwnChanges({cataloger, incomingRecord: record, operation: headers.operation, recordMetadata, skipLowValidation});
 
     if (operationSettings.unique || operationSettings.merge) {
       logger.verbose('Attempting to find matching records in the SRU');
@@ -324,7 +327,7 @@ export async function validationsFactory(
     }
   }
 
-  function runValidateOwnChanges({cataloger, incomingRecord, existingRecord, operation, recordMetadata, runValidations, skipLowValidation}) {
+  function runValidateOwnChanges({cataloger, incomingRecord, existingRecord, operation, recordMetadata, skipLowValidation}) {
     logger.debug(`cataloger: ${JSON.stringify(cataloger)}`);
     if (skipLowValidation) {
       logger.verbose(`skipLowValidation: ${skipLowValidation} - not checkin LOW-tag authorization`);
@@ -334,7 +337,7 @@ export async function validationsFactory(
     // what if we have empty authorization?
     if (cataloger.id && cataloger.authorization) {
       logger.verbose('Checking LOW-tag authorization');
-      validateOwnChanges({ownTags: cataloger.authorization, incomingRecord, existingRecord, operation, recordMetadata, validate: runValidations});
+      validateOwnChanges({ownTags: cataloger.authorization, incomingRecord, existingRecord, operation, recordMetadata});
       return;
     }
     logger.verbose(`No cataloger.authorization available for checking LOW-tags`);

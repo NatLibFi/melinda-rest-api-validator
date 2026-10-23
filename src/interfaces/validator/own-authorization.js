@@ -7,12 +7,7 @@ import createDebugLogger from 'debug';
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator:own-authorization');
 const debugData = debug.extend('data');
 
-export default ({ownTags, incomingRecord, existingRecord, recordMetadata, operation, validate}) => {
-
-  // Skip this validation if validate: false
-  if (validate === false) {
-    return 'skipped';
-  }
+export default ({ownTags, incomingRecord, existingRecord, recordMetadata, operation}) => {
 
   const lowTags = getLowTags();
   debugData(`OwnTags: ${ownTags}`);

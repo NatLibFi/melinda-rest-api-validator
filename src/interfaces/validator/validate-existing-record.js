@@ -7,12 +7,7 @@ const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator:
 const debugData = debug.extend('data');
 const logger = createLogger();
 
-export function validateExistingRecord(existingRecord, recordMetadata, validate) {
-
-  if (validate === false) {
-    logger.debug(`Skipping validateExistingRecord, validate: ${validate}`);
-    return 'skipped';
-  }
+export function validateExistingRecord(existingRecord, recordMetadata) {
 
   debugData(`Existing record:\n ${existingRecord}`);
 
