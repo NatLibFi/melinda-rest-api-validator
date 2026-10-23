@@ -1,5 +1,5 @@
 {
-  "description": "reader record error with failOnError rejects 422 and removes the queue; keepSplitterReport ERROR pushes the report (3x: once on error, twice on end)",
+  "description": "reader record error with failOnError rejects 422 and removes the queue; keepSplitterReport ERROR pushes the report (written once, on end)",
   "contentType": "application/json",
   "operation": "CREATE",
   "failOnError": true,
@@ -37,53 +37,9 @@
             "error": "Record is invalid: instance.fields does not meet minimum length of 1"
           }
         ]
-      },
-      {
-        "recordNumber": 0,
-        "sequenceNumber": 1,
-        "readerErrors": [
-          {
-            "sequenceNumber": 1,
-            "error": "Record is invalid: instance.fields does not meet minimum length of 1"
-          }
-        ]
-      },
-      {
-        "recordNumber": 0,
-        "sequenceNumber": 1,
-        "readerErrors": [
-          {
-            "sequenceNumber": 1,
-            "error": "Record is invalid: instance.fields does not meet minimum length of 1"
-          }
-        ]
       }
     ],
     "logItems": [
-      {
-        "logItemType": "SPLITTER_LOG",
-        "correlationId": "corr-1",
-        "recordNumber": 0,
-        "sequenceNumber": 1,
-        "readerErrors": [
-          {
-            "sequenceNumber": 1,
-            "error": "Record is invalid: instance.fields does not meet minimum length of 1"
-          }
-        ]
-      },
-      {
-        "logItemType": "SPLITTER_LOG",
-        "correlationId": "corr-1",
-        "recordNumber": 0,
-        "sequenceNumber": 1,
-        "readerErrors": [
-          {
-            "sequenceNumber": 1,
-            "error": "Record is invalid: instance.fields does not meet minimum length of 1"
-          }
-        ]
-      },
       {
         "logItemType": "SPLITTER_LOG",
         "correlationId": "corr-1",

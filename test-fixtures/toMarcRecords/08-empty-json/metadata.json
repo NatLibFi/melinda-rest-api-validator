@@ -1,5 +1,5 @@
 {
-  "description": "empty json array rejects with 422 and (no return after the reject) writes the splitter report twice",
+  "description": "empty json array rejects with 422 and writes one splitter report and one splitter log entry",
   "contentType": "application/json",
   "operation": "CREATE",
   "failOnError": false,
@@ -21,21 +21,9 @@
         "recordNumber": 0,
         "sequenceNumber": 0,
         "readerErrors": []
-      },
-      {
-        "recordNumber": 0,
-        "sequenceNumber": 0,
-        "readerErrors": []
       }
     ],
     "logItems": [
-      {
-        "logItemType": "SPLITTER_LOG",
-        "correlationId": "corr-1",
-        "recordNumber": 0,
-        "sequenceNumber": 0,
-        "readerErrors": []
-      },
       {
         "logItemType": "SPLITTER_LOG",
         "correlationId": "corr-1",

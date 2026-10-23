@@ -931,9 +931,10 @@ describe('bulk mode (stream to records and validation)', () => {
       assert.equal(response.detailedRecordStatus, 'UNPROCESSABLE_ENTITY');
       // keepSplitterReport NONE: the splitter report is only logged, not stored
       assert.deepStrictEqual(queueItem.splitterReports, []);
-      assert.ok(mongoLogOperator.state.logItems.some(({logItemType}) => logItemType === 'SPLITTER_LOG'));
-      // the reader 'end' handler finishes ~500 ms later and removes the queue
+      // the reader 'end' handler finishes ~500 ms later, writes the single
+      // splitter log entry and removes the queue
       await removed;
+      assert.ok(mongoLogOperator.state.logItems.some(({logItemType}) => logItemType === 'SPLITTER_LOG'));
       assert.deepStrictEqual(amqpOperator.state.removed, [`CREATE.${correlationId}`]);
 
       await drain();

@@ -64,7 +64,6 @@ export default function ({amqpOperator, mongoOperator, splitterOptions, mongoLog
             });
 
           if (failOnError || !recordError) {
-            createSplitterReportAndLogs();
             reject(new ApiError(httpStatus.UNPROCESSABLE_ENTITY, `Invalid payload! (${sequenceNumber}) ${cleanErrorMessage}`));
           }
         })
@@ -156,19 +155,17 @@ export default function ({amqpOperator, mongoOperator, splitterOptions, mongoLog
 
             if (promises.length === 0) {
               logger.debug(`Got no record promises from reader stream`);
-              createSplitterReportAndLogs();
               reject(new ApiError(httpStatus.UNPROCESSABLE_ENTITY, 'Invalid payload!'));
+            } else {
+              await Promise.all(promises);
+              logger.info(`Request handling done for ${correlationId}`);
             }
-
-            await Promise.all(promises);
-            logger.info(`Request handling done for ${correlationId}`);
 
             createSplitterReportAndLogs();
 
             if ((readerErrored || transformerErrored) && failOnError) {
               logger.debug(`Reader or transformer errored, failOnError active, removing the queue.`);
               await amqpOperator.removeQueue(`${headers.operation}.${correlationId}`);
-              return resolve();
             }
             return resolve();
 
