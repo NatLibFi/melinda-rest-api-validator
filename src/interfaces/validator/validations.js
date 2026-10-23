@@ -9,7 +9,9 @@ import createSruClient from '@natlibfi/sru-client';
 
 import {logMergeAction, logMatchAction, getCatalogerForLog} from './log-actions.js';
 import * as matcherService from './match.js';
-import {matchValidationForMatchResults} from './match-validation.js';
+import {matchValidation} from './match-validation.js';
+import {sortCandidatesByRules} from './match-selector.js';
+import {buildMultiMatchMessage, sendMultiMatchMessage} from './match-selector-multi.js';
 import merger from './merge.js';
 import validateOwnChanges from './own-authorization.js';
 import {validateChanges} from './validate-changes.js';
@@ -28,6 +30,7 @@ export async function validationsFactory(
     recordType,
     postMergeFixOptions,
     matchOptionsList,
+    matchSelectorRules = [],
     stopWhenFound,
     acceptZeroWithMaxCandidates,
     matchFailuresAsNew,
@@ -253,26 +256,57 @@ export async function validationsFactory(
       logger.debug(`We have matchResults (${matchResults.length}) here: ${JSON.stringify(matchResults.map(({candidate: {id}, probability}) => ({id, probability})))}`);
       logger.silly(`matchResults: ${inspect(matchResults, {colors: true, maxArrayLength: 3, depth: 2})}`);
 
-      // run matchValidation for record & matchResults
-      // -> choose the best possible match, and choose which record should be preferred in merge
-      // -> error if none of the matches are valid
+      // --- Match selector (replaces matchValidationForMatchResults) ---
+      logger.debug(`Match selector rules: ${JSON.stringify(matchSelectorRules)}`);
 
-      // does matchValidationResult need to include record?
-      // matchValidationResult: {record, result: {candidate: {id, record}, probability, matchSequence, action, preference: {value, name}}}
+      // 1. Add matchSequence to each candidate
+      const candidates = matchResults.map((match, index) => ({...match, matchSequence: index}));
 
-      const {matchValidationResult, sortedValidatedMatchResults} = await matchValidationForMatchResults(record, matchResults);
-      logger.silly(`MatchValidationResult: ${inspect(matchValidationResult, {colors: true, maxArrayLength: 3, depth: 3})}}`);
+      // 2. Run matchValidation for each candidate (A: incoming record, B: database record)
+      //    -> enrich each candidate with action, preference and message
+      for (const candidate of candidates) {
+        const matchValidationResult = matchValidation({
+          record1: record,
+          record2: candidate.candidate.record,
+          record1External: {recordSource: 'incomingRecord'},
+          record2External: {recordSource: 'databaseRecord'}
+        });
+        Object.assign(candidate, matchValidationResult);
+      }
+      logger.silly(`Candidates: ${inspect(candidates, {colors: true, maxArrayLength: 3, depth: 3})}`);
 
-      await logMatchAction(mongoLogOperator, {headers, record, matchResultsForLog: sortedValidatedMatchResults, matcherReports});
+      // 3. Multi-match handler: notify when the matchers found more than one candidate
+      if (candidates.length > 1) {
+        const candidateIds = candidates.map(candidate => candidate.candidate.id);
+        const messageText = buildMultiMatchMessage({
+          candidateIds,
+          catalogerId: cataloger?.id,
+          catalogerName: cataloger?.name
+        });
+        // fire-and-forget: must NOT be awaited
+        sendMultiMatchMessage({record, candidateIds, messageText});
+      }
 
-      // Check error cases
+      // 4. Filter to the valid candidates
+      const validCandidates = candidates.filter(candidate => candidate.action === 'merge');
+      logger.debug(`${validCandidates.length} valid candidates out of ${candidates.length}`);
+
+      // 5. Log ALL candidates (valid + invalid), in original matchSequence order
+      await logMatchAction(mongoLogOperator, {headers, record, matchResultsForLog: candidates, matcherReports});
+
+      // 6. No valid candidates: same error handling as before
       // Note that if we had stopWhenFound active, and did not run all the matchers because a match was found, we'll probably have cases, where we error records, that might
       // have a valid match that could be found by later matchers
-      if (!matchValidationResult.result) {
-        const messages = sortedValidatedMatchResults.map(match => `${match.candidate.id}: ${match.message}`);
+      if (validCandidates.length === 0) {
+        const messages = candidates.map(match => `${match.candidate.id}: ${match.message}`);
         const matchValidationMessage = messages.join(`, `);
         if (!handleMatchFailuresAsNew) {
-          throw new ValidationError(httpStatus.CONFLICT, {message: `MatchValidation for all ${sortedValidatedMatchResults.length} matches failed. ${matchValidationMessage}`, ids: sortedValidatedMatchResults.map(match => match.candidate.id), recordMetadata});
+          const allFailed = `MatchValidation for all ${candidates.length} matches failed. `;
+          throw new ValidationError(httpStatus.CONFLICT, {
+            message: allFailed + matchValidationMessage,
+            ids: candidates.map(match => match.candidate.id),
+            recordMetadata
+          });
         }
         logger.debug(`Here we should return to adding record as new.`);
         // add messages to headers
@@ -285,7 +319,12 @@ export async function validationsFactory(
         return noValidMatches({record, recordMetadata, headers: newHeaders});
       }
 
-      const firstResult = matchValidationResult.result;
+      // 7. Sort the valid candidates with the match selector rules
+      //    (rules from config, then PROBABILITY DESC, then MATCH_SEQUENCE ASC)
+      const sortedList = sortCandidatesByRules(record, validCandidates, matchSelectorRules);
+
+      // 8. Pick the winner
+      const firstResult = sortedList[0];
       logger.silly(`Result: ${inspect(firstResult, {colors: true, maxArrayLength: 3, depth: 2})}}`);
 
       // Do we ever get this kind of result from the matchValidation?

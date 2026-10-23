@@ -35,6 +35,25 @@ const logNoMatches = readEnvironmentVariable('LOG_NO_MATCHES', {defaultValue: 0,
 const logInputRecord = readEnvironmentVariable('LOG_INPUT_RECORD', {defaultValue: 0, format: v => parseBoolean(v)});
 const logResultRecord = readEnvironmentVariable('LOG_RESULT_RECORD', {defaultValue: 0, format: v => parseBoolean(v)});
 
+// Match selector rules, in priority order. Each rule extracts a key from the record;
+// rules are evaluated in this order and a match on an earlier rule wins.
+// - MELINDA_ID: same melinda-id (035 $a/$z with FI-MELINDA prefix)
+// - LOCAL_SID: same local SID (same $b, same $c)
+// - SAME_LOW: same LOW $a
+// - NAT_BIB: national bibliography record (042 $a = finb/finbd)
+// - LOW_COUNT: number of LOW fields
+// - ENCODING_LEVEL: encoding level (LDR/17)
+// - PREPUB_LEVEL: prepublication level (5XX-based)
+const KNOWN_MATCH_SELECTOR_RULES = [
+  'MELINDA_ID',
+  'LOCAL_SID',
+  'SAME_LOW',
+  'NAT_BIB',
+  'LOW_COUNT',
+  'ENCODING_LEVEL',
+  'PREPUB_LEVEL'
+];
+
 // Note: matchFailuresAsNew from operationSettings of the job overrides this default setting given in environmental variables
 const matchFailuresAsNew = readEnvironmentVariable('MATCH_FAILURES_AS_NEW', {defaultValue: false, format: v => parseBoolean(v)});
 
@@ -54,6 +73,10 @@ export const validatorOptions = {
   preImportFixOptions: generatePreImportFixOptions(),
   sruUrl: readEnvironmentVariable('SRU_URL'),
   matchOptionsList: generateMatchOptionsList(),
+  // Match selector rules live in validatorOptions (instead of a separate top-level export)
+  // because validatorOptions is the single config object consumed by the matching code,
+  // and the match selector runs as part of match validation, next to matchOptionsList
+  matchSelectorRules: generateMatchSelectorRules(),
   stopWhenFound,
   acceptZeroWithMaxCandidates,
   matchFailuresAsNew,
@@ -68,6 +91,20 @@ function generateMatchOptionsList() {
     return [];
   }
   throw new Error(`Unsupported record type ${recordType}`);
+}
+
+function generateMatchSelectorRules() {
+  const matchSelectorRules = readEnvironmentVariable('MATCH_SELECTOR_RULES', {
+    defaultValue: KNOWN_MATCH_SELECTOR_RULES.join(',')
+  }).split(',');
+
+  const unknownRules = matchSelectorRules.filter(rule => !KNOWN_MATCH_SELECTOR_RULES.includes(rule));
+  if (unknownRules.length > 0) {
+    throw new Error(`Unknown match selector rules: ${unknownRules.join(', ')}`);
+  }
+
+  debug(`Match selector rules: ${matchSelectorRules.join(', ')}`);
+  return matchSelectorRules;
 }
 
 function generateMatchOptions(validatorMatchPackage) {
