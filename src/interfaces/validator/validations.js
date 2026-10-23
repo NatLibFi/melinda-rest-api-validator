@@ -231,7 +231,7 @@ export async function validationsFactory(
     } catch (err) {
       logger.error(`mergeRecordForUpdates errored: ${err}`);
       logError(err);
-      const errorMessage = err;
+      const errorMessage = err.message;
       throw new ValidationError(httpStatus.UNPROCESSABLE_ENTITY, {message: `Merge errored: ${errorMessage}`, recordMetadata});
     }
   }
