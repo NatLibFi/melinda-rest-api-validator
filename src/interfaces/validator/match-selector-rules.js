@@ -158,7 +158,7 @@ function getPrepubLevelFromText(text) {
     return 2;
   }
 
-  if (/^ennakkotieto(?:$|[. ])/ui.test(text) || /^EI VIELÄ ILMESTYNYT/u.test(text)) {
+  if (/^ennakkotieto(?:$|[. ])/ui.test(text) || /^EI VIELÄ ILMESTYNYT/ui.test(text)) {
     return 3;
   }
 
