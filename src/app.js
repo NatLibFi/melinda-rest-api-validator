@@ -458,8 +458,36 @@ export default async function ({
   }
 
 
+  // Restart recovery: at poll time no in-flight item can be in QUEUING_IN_PROGRESS
+  // (the loop processes items sequentially and every in-flight item is moved on
+  // before checkMongo re-enters), so any item found here is a zombie left by a
+  // crashed or restarted previous process. Error it out instead of reprocessing:
+  // re-splitting a half-split bulk job could double-write record items.
+  async function recoverStaleQueuingItems({mongoOperator}) {
+    const queueItemQueuingInProgress = await mongoOperator.getOne({queueItemState: QUEUE_ITEM_STATE.VALIDATOR.QUEUING_IN_PROGRESS});
+
+    if (!queueItemQueuingInProgress) {
+      return false;
+    }
+    logger.silly('Stale QUEUING_IN_PROGRESS queueItem found');
+    const {correlationId} = queueItemQueuingInProgress;
+    await mongoOperator.setState({
+      correlationId,
+      state: QUEUE_ITEM_STATE.ERROR,
+      errorMessage: {message: 'Worker restarted while the item was being queued/split; the item is left as stale and is not reprocessed.'},
+      errorStatus: httpStatus.INTERNAL_SERVER_ERROR
+    });
+    return true;
+  }
+
   // Check Mongo for jobs
   async function checkMongo({mongoOperator, amqpOperator, prio}) {
+
+    // A stale QUEUING_IN_PROGRESS item is dead on arrival: error it out
+    // before any real work, do not reprocess it
+    if (await recoverStaleQueuingItems({mongoOperator})) {
+      return initCheck();
+    }
 
     // bulk jobs for validation
     const queueItemValidating = await mongoOperator.getOne({queueItemState: QUEUE_ITEM_STATE.VALIDATOR.VALIDATING});
@@ -527,7 +555,13 @@ export default async function ({
 
           return initCheck();
         }
-        // If error is not ApiError, queueItem is stuck in QUEUEING_IN_PROGRESS - should this be handled somehow
+        // The loop is about to crash, so mark the queueItem ERROR (best effort)
+        // before rethrowing to keep it from being left stuck in QUEUING_IN_PROGRESS
+        try {
+          await mongoOperator.setState({correlationId, state: QUEUE_ITEM_STATE.ERROR, errorMessage: {message: error.message}, errorStatus: error.status || httpStatus.INTERNAL_SERVER_ERROR});
+        } catch (stateError) {
+          logError(stateError);
+        }
         logError(error);
         throw error;
       }

@@ -1103,10 +1103,11 @@ describe('bulk mode (stream to records and validation)', () => {
     }
   });
 
-  it('Should crash when the bulk stream errors with a non-ApiError (stuck in QUEUING_IN_PROGRESS)', async () => {
-    // a non-ApiError from streamToRecords is logged and rethrown, so the app
-    // dies and the queueItem is left stuck in QUEUING_IN_PROGRESS (documented
-    // in app.js: the app has no handling for this state)
+  it('Should mark the item ERROR when the bulk stream errors with a non-ApiError, then crash', async () => {
+    // a non-ApiError from streamToRecords is logged, the queueItem is marked
+    // ERROR (best effort) with the error info, and the ORIGINAL error is
+    // rethrown so the app dies - the item is no longer left stuck in
+    // QUEUING_IN_PROGRESS across a restart
     const correlationId = 'corrB9';
     const {promise, amqpOperator, mongoOperator} = await runApp({
       pollRequest: false,
@@ -1123,7 +1124,45 @@ describe('bulk mode (stream to records and validation)', () => {
         return true;
       });
       const queueItem = mongoOperator.items.get(correlationId);
-      assert.deepStrictEqual(queueItem.stateLog.map(({state}) => state), ['QUEUING_IN_PROGRESS']);
+      assert.deepStrictEqual(queueItem.stateLog.map(({state}) => state), ['QUEUING_IN_PROGRESS', 'ERROR']);
+      const errorState = queueItem.stateLog[1];
+      assert.deepStrictEqual(errorState.errorMessage, {message: 'stream.on is not a function'});
+      // a TypeError has no status: 500 is recorded
+      assert.equal(errorState.errorStatus, 500);
+    } finally {
+      amqpOperator.stop();
+      mongoOperator.stop();
+    }
+  });
+
+  it('Should error a stale QUEUING_IN_PROGRESS item on restart without reprocessing it', async () => {
+    // a crashed/restarted previous worker leaves the item stuck in
+    // QUEUING_IN_PROGRESS; a fresh process must error it out on its first
+    // poll instead of re-splitting (a half-split bulk job could double-write
+    // record items)
+    const correlationId = 'corrB10';
+    const {amqpOperator, mongoOperator, drain} = await runApp({
+      pollRequest: false,
+      queueItems: [makeBulkItem(correlationId, 'QUEUING_IN_PROGRESS', {validate: false})]
+      // no stream seeded: reprocessing is not even possible, and it must not
+      // be attempted in the first place
+    });
+
+    await mongoOperator.onEvent('state', 'ERROR');
+    try {
+      const queueItem = mongoOperator.items.get(correlationId);
+      assert.equal(queueItem.state, 'ERROR');
+      assert.deepStrictEqual(queueItem.stateLog, [{
+        state: 'ERROR',
+        errorMessage: {message: 'Worker restarted while the item was being queued/split; the item is left as stale and is not reprocessed.'},
+        errorStatus: 500
+      }]);
+      // no reprocessing: nothing went to any queue and no records were read
+      assert.deepStrictEqual(amqpOperator.state.sent, []);
+      assert.deepStrictEqual(queueItem.recordResponses, []);
+      assert.deepStrictEqual(queueItem.splitterReports, []);
+
+      await drain();
     } finally {
       amqpOperator.stop();
       mongoOperator.stop();
