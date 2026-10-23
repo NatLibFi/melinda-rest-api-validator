@@ -30,6 +30,7 @@ const MANAGED_VARIABLES = [
   'LOG_INPUT_RECORD',
   'LOG_RESULT_RECORD',
   'MATCH_FAILURES_AS_NEW',
+  'MATCHING_THRESHOLD',
   'MATCHING_TRESHOLD',
   'MAX_MATCHES',
   'MAX_CANDIDATES'
@@ -76,7 +77,7 @@ const runConfigDump = (overrides) => {
       }
     })
   );
-  return {exitCode: 0, dump};
+  return {exitCode: 0, dump, stderr: result.stderr};
 };
 
 const BSR = candidateSearch.searchTypes.bib;
@@ -189,7 +190,7 @@ const BIB_OVERRIDES = {
   LOG_NO_MATCHES: '1',
   LOG_INPUT_RECORD: '1',
   LOG_RESULT_RECORD: '1',
-  MATCHING_TRESHOLD: '0.5'
+  MATCHING_THRESHOLD: '0.5'
 };
 
 const assertThrow = ({exitCode, error}, message) => {
@@ -276,6 +277,61 @@ describe('config option building (subprocess: env is read at import time)', () =
     assert.deepStrictEqual(dump.validatorOptions.matchOptionsList, serializeForComparison(
       getExpectedMatchOptions(['CONTENT'], {sruUrl: 'http://sru.content'})
     ));
+  });
+
+  it('uses MATCHING_THRESHOLD when it is set', () => {
+    const {exitCode, dump, stderr} = runConfigDump({
+      RECORD_TYPE: 'bib',
+      SRU_URL: 'http://sru.threshold',
+      MATCHING_THRESHOLD: '0.42'
+    });
+    assert.strictEqual(exitCode, 0);
+    assert.deepStrictEqual(dump.validatorOptions.matchOptionsList, serializeForComparison(
+      getExpectedMatchOptions(['IDS', 'STANDARD_IDS', 'CONTENTALT'], {sruUrl: 'http://sru.threshold', treshold: 0.42})
+    ));
+    assert.ok(!stderr.includes('is deprecated'), `expected no deprecation warning, stderr: ${stderr}`);
+  });
+
+  it('falls back to the deprecated MATCHING_TRESHOLD when only the old name is set', () => {
+    const {exitCode, dump, stderr} = runConfigDump({
+      RECORD_TYPE: 'bib',
+      SRU_URL: 'http://sru.threshold',
+      MATCHING_TRESHOLD: '0.42'
+    });
+    assert.strictEqual(exitCode, 0);
+    assert.deepStrictEqual(dump.validatorOptions.matchOptionsList, serializeForComparison(
+      getExpectedMatchOptions(['IDS', 'STANDARD_IDS', 'CONTENTALT'], {sruUrl: 'http://sru.threshold', treshold: 0.42})
+    ));
+    assert.ok(
+      stderr.includes('MATCHING_TRESHOLD is deprecated') && stderr.includes('Use MATCHING_THRESHOLD instead'),
+      `expected deprecation warning, stderr: ${stderr}`
+    );
+  });
+
+  it('prefers MATCHING_THRESHOLD over MATCHING_TRESHOLD when both are set', () => {
+    const {exitCode, dump, stderr} = runConfigDump({
+      RECORD_TYPE: 'bib',
+      SRU_URL: 'http://sru.threshold',
+      MATCHING_THRESHOLD: '0.7',
+      MATCHING_TRESHOLD: '0.42'
+    });
+    assert.strictEqual(exitCode, 0);
+    assert.deepStrictEqual(dump.validatorOptions.matchOptionsList, serializeForComparison(
+      getExpectedMatchOptions(['IDS', 'STANDARD_IDS', 'CONTENTALT'], {sruUrl: 'http://sru.threshold', treshold: 0.7})
+    ));
+    assert.ok(!stderr.includes('is deprecated'), `expected no deprecation warning, stderr: ${stderr}`);
+  });
+
+  it('defaults the threshold to 0.8999 when neither spelling is set', () => {
+    const {exitCode, dump, stderr} = runConfigDump({
+      RECORD_TYPE: 'bib',
+      SRU_URL: 'http://sru.threshold'
+    });
+    assert.strictEqual(exitCode, 0);
+    assert.deepStrictEqual(dump.validatorOptions.matchOptionsList, serializeForComparison(
+      getExpectedMatchOptions(['IDS', 'STANDARD_IDS', 'CONTENTALT'], {sruUrl: 'http://sru.threshold', treshold: 0.8999})
+    ));
+    assert.ok(!stderr.includes('is deprecated'), `expected no deprecation warning, stderr: ${stderr}`);
   });
 });
 
