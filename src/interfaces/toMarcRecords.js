@@ -190,12 +190,18 @@ export default function ({amqpOperator, mongoOperator, splitterOptions, mongoLog
         };
 
         logger.silly(`${inspect(splitterLogItem, {depth: 6})}`);
-        mongoLogOperator.addLogItem(splitterLogItem);
+        Promise.resolve(mongoLogOperator.addLogItem(splitterLogItem)).catch(error => {
+          logger.debug(`Adding splitter log item failed: ${JSON.stringify(error)}`);
+          logError(error);
+        });
 
         logger.debug(`Creating splitterReport to queueItem if needed`);
         if ((keepSplitterReport === 'ALL') || (keepSplitterReport === 'ERROR' && (readerErrored || transformerErrored))) { 
           logger.debug(`Got ${readerErrors.length} errors. Pushing report to mongo`);
-          mongoOperator.pushMessages({correlationId, messages: [splitterReport], messageField: 'splitterReport'});
+          Promise.resolve(mongoOperator.pushMessages({correlationId, messages: [splitterReport], messageField: 'splitterReport'})).catch(error => {
+            logger.debug(`Pushing splitterReport failed: ${JSON.stringify(error)}`);
+            logError(error);
+          });
           return;
         }
         return;
