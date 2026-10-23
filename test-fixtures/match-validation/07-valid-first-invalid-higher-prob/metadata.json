@@ -1,0 +1,8 @@
+{
+  "description": "keeps the valid match before an invalid match with a higher probability when the valid match is listed first (pins the sortMatch valid/invalid mirror condition)",
+  "expectedBestId": "cand1",
+  "expectedOrder": [
+    "cand1",
+    "cand2"
+  ]
+}

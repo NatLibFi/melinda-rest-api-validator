@@ -95,7 +95,7 @@ function sortMatch(a, b) {
     return -1;
   }
 
-  if (b.action !== 'merge' && a.action === 'merge') {
+  if (b.action === 'merge' && a.action !== 'merge') {
     return 1;
   }
 
