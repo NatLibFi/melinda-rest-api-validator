@@ -1,5 +1,5 @@
 {
-  "description": "empty json array rejects with 422 and writes one splitter report and one splitter log entry",
+  "description": "empty payload always fails with 422 regardless of failOnError and writes one splitter report and one splitter log entry",
   "contentType": "application/json",
   "operation": "CREATE",
   "failOnError": false,

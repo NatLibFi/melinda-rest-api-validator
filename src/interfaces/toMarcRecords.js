@@ -63,6 +63,9 @@ export default function ({amqpOperator, mongoOperator, splitterOptions, mongoLog
               logError(error);
             });
 
+          // failOnError governs per-record "Record is invalid" errors only.
+          // Any other (stream-level) reader error fails the bulk by design: the worker cannot
+          // distinguish a bad record from a broken source, and must not hand on a silently truncated result set.
           if (failOnError || !recordError) {
             reject(new ApiError(httpStatus.UNPROCESSABLE_ENTITY, `Invalid payload! (${sequenceNumber}) ${cleanErrorMessage}`));
           }
@@ -154,6 +157,8 @@ export default function ({amqpOperator, mongoOperator, splitterOptions, mongoLog
             await mongoOperator.setBlobSize({correlationId, blobSize: sequenceNumber});
 
             if (promises.length === 0) {
+              // An empty bulk has no records to validate; failing with 422 is intentional
+              // (succeeding would mask an upstream failure), independent of failOnError.
               logger.debug(`Got no record promises from reader stream`);
               reject(new ApiError(httpStatus.UNPROCESSABLE_ENTITY, 'Invalid payload!'));
             } else {
@@ -229,6 +234,7 @@ export default function ({amqpOperator, mongoOperator, splitterOptions, mongoLog
         return ISO2709.reader(stream, {subfieldValues: false});
       }
 
+      // 415 is thrown before any record exists; there is nothing to skip, so it is always fatal.
       throw new ApiError(httpStatus.UNSUPPORTED_MEDIA_TYPE, 'Invalid content-type');
     }
 
