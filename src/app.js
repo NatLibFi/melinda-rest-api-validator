@@ -164,12 +164,13 @@ export default async function ({
     const {correlationId} = message.properties;
     logger.debug(`app/checkAmqp: Found message for correlationId: ${correlationId}`);
 
-    // checkAndSetState checks that the queueItem is not too old, sets state and return true if okay
+    // checkAndSetState checks that the queueItem is not too old, sets the state and
+    // returns { status: 'updated' } if okay ({ status: 'timeout' } when too old, ABORT)
     // http, did createPrio in state QUEUE_ITEM_STATE.VALIDATOR.PENDING_VALIDATION
     // this is just for prio
 
-    const fresh = await mongoOperator.checkAndSetState({correlationId, state: QUEUE_ITEM_STATE.VALIDATOR.VALIDATING});
-    if (fresh) {
+    const {status: freshStatus} = await mongoOperator.checkAndSetState({correlationId, state: QUEUE_ITEM_STATE.VALIDATOR.VALIDATING});
+    if (freshStatus === 'updated') {
       return processFreshMessage({message, mongoOperator, amqpOperator, prio});
     }
     // queueItem was too old, queueItem was set to ABORT

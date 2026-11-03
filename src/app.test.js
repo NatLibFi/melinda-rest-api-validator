@@ -199,8 +199,9 @@ function makeMongoOperator({queueItems = [], streams = {}, freshStates = {}}) {
       item.stateLog.push({state: newState, errorMessage, errorStatus});
       trigger('state', newState);
     },
-    // checkAndSetState: returns fresh and sets the state, or returns stale
-    // (false) and moves the queueItem to ABORT (mirrors the real operator)
+    // checkAndSetState: returns {status:'updated'} and sets the state, or
+    // returns {status:'timeout'} and moves the queueItem to ABORT
+    // (mirrors the real operator contract)
     async checkAndSetState({correlationId, state}) {
       const item = items.get(correlationId);
       const scripted = freshStates[correlationId] || [];
@@ -208,7 +209,7 @@ function makeMongoOperator({queueItems = [], streams = {}, freshStates = {}}) {
       item.state = fresh ? state : 'ABORT';
       item.stateLog.push({state: item.state, fresh});
       trigger('state', item.state);
-      return fresh;
+      return {status: fresh ? 'updated' : 'timeout', queueItem: item};
     },
     stop() {
       stopped = true;
