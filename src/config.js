@@ -74,7 +74,7 @@ function generateMatchOptions(validatorMatchPackage) {
       searchSpec: generateSearchSpec(validatorMatchPackage)
     },
     detection: {
-      treshold: generateThreshold(validatorMatchPackage),
+      threshold: generateThreshold(validatorMatchPackage),
       strategy: generateStrategy(validatorMatchPackage)
     }
   };

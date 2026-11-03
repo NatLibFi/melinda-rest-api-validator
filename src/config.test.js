@@ -130,7 +130,7 @@ const BIB_MAX_CANDIDATES = {IDS: 50, STANDARD_IDS: 50, CONTENT: 50, CONTENTALT: 
 // defaults, so unset boolean switches stay numeric 0/1 (not false/true).
 const DEFAULT_LOG_OPTIONS = {logNoMatches: 0, logInputRecord: 0, logResultRecord: 0};
 
-const getExpectedMatchOptions = (packages, {sruUrl, treshold = 0.9}) =>
+const getExpectedMatchOptions = (packages, {sruUrl, threshold = 0.9}) =>
   packages.map((matchPackageName) => ({
     matchPackageName,
     maxMatches: BIB_MAX_MATCHES[matchPackageName],
@@ -138,7 +138,7 @@ const getExpectedMatchOptions = (packages, {sruUrl, treshold = 0.9}) =>
     returnFailures: true,
     search: {url: sruUrl, searchSpec: BIB_SEARCH_SPECS[matchPackageName]},
     detection: {
-      treshold,
+      threshold,
       strategy: BIB_STRATEGIES[matchPackageName].map((feature) => feature.name)
     }
   }));
@@ -149,7 +149,7 @@ const getExpectedValidatorOptions = ({
   postMergeFixOptions,
   sruUrl,
   matchPackages,
-  treshold,
+  threshold,
   stopWhenFound,
   acceptZeroWithMaxCandidates,
   matchFailuresAsNew,
@@ -161,7 +161,7 @@ const getExpectedValidatorOptions = ({
   // The current behavior reuses the BIB preimport fix settings for autname too.
   preImportFixOptions: fixes.BIB_PREIMPORT_FIX_SETTINGS,
   sruUrl,
-  matchOptionsList: getExpectedMatchOptions(matchPackages, {sruUrl, treshold}),
+  matchOptionsList: getExpectedMatchOptions(matchPackages, {sruUrl, threshold}),
   stopWhenFound,
   acceptZeroWithMaxCandidates,
   matchFailuresAsNew,
@@ -240,7 +240,7 @@ describe('config option building (subprocess: env is read at import time)', () =
         ...BIB_FIX_OPTIONS,
         sruUrl: 'http://sru.over',
         matchPackages: ['IDS', 'CONTENTALT'],
-        treshold: 0.5,
+        threshold: 0.5,
         stopWhenFound: false,
         acceptZeroWithMaxCandidates: true,
         matchFailuresAsNew: true,

@@ -16,7 +16,7 @@ export async function matchValidationForMatchResults(record, matchResults) {
   // - candidate.record
   // - probability
   // - strategy (if returnStrategy option is true)
-  // - treshold (if returnStrategy option is true)
+  // - threshold (if returnStrategy option is true)
   // - matchQuery (if returnQuery option is true)
 
   debugData(`Original: ${JSON.stringify(matchResults.map(({candidate: {id}, probability}) => ({id, probability})))}))}`);
