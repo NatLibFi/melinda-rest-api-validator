@@ -287,7 +287,7 @@ describe('config option building (subprocess: env is read at import time)', () =
     });
     assert.strictEqual(exitCode, 0);
     assert.deepStrictEqual(dump.validatorOptions.matchOptionsList, serializeForComparison(
-      getExpectedMatchOptions(['IDS', 'STANDARD_IDS', 'CONTENTALT'], {sruUrl: 'http://sru.threshold', treshold: 0.42})
+      getExpectedMatchOptions(['IDS', 'STANDARD_IDS', 'CONTENTALT'], {sruUrl: 'http://sru.threshold', threshold: 0.42})
     ));
     assert.ok(!stderr.includes('is deprecated'), `expected no deprecation warning, stderr: ${stderr}`);
   });
@@ -300,7 +300,7 @@ describe('config option building (subprocess: env is read at import time)', () =
     });
     assert.strictEqual(exitCode, 0);
     assert.deepStrictEqual(dump.validatorOptions.matchOptionsList, serializeForComparison(
-      getExpectedMatchOptions(['IDS', 'STANDARD_IDS', 'CONTENTALT'], {sruUrl: 'http://sru.threshold', treshold: 0.42})
+      getExpectedMatchOptions(['IDS', 'STANDARD_IDS', 'CONTENTALT'], {sruUrl: 'http://sru.threshold', threshold: 0.42})
     ));
     assert.ok(
       stderr.includes('MATCHING_TRESHOLD is deprecated') && stderr.includes('Use MATCHING_THRESHOLD instead'),
@@ -317,7 +317,7 @@ describe('config option building (subprocess: env is read at import time)', () =
     });
     assert.strictEqual(exitCode, 0);
     assert.deepStrictEqual(dump.validatorOptions.matchOptionsList, serializeForComparison(
-      getExpectedMatchOptions(['IDS', 'STANDARD_IDS', 'CONTENTALT'], {sruUrl: 'http://sru.threshold', treshold: 0.7})
+      getExpectedMatchOptions(['IDS', 'STANDARD_IDS', 'CONTENTALT'], {sruUrl: 'http://sru.threshold', threshold: 0.7})
     ));
     assert.ok(!stderr.includes('is deprecated'), `expected no deprecation warning, stderr: ${stderr}`);
   });
@@ -329,7 +329,7 @@ describe('config option building (subprocess: env is read at import time)', () =
     });
     assert.strictEqual(exitCode, 0);
     assert.deepStrictEqual(dump.validatorOptions.matchOptionsList, serializeForComparison(
-      getExpectedMatchOptions(['IDS', 'STANDARD_IDS', 'CONTENTALT'], {sruUrl: 'http://sru.threshold', treshold: 0.8999})
+      getExpectedMatchOptions(['IDS', 'STANDARD_IDS', 'CONTENTALT'], {sruUrl: 'http://sru.threshold', threshold: 0.8999})
     ));
     assert.ok(!stderr.includes('is deprecated'), `expected no deprecation warning, stderr: ${stderr}`);
   });
