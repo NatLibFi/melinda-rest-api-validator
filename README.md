@@ -144,7 +144,7 @@ melinda-validator-cli <record.json> --sru-url https://sru.api.melinda.kansallisk
 
 | Option                 | Description                                                                                          |
 |------------------------|------------------------------------------------------------------------------------------------------|
-| `--sru-url <url>`      | SRU endpoint. Mandatory, unless the `SRU_URL` environment variable is set.                            |
+| `--sru-url <url>`      | SRU endpoint. Mandatory for live runs and `--record`; optional with `--stub-results` / `--replay` (fully offline, the URL is not used on the wire). Defaults to the `SRU_URL` environment variable. |
 | `--operation CREATE\|UPDATE` | Operation to probe: `CREATE` (default) or `UPDATE`. `UPDATE` requires `--target-id`.        |
 | `--target-id <id>`     | Target record id for `--operation UPDATE`. Must be a 9-digit Aleph id, and match the record's `001` if present. |
 | `--match-packages <a,b,c>` | Match packages to run. Defaults to the `VALIDATOR_MATCH_PACKAGES` environment variable, or `IDS,STANDARD_IDS,CONTENTALT`. |
@@ -153,6 +153,9 @@ melinda-validator-cli <record.json> --sru-url https://sru.api.melinda.kansallisk
 | `--validate on\|off`   | Enable the `validate` pipeline entry setting. Defaults to `off`.                                    |
 | `--match-failures-as-new 0\|1` | Treat a result where all matches fail match validation as a no-match result. Defaults to the `MATCH_FAILURES_AS_NEW` environment variable, or `0`. |
 | `--match-selector-rules <a,b,c>` | Match selection rules, in priority order. Defaults to the `MATCH_SELECTOR_RULES` environment variable, or all rules. |
+| `--stub-results <file.json>` | Serve SRU responses from a fixture file instead of live traffic (fully offline; a fixture miss is a hard error — the run never falls back to the network). Mutually exclusive with `--replay` and `--record`. |
+| `--replay <file.json>` | Replay a capture file written by `--record` (fully offline; a capture miss is a hard error). Mutually exclusive with `--stub-results` and `--record`. |
+| `--record <file.json>` | Run against the live SRU endpoint and capture all SRU traffic to `<file.json>` as a replay file. `--sru-url` is mandatory. Mutually exclusive with `--stub-results` and `--replay`. |
 | `-o, --output <file>`  | Write the full trace as JSON to `<file>`.                                                             |
 | `-h, --help`           | Show the option reference.                                                                            |
 
@@ -180,6 +183,36 @@ update / skip / 409 conflict / validation failed / would-skip-validation);
 `1` on CLI usage errors or pipeline errors.
 
 Run `melinda-validator-cli --help` for the authoritative option reference.
+
+### Stubbing and replay
+
+`--stub-results`, `--replay` and `--record` replace the CLI's live SRU
+dependency with a file (pick at most one). Fixture and capture files share
+one format, keyed by the exact SRU request URL:
+
+```json
+{
+  "entries": [{"url": "...", "status": 200, "body": "<SRU XML>"}]
+}
+```
+
+- **Record, then replay.** Record once against a live endpoint and re-run
+  the same probe offline and deterministically:
+
+  ```sh
+  melinda-validator-cli record.json --sru-url https://.../bib/prv --record capture.json
+  melinda-validator-cli record.json --replay capture.json
+  ```
+
+  The capture's URLs are tied to the SRU endpoint used while recording, so
+  a replay matches a recorded run's requests exactly (paging parameters
+  included). In stub/replay mode `--sru-url` is optional; without it, the run
+  keys fixture URLs against a placeholder endpoint prefix instead.
+
+- **Static stub.** `--stub-results <file.json>` serves a hand-made fixture
+  in the same format — useful for pinning a specific candidate set or
+  historical decision. A stub/replay run is fully offline: a URL with no
+  fixture entry is a loud error — the run never falls back to the network.
 
 ## License and copyright
 
