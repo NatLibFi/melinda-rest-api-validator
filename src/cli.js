@@ -14,9 +14,9 @@
  * - Live dependency: read-only SRU ONLY (candidate searches + rec.id
  *   getRecord of the target record on the merge and UPDATE paths). No Mongo,
  *   no AMQP, no Aleph writes.
- * - Exit codes: 0 when the pipeline reaches a decision (create / merge /
- *   skip / 409 conflict / validation failed), 1 on CLI usage errors or
- *   pipeline errors.
+ * - Exit codes: 0 when the pipeline reaches a decision (create / merge / update /
+ *   skip / 409 conflict / validation failed / would-skip-validation), 1 on CLI
+ *   usage errors or pipeline errors.
  *
  * Note: src/config.js reads env vars at module load. The CLI applies its
  * options to process.env BEFORE importing config.js, so within one process
@@ -47,12 +47,16 @@ Options:
                                    (default: env MATCH_FAILURES_AS_NEW or 0)
   --match-selector-rules <a,b,c>   Match selector rules, in priority order
                                    (default: env MATCH_SELECTOR_RULES or all seven rules)
+  --unique on|off                  Enable the unique (match) pipeline entry setting (default: on)
+  --validate on|off                Enable the validate pipeline entry setting (default: off)
   -o, --output <file>              Write the full trace as JSON to <file>
   -h, --help                       Show this help
 
 Record input: one record JSON in internal MarcRecord format ({leader, fields}).
 Only RECORD_TYPE=bib is supported. Read-only SRU traffic only (no Mongo / AMQP / Aleph).
-Exit codes: 0 = decision reached (create / merge / update / skip / 409 conflict / validation failed), 1 = error.`;
+Production entry gate: the pipeline runs when any of merge / unique / validate is on;
+with all three off the CLI reports WOULD_SKIP_VALIDATION without running the pipeline.
+Exit codes: 0 = decision reached (create / merge / update / skip / 409 conflict / validation failed / would-skip-validation), 1 = error.`;
 
 class CliError extends Error { }
 
@@ -64,6 +68,8 @@ export function parseArgs(argv) {
     operation: 'CREATE',
     targetId: undefined,
     merge: 'off',
+    unique: 'on',
+    validate: 'off',
     matchFailuresAsNew: undefined,
     matchSelectorRules: undefined,
     output: undefined,
@@ -96,6 +102,10 @@ export function parseArgs(argv) {
       args.matchPackages = next();
     } else if (arg === '--merge') {
       args.merge = parseOnOff(arg, next());
+    } else if (arg === '--unique') {
+      args.unique = parseOnOff(arg, next());
+    } else if (arg === '--validate') {
+      args.validate = parseOnOff(arg, next());
     } else if (arg === '--match-failures-as-new') {
       args.matchFailuresAsNew = parseZeroOne(arg, next());
     } else if (arg === '--match-selector-rules') {
@@ -217,15 +227,23 @@ async function runPipeline({args, sruUrl, validatorOptions, validationsFactory, 
     removeBySequences() {}
   };
 
-  // no sruClient/matchers injected -> factory builds the real ones from validatorOptions
-  const {createValidations, updateValidations} = await validationsFactory(mongoLogOperator, fixRecord, validatorOptions, {});
-
   const operation = args.operation;
   const merge = args.merge === 'on';
-  const operationSettings = {validate: false, unique: true, merge};
+  const unique = args.unique === 'on';
+  const validate = args.validate === 'on';
+  const operationSettings = {validate, unique, merge};
   if (args.matchFailuresAsNew !== undefined) {
     operationSettings.matchFailuresAsNew = args.matchFailuresAsNew;
   }
+
+  // Production entry gate (validator/index processLoad): the pipeline runs when any of
+  // merge / unique / validate / noStream / prio is set; the CLI only sets the first three
+  if (!merge && !unique && !validate) {
+    return buildTrace({args, sruUrl, validatorOptions, merge, logItems, outcome: {kind: 'wouldSkipValidation'}, outHeaders: null});
+  }
+
+  // no sruClient/matchers injected -> factory builds the real ones from validatorOptions
+  const {createValidations, updateValidations} = await validationsFactory(mongoLogOperator, fixRecord, validatorOptions, {});
 
   // Production fills recordMetadata from the record (all sourceIds for CREATE,
   // the first/best set for UPDATE); the CLI supplies only the blobSequence
@@ -258,7 +276,7 @@ async function runPipeline({args, sruUrl, validatorOptions, validationsFactory, 
 function buildTrace({args, sruUrl, validatorOptions, merge, logItems, outcome, outHeaders}) {
   const matchLog = logItems.find(item => item.logItemType === 'MATCH_LOG');
   const mergeLog = logItems.find(item => item.logItemType === 'MERGE_LOG');
-  const exitCode = ['create', 'merge', 'skip', 'conflict', 'update', 'failed'].includes(outcome.kind) ? 0 : 1;
+  const exitCode = ['create', 'merge', 'skip', 'conflict', 'update', 'failed', 'wouldSkipValidation'].includes(outcome.kind) ? 0 : 1;
   return {
     recordFile: args.recordFile,
     sruUrl,
@@ -266,6 +284,8 @@ function buildTrace({args, sruUrl, validatorOptions, merge, logItems, outcome, o
       operation: args.operation,
       targetId: args.targetId,
       merge,
+      unique: args.unique === 'on',
+      validate: args.validate === 'on',
       matchFailuresAsNew: args.matchFailuresAsNew,
       matchPackages: validatorOptions.matchOptionsList.map(o => o.matchPackageName),
       matchSelectorRules: validatorOptions.matchSelectorRules,
@@ -326,7 +346,7 @@ export function printTrace(trace) {
   const {options} = trace;
   console.log(`Record:    ${trace.recordFile}`);
   console.log(`SRU:       ${trace.sruUrl}`);
-  console.log(`Options:   operation=${options.operation}${options.targetId ? ` targetId=${options.targetId}` : ''} merge=${options.merge} matchFailuresAsNew=${options.matchFailuresAsNew ?? 'config-default'} packages=${options.matchPackages.join(',')} selectorRules=${options.matchSelectorRules.join(',')} stopWhenFound=${options.stopWhenFound} thresholds=${JSON.stringify(options.thresholds)}`);
+  console.log(`Options:   operation=${options.operation}${options.targetId ? ` targetId=${options.targetId}` : ''} merge=${options.merge} unique=${options.unique} validate=${options.validate} matchFailuresAsNew=${options.matchFailuresAsNew ?? 'config-default'} packages=${options.matchPackages.join(',')} selectorRules=${options.matchSelectorRules.join(',')} stopWhenFound=${options.stopWhenFound} thresholds=${JSON.stringify(options.thresholds)}`);
   console.log('');
   console.log(`Matcher stages (${trace.matcherReports.length}):`);
   for (const report of trace.matcherReports) {
@@ -361,6 +381,8 @@ function describeDecision(outcome) {
       return `UPDATE ${outcome.id}`;
     case 'failed':
       return 'VALIDATION FAILED (422 in production)';
+    case 'wouldSkipValidation':
+      return 'WOULD_SKIP_VALIDATION (entry gate)';
     case 'merge':
       return `MERGE -> UPDATE into ${outcome.id} (${lastNote(outcome.notes) ?? 'merged'})`;
     case 'skip':

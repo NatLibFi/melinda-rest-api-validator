@@ -67,6 +67,69 @@ describe('parseArgs (cli)', () => {
     assert.strictEqual(args.sruUrl, undefined);
   });
 
+  it('Should accept the --output long form', () => {
+    const args = parseArgs(['rec.json', '--output', 'out.json']);
+    assert.strictEqual(args.output, 'out.json');
+  });
+
+  it('Should fail on missing record file', () => {
+    assert.throws(() => parseArgs(['--sru-url', 'http://x']), /Expected exactly one record file/);
+  });
+
+  it('Should fail on two record files', () => {
+    assert.throws(() => parseArgs(['a.json', 'b.json']), /Expected exactly one record file/);
+  });
+
+  it('Should fail on unknown option', () => {
+    assert.throws(() => parseArgs(['rec.json', '--nope']), /Unknown option: --nope/);
+  });
+
+  it('Should fail on invalid --merge value', () => {
+    assert.throws(() => parseArgs(['rec.json', '--merge', 'yes']), /Invalid value for --merge/);
+  });
+
+  it('Should default unique to on and validate to off', () => {
+    const args = parseArgs(['rec.json']);
+    assert.strictEqual(args.unique, 'on');
+    assert.strictEqual(args.validate, 'off');
+  });
+
+  it('Should parse --unique off and --validate on', () => {
+    const args = parseArgs(['rec.json', '--unique', 'off', '--validate', 'on']);
+    assert.strictEqual(args.unique, 'off');
+    assert.strictEqual(args.validate, 'on');
+  });
+
+  it('Should fail on invalid --unique value', () => {
+    assert.throws(() => parseArgs(['rec.json', '--unique', 'yes']), /Invalid value for --unique/);
+  });
+
+  it('Should fail on invalid --validate value', () => {
+    assert.throws(() => parseArgs(['rec.json', '--validate', 'maybe']), /Invalid value for --validate/);
+  });
+
+  it('Should fail on invalid --match-failures-as-new value', () => {
+    assert.throws(() => parseArgs(['rec.json', '--match-failures-as-new', 'true']), /Invalid value for --match-failures-as-new/);
+  });
+
+  it('Should fail on missing flag value', () => {
+    assert.throws(() => parseArgs(['rec.json', '--sru-url']), /Missing value for --sru-url/);
+  });
+
+  it('Should fail on missing sru-url with no env fallback', async () => {
+    const previous = process.env.SRU_URL;
+    delete process.env.SRU_URL;
+    try {
+      await assert.rejects(runCli(['rec.json']), /No SRU endpoint given/);
+    } finally {
+      if (previous !== undefined) {
+        process.env.SRU_URL = previous;
+      }
+    }
+  });
+});
+
+describe('parseArgs (cli, UPDATE options)', () => {
   it('Should default operation to CREATE and targetId to undefined', () => {
     const args = parseArgs(['rec.json']);
     assert.strictEqual(args.operation, 'CREATE');
@@ -108,47 +171,6 @@ describe('parseArgs (cli)', () => {
     writeFileSync(recordFile, JSON.stringify({leader: '00000nam a2200000 a 4500', fields: [{tag: '001', value: '000012345'}]}));
     const args = parseArgs([recordFile, '--operation', 'UPDATE', '--target-id', '000012345']);
     assert.strictEqual(args.targetId, '000012345');
-  });
-
-  it('Should accept the --output long form', () => {
-    const args = parseArgs(['rec.json', '--output', 'out.json']);
-    assert.strictEqual(args.output, 'out.json');
-  });
-
-  it('Should fail on missing record file', () => {
-    assert.throws(() => parseArgs(['--sru-url', 'http://x']), /Expected exactly one record file/);
-  });
-
-  it('Should fail on two record files', () => {
-    assert.throws(() => parseArgs(['a.json', 'b.json']), /Expected exactly one record file/);
-  });
-
-  it('Should fail on unknown option', () => {
-    assert.throws(() => parseArgs(['rec.json', '--nope']), /Unknown option: --nope/);
-  });
-
-  it('Should fail on invalid --merge value', () => {
-    assert.throws(() => parseArgs(['rec.json', '--merge', 'yes']), /Invalid value for --merge/);
-  });
-
-  it('Should fail on invalid --match-failures-as-new value', () => {
-    assert.throws(() => parseArgs(['rec.json', '--match-failures-as-new', 'true']), /Invalid value for --match-failures-as-new/);
-  });
-
-  it('Should fail on missing flag value', () => {
-    assert.throws(() => parseArgs(['rec.json', '--sru-url']), /Missing value for --sru-url/);
-  });
-
-  it('Should fail on missing sru-url with no env fallback', async () => {
-    const previous = process.env.SRU_URL;
-    delete process.env.SRU_URL;
-    try {
-      await assert.rejects(runCli(['rec.json']), /No SRU endpoint given/);
-    } finally {
-      if (previous !== undefined) {
-        process.env.SRU_URL = previous;
-      }
-    }
   });
 });
 
@@ -355,5 +377,76 @@ describe('runCli (cli UPDATE validation failure, stubbed SRU)', () => {
     assert.strictEqual(trace.outcome.status, 422);
     assert.ok(trace.outcome.messages.length > 0);
     assert.strictEqual(trace.merge, null);
+  });
+});
+
+// Production entry-gate wiring: the pipeline runs when any of merge / unique /
+// validate is on; with all three off the CLI reports WOULD_SKIP_VALIDATION
+// without running the pipeline (and without any SRU traffic)
+describe('runCli (cli entry gate, stubbed SRU)', () => {
+  let recordFile;
+  const originalFetch = globalThis.fetch;
+  let fetchCalls = 0;
+
+  before(() => {
+    const dir = mkdtempSync(join(tmpdir(), 'validator-cli-'));
+    recordFile = join(dir, 'record.json');
+    writeFileSync(recordFile, JSON.stringify(record));
+    globalThis.fetch = async () => {
+      fetchCalls += 1;
+      return new Response(emptySruResponseXml, {status: 200, headers: {'Content-Type': 'text/xml'}});
+    };
+  });
+
+  after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it('Should report WOULD_SKIP_VALIDATION with exit 0 when merge, unique and validate are all off', async () => {
+    fetchCalls = 0;
+    const {trace, exitCode} = await runCli([recordFile, '--sru-url', SRU_URL, '--unique', 'off']);
+
+    assert.strictEqual(exitCode, 0);
+    assert.strictEqual(trace.outcome.kind, 'wouldSkipValidation');
+    assert.strictEqual(trace.options.merge, false);
+    assert.strictEqual(trace.options.unique, false);
+    assert.strictEqual(trace.options.validate, false);
+    assert.strictEqual(fetchCalls, 0);
+  });
+
+  it('Should run the pipeline when only validate is on', async () => {
+    const {trace, exitCode} = await runCli([recordFile, '--sru-url', SRU_URL, '--unique', 'off', '--validate', 'on']);
+
+    assert.strictEqual(exitCode, 0);
+    assert.strictEqual(trace.outcome.kind, 'create');
+    assert.strictEqual(trace.outcome.operation, 'CREATE');
+    assert.strictEqual(trace.options.unique, false);
+    assert.strictEqual(trace.options.validate, true);
+    // unique off: the match stage did not run, the record was validated as-is
+    assert.deepStrictEqual(trace.matcherReports, []);
+    assert.deepStrictEqual(trace.candidates, []);
+  });
+
+  it('Should run the pipeline when only unique is on (default)', async () => {
+    fetchCalls = 0;
+    const {trace, exitCode} = await runCli([recordFile, '--sru-url', SRU_URL, '--match-packages', 'IDS']);
+
+    assert.strictEqual(exitCode, 0);
+    assert.strictEqual(trace.outcome.kind, 'create');
+    // the match stage ran against the (empty) database
+    assert.ok(fetchCalls > 0);
+    assert.strictEqual(trace.matcherReports.length, 1);
+    assert.strictEqual(trace.candidates.length, 0);
+  });
+
+  it('Should report WOULD_SKIP_VALIDATION for UPDATE when the gate is off', async () => {
+    fetchCalls = 0;
+    const {trace, exitCode} = await runCli([recordFile, '--sru-url', SRU_URL, '--operation', 'UPDATE', '--target-id', CANDIDATE_ID, '--unique', 'off']);
+
+    assert.strictEqual(exitCode, 0);
+    assert.strictEqual(trace.outcome.kind, 'wouldSkipValidation');
+    assert.strictEqual(trace.options.operation, 'UPDATE');
+    assert.strictEqual(trace.options.targetId, CANDIDATE_ID);
+    assert.strictEqual(fetchCalls, 0);
   });
 });
