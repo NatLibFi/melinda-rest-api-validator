@@ -122,6 +122,49 @@ Queue-item schema examle for a bulk job queueItem:
 }
 ```
 
+## Dev CLI
+
+The package installs a `melinda-validator-cli` binary that runs the validator's
+**CREATE decision pipeline** (match chain -> match validation -> match selector
+-> merge / update validations) offline against a read-only SRU endpoint, and
+prints the decision trace: "what would the production pipeline decide for this
+record?"
+
+It performs no writes. It uses no Mongo, no AMQP and no Aleph access; the only
+live dependency is read-only SRU traffic (candidate searches, plus a `getRecord`
+fetch of the match target on the merge path).
+
+### Usage
+
+```sh
+melinda-validator-cli <record.json> --sru-url https://sru.api.melinda.kansalliskirjasto.fi/bib/prv [--options]
+```
+
+| Option                 | Description                                                                                          |
+|------------------------|------------------------------------------------------------------------------------------------------|
+| `--sru-url <url>`      | SRU endpoint. Mandatory, unless the `SRU_URL` environment variable is set.                            |
+| `--match-packages <a,b,c>` | Match packages to run. Defaults to the `VALIDATOR_MATCH_PACKAGES` environment variable, or `IDS,STANDARD_IDS,CONTENTALT`. |
+| `--merge on\|off`      | Run the merge path when matches are found. Defaults to `off` (report the conflict instead of merging). |
+| `--match-failures-as-new 0\|1` | Treat a result where all matches fail match validation as a no-match result. Defaults to the `MATCH_FAILURES_AS_NEW` environment variable, or `0`. |
+| `--match-selector-rules <a,b,c>` | Match selection rules, in priority order. Defaults to the `MATCH_SELECTOR_RULES` environment variable, or all rules. |
+| `-o, --output <file>`  | Write the full trace as JSON to `<file>`.                                                             |
+| `-h, --help`           | Show the option reference.                                                                            |
+
+**Input**: one record JSON file in the internal `MarcRecord` format
+(`{leader, fields}`). Only `RECORD_TYPE=bib` is supported, and only the CREATE
+operation.
+
+**Output**: a human-readable trace on stdout — the effective options, per-stage
+matcher reports, one line per candidate (id, probability, match validation
+action and preference), the merge target if one is chosen, and a final
+`Decision:` line (`CREATE`, `MERGE` into an id, `SKIPPED_*`, or `409 CONFLICT`
+with the candidate ids). With `-o`, the same trace is written as JSON.
+
+**Exit codes**: `0` when the pipeline reaches any decision (create / merge /
+skip / 409 conflict); `1` on CLI usage errors or pipeline errors.
+
+Run `melinda-validator-cli --help` for the authoritative option reference.
+
 ## License and copyright
 
 Copyright (c) 2020-2026 **University Of Helsinki (The National Library Of Finland)**
