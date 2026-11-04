@@ -5,7 +5,7 @@ import {join} from 'node:path';
 import {describe, it, before, after} from 'node:test';
 import {MarcRecord} from '@natlibfi/marc-record';
 import {MARCXML} from '@natlibfi/marc-record-serializers';
-import {parseArgs, runCli} from './cli.js';
+import {parseArgs, runCli, loadStubFile, createStubFetch, createRecordFetch} from './cli.js';
 
 // Shared fixtures for the stubbed-SRU pipeline tests: the candidate shares the
 // melinda 035 id with the incoming record, so the IDS matcher finds it at 1.0
@@ -171,6 +171,128 @@ describe('parseArgs (cli, UPDATE options)', () => {
     writeFileSync(recordFile, JSON.stringify({leader: '00000nam a2200000 a 4500', fields: [{tag: '001', value: '000012345'}]}));
     const args = parseArgs([recordFile, '--operation', 'UPDATE', '--target-id', '000012345']);
     assert.strictEqual(args.targetId, '000012345');
+  });
+});
+
+describe('SRU stub/recording engine (cli)', () => {
+  describe('loadStubFile', () => {
+    it('Should load a valid fixture', () => {
+      const dir = mkdtempSync(join(tmpdir(), 'validator-cli-'));
+      const file = join(dir, 'fixture.json');
+      const fixture = {entries: [{url: 'http://sru.example/bib/prv?query=1', status: 200, body: '<xml/>'}]};
+      writeFileSync(file, JSON.stringify(fixture));
+      assert.deepStrictEqual(loadStubFile(file), fixture);
+    });
+
+    it('Should fail on a missing file', () => {
+      assert.throws(() => loadStubFile(join(tmpdir(), 'no-such-cli-fixture.json')), /Cannot read SRU fixture file/);
+    });
+
+    it('Should fail on invalid JSON', () => {
+      const dir = mkdtempSync(join(tmpdir(), 'validator-cli-'));
+      const file = join(dir, 'fixture.json');
+      writeFileSync(file, '{nope');
+      assert.throws(() => loadStubFile(file), /Invalid JSON in SRU fixture file/);
+    });
+
+    it('Should fail on a fixture without an entries array', () => {
+      const dir = mkdtempSync(join(tmpdir(), 'validator-cli-'));
+      const file = join(dir, 'fixture.json');
+      writeFileSync(file, JSON.stringify({entries: 'nope'}));
+      assert.throws(() => loadStubFile(file), /expected \{entries: \[\{url, status, body\}\]\}/);
+    });
+
+    it('Should fail on an entry without url, status or body', () => {
+      const dir = mkdtempSync(join(tmpdir(), 'validator-cli-'));
+      const file = join(dir, 'fixture.json');
+      writeFileSync(file, JSON.stringify({entries: [{url: 'http://x', status: 200}]}));
+      assert.throws(() => loadStubFile(file), /each entry must have a string url, a numeric status and a string body/);
+    });
+  });
+
+  describe('createStubFetch', () => {
+    const sruUrl = 'http://sru.stub';
+    const entries = [
+      {url: 'http://sru.stub?query=1', status: 200, body: '<xml one/>'},
+      {url: 'http://sru.stub?query=2', status: 500, body: 'server error'}
+    ];
+
+    it('Should serve the fixture entry for an exact URL match', async () => {
+      const stubFetch = createStubFetch({sruUrl, entries, label: 'stub'});
+      const response = await stubFetch('http://sru.stub?query=1');
+      assert.strictEqual(response.status, 200);
+      assert.strictEqual(await response.text(), '<xml one/>');
+    });
+
+    it('Should serve non-200 entries as captured', async () => {
+      const stubFetch = createStubFetch({sruUrl, entries, label: 'stub'});
+      const response = await stubFetch('http://sru.stub?query=2');
+      assert.strictEqual(response.status, 500);
+      assert.strictEqual(await response.text(), 'server error');
+    });
+
+    it('Should reject loudly, naming the URL, on a fixture miss', async () => {
+      const stubFetch = createStubFetch({sruUrl, entries, label: 'replay'});
+      await assert.rejects(stubFetch('http://sru.stub?query=missing'), /No replay fixture entry for SRU URL: http:\/\/sru\.stub\?query=missing/);
+    });
+
+    it('Should pass non-SRU URLs through to the underlying fetch', async () => {
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = async () => new Response('real', {status: 200});
+      try {
+        const stubFetch = createStubFetch({sruUrl, entries, label: 'stub'});
+        const response = await stubFetch('http://elsewhere.example/x');
+        assert.strictEqual(await response.text(), 'real');
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+  });
+
+  describe('createRecordFetch', () => {
+    const sruUrl = 'http://sru.rec';
+
+    it('Should capture {url, status, body} for SRU URLs and still return the response', async () => {
+      const entries = [];
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = async url => new Response(`<xml url="${url}"/>`, {status: 200});
+      try {
+        const recordFetch = createRecordFetch({sruUrl, entries});
+        const response = await recordFetch('http://sru.rec?query=1');
+        assert.strictEqual(await response.text(), '<xml url="http://sru.rec?query=1"/>');
+        assert.deepStrictEqual(entries, [{url: 'http://sru.rec?query=1', status: 200, body: '<xml url="http://sru.rec?query=1"/>'}]);
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it('Should capture non-200 SRU responses', async () => {
+      const entries = [];
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = async () => new Response('server error', {status: 500});
+      try {
+        const recordFetch = createRecordFetch({sruUrl, entries});
+        const response = await recordFetch('http://sru.rec?query=1');
+        assert.strictEqual(response.status, 500);
+        assert.deepStrictEqual(entries, [{url: 'http://sru.rec?query=1', status: 500, body: 'server error'}]);
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it('Should pass non-SRU URLs through without capturing', async () => {
+      const entries = [];
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = async () => new Response('real', {status: 200});
+      try {
+        const recordFetch = createRecordFetch({sruUrl, entries});
+        const response = await recordFetch('http://elsewhere.example/x');
+        assert.strictEqual(await response.text(), 'real');
+        assert.deepStrictEqual(entries, []);
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
   });
 });
 

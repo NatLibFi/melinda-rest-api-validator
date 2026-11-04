@@ -165,6 +165,84 @@ function getRecord001(recordFile) {
   return f001 ? f001.value : undefined;
 }
 
+// ---------------------------------------------------------------------------
+// SRU stubbing / recording engine (--stub-results / --replay / --record)
+//
+// The pipeline's only live dependency is SRU HTTP traffic: the matchers'
+// internal candidate-search clients and the getRecord client built by the
+// validator factory. Both go through the global fetch with the full SRU
+// request URL (the CQL query and the paging parameters are part of the URL),
+// so an interceptor wrapped around globalThis.fetch for the duration of the
+// pipeline run covers all SRU traffic.
+//
+// Fixture / capture file format (one format for all three flags):
+//   {entries: [{url, status, body}]}
+// where url is the exact SRU request URL (the lookup key: the paging
+// parameters are part of the URL, so paged runs replay exactly as recorded),
+// status is the HTTP status and body is the raw SRU XML response text.
+
+// Placeholder SRU_URL for pure stub/replay runs: config.js requires the
+// variable to be set, but no request ever reaches the network in stub mode
+export const DUMMY_SRU_URL = 'http://sru.stub.invalid';
+
+export function loadStubFile(file) {
+  let raw;
+  try {
+    raw = readFileSync(file, 'utf8');
+  } catch (err) {
+    throw new CliError(`Cannot read SRU fixture file ${file}: ${err.message}`);
+  }
+
+  let fixture;
+  try {
+    fixture = JSON.parse(raw);
+  } catch (err) {
+    throw new CliError(`Invalid JSON in SRU fixture file ${file}: ${err.message}`);
+  }
+
+  if (fixture === null || typeof fixture !== 'object' || !Array.isArray(fixture.entries)) {
+    throw new CliError(`Invalid SRU fixture file ${file}: expected {entries: [{url, status, body}]}`);
+  }
+  for (const entry of fixture.entries) {
+    if (entry === null || typeof entry !== 'object' || typeof entry.url !== 'string' || typeof entry.status !== 'number' || typeof entry.body !== 'string') {
+      throw new CliError(`Invalid SRU fixture file ${file}: each entry must have a string url, a numeric status and a string body`);
+    }
+  }
+  return fixture;
+}
+
+// Fetch replacement for stub/replay runs: serves SRU requests from the
+// fixture by exact URL match. A miss is a loud error — stub/replay runs
+// never fall back to the network
+export function createStubFetch({sruUrl, entries, label}) {
+  const realFetch = globalThis.fetch;
+  const byUrl = new Map(entries.map(entry => [entry.url, entry]));
+  return async function stubFetch(url, init) {
+    if (typeof url !== 'string' || !url.startsWith(sruUrl)) {
+      return realFetch(url, init);
+    }
+    const entry = byUrl.get(url);
+    if (!entry) {
+      throw new Error(`No ${label} fixture entry for SRU URL: ${url} (never falls back to the network)`);
+    }
+    return new Response(entry.body, {status: entry.status, headers: {'Content-Type': 'text/xml'}});
+  };
+}
+
+// Fetch replacement for record runs: passes the request through to the
+// underlying fetch and appends {url, status, body} to entries for every
+// SRU request
+export function createRecordFetch({sruUrl, entries}) {
+  const realFetch = globalThis.fetch;
+  return async function recordFetch(url, init) {
+    const response = await realFetch(url, init);
+    if (typeof url === 'string' && url.startsWith(sruUrl)) {
+      entries.push({url, status: response.status, body: await response.clone().text()});
+    }
+    return response;
+  };
+}
+
 export async function runCli(argv) {
   const args = parseArgs(argv);
   if (args.help) {
