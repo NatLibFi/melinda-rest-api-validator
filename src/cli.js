@@ -8,12 +8,15 @@
  * Usage:
  *   node src/cli.js record.json --sru-url https://sru.api.melinda.kansalliskirjasto.fi/bib/prv
  *   node src/cli.js record.json --sru-url ... --merge on --match-failures-as-new 1 -o trace.json
+ *   node src/cli.js record.json --stub-results fixture.json   (offline: the fixture serves SRU)
  *
  * - Input: one record JSON in internal MarcRecord format ({leader, fields})
  *   (same shape as used in validations.test.js / the importer's processLoad).
  * - Live dependency: read-only SRU ONLY (candidate searches + rec.id
  *   getRecord of the target record on the merge and UPDATE paths). No Mongo,
- *   no AMQP, no Aleph writes.
+ *   no AMQP, no Aleph writes. SRU traffic can be replaced by a fixture file
+ *   (--stub-results / --replay, fully offline) or captured from a live run
+ *   (--record) via a fetch-level interceptor.
  * - Exit codes: 0 when the pipeline reaches a decision (create / merge / update /
  *   skip / 409 conflict / validation failed / would-skip-validation), 1 on CLI
  *   usage errors or pipeline errors.
@@ -36,7 +39,9 @@ chain -> matchValidation -> match selector -> merge / update validations; the
 UPDATE operation runs the update validations against the target record.
 
 Options:
-  --sru-url <url>                  SRU endpoint (or env SRU_URL). Required.
+  --sru-url <url>                  SRU endpoint (or env SRU_URL). Required for live and
+                                   --record runs; optional for --stub-results / --replay
+                                   (the URL is not used on the wire in those modes)
   --operation CREATE|UPDATE        Operation to probe (default: CREATE)
   --target-id <id>                 Target record id, required with --operation UPDATE
                                    (9-digit Aleph id; must match the record's 001 if present)
@@ -49,11 +54,19 @@ Options:
                                    (default: env MATCH_SELECTOR_RULES or all seven rules)
   --unique on|off                  Enable the unique (match) pipeline entry setting (default: on)
   --validate on|off                Enable the validate pipeline entry setting (default: off)
+  --stub-results <file.json>       Serve SRU responses from a fixture file instead of live
+                                   traffic (fully offline; a fixture miss is a loud error)
+  --replay <file.json>             Replay a capture file from a --record run (fully offline)
+  --record <file.json>             Run against live SRU and capture the SRU traffic to a
+                                   replay file
   -o, --output <file>              Write the full trace as JSON to <file>
   -h, --help                       Show this help
 
 Record input: one record JSON in internal MarcRecord format ({leader, fields}).
 Only RECORD_TYPE=bib is supported. Read-only SRU traffic only (no Mongo / AMQP / Aleph).
+SRU source: --stub-results / --replay / --record are mutually exclusive. Fixture and
+capture files share one format: {entries: [{url, status, body}]} keyed by the exact SRU
+request URL (built from the SRU endpoint, or a placeholder endpoint when none is given).
 Production entry gate: the pipeline runs when any of merge / unique / validate is on;
 with all three off the CLI reports WOULD_SKIP_VALIDATION without running the pipeline.
 Exit codes: 0 = decision reached (create / merge / update / skip / 409 conflict / validation failed / would-skip-validation), 1 = error.`;
@@ -73,6 +86,9 @@ export function parseArgs(argv) {
     matchFailuresAsNew: undefined,
     matchSelectorRules: undefined,
     output: undefined,
+    stubResults: undefined,
+    replay: undefined,
+    record: undefined,
     help: false
   };
   const positionals = [];
@@ -106,6 +122,12 @@ export function parseArgs(argv) {
       args.unique = parseOnOff(arg, next());
     } else if (arg === '--validate') {
       args.validate = parseOnOff(arg, next());
+    } else if (arg === '--stub-results') {
+      args.stubResults = next();
+    } else if (arg === '--replay') {
+      args.replay = next();
+    } else if (arg === '--record') {
+      args.record = next();
     } else if (arg === '--match-failures-as-new') {
       args.matchFailuresAsNew = parseZeroOne(arg, next());
     } else if (arg === '--match-selector-rules') {
@@ -133,6 +155,15 @@ export function parseArgs(argv) {
     if (f001 !== undefined && f001 !== args.targetId) {
       throw new CliError(`--target-id ${args.targetId} does not match the record's 001 (${f001})`);
     }
+  }
+
+  const sruSourceFlags = [
+    args.stubResults !== undefined && '--stub-results',
+    args.replay !== undefined && '--replay',
+    args.record !== undefined && '--record'
+  ].filter(Boolean);
+  if (sruSourceFlags.length > 1) {
+    throw new CliError(`${sruSourceFlags.join(' and ')} cannot be combined (pick at most one SRU source flag)`);
   }
   return args;
 }
@@ -182,7 +213,9 @@ function getRecord001(recordFile) {
 // status is the HTTP status and body is the raw SRU XML response text.
 
 // Placeholder SRU_URL for pure stub/replay runs: config.js requires the
-// variable to be set, but no request ever reaches the network in stub mode
+// variable to be set, but no request ever reaches the network in stub mode.
+// It also becomes the SRU request URL prefix the fixture entries are matched
+// against, so a fixture for a URL-less run is keyed on this prefix
 export const DUMMY_SRU_URL = 'http://sru.stub.invalid';
 
 export function loadStubFile(file) {
@@ -243,13 +276,30 @@ export function createRecordFetch({sruUrl, entries}) {
   };
 }
 
+function sruModeOf(args) {
+  if (args.stubResults) {
+    return 'stub';
+  }
+  if (args.replay) {
+    return 'replay';
+  }
+  if (args.record) {
+    return 'record';
+  }
+  return 'live';
+}
+
 export async function runCli(argv) {
   const args = parseArgs(argv);
   if (args.help) {
     return {args, trace: null, exitCode: 0};
   }
 
-  const sruUrl = args.sruUrl ?? process.env.SRU_URL;
+  const sruMode = sruModeOf(args);
+  const givenUrl = args.sruUrl ?? process.env.SRU_URL;
+  // stub/replay runs are fully offline: the URL only feeds config.js and the
+  // fetch interceptor's match prefix (DUMMY_SRU_URL when absent)
+  const sruUrl = sruMode === 'stub' || sruMode === 'replay' ? givenUrl ?? DUMMY_SRU_URL : givenUrl;
   if (!sruUrl) {
     throw new CliError('No SRU endpoint given: use --sru-url <url> or set env SRU_URL');
   }
@@ -257,7 +307,34 @@ export async function runCli(argv) {
   applyCliEnv(args, sruUrl);
 
   const {validatorOptions, validationsFactory, MarcRecord, fixRecord} = await loadValidator();
-  const trace = await runPipeline({args, sruUrl, validatorOptions, validationsFactory, MarcRecord, fixRecord});
+
+  // Swap in the fetch interceptor for the duration of the pipeline run so all
+  // SRU traffic (matcher searches + rec.id lookups) goes through it; the
+  // original global fetch is always restored afterwards (see module header note
+  // on sequential runCli calls)
+  const originalFetch = globalThis.fetch;
+  let fetchImpl;
+  let capturedEntries;
+  if (sruMode === 'stub' || sruMode === 'replay') {
+    const fixture = loadStubFile(sruMode === 'stub' ? args.stubResults : args.replay);
+    fetchImpl = createStubFetch({sruUrl, entries: fixture.entries, label: sruMode});
+  } else if (sruMode === 'record') {
+    capturedEntries = [];
+    fetchImpl = createRecordFetch({sruUrl, entries: capturedEntries});
+  }
+  if (fetchImpl) {
+    globalThis.fetch = fetchImpl;
+  }
+
+  let trace;
+  try {
+    trace = await runPipeline({args, sruUrl, validatorOptions, validationsFactory, MarcRecord, fixRecord});
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (sruMode === 'record') {
+      writeFileSync(args.record, `${JSON.stringify({entries: capturedEntries}, null, 2)}\n`);
+    }
+  }
   return {args, trace, exitCode: trace.exitCode};
 }
 
@@ -355,6 +432,7 @@ function buildTrace({args, sruUrl, validatorOptions, merge, logItems, outcome, o
   const matchLog = logItems.find(item => item.logItemType === 'MATCH_LOG');
   const mergeLog = logItems.find(item => item.logItemType === 'MERGE_LOG');
   const exitCode = ['create', 'merge', 'skip', 'conflict', 'update', 'failed', 'wouldSkipValidation'].includes(outcome.kind) ? 0 : 1;
+  const sruMode = sruModeOf(args);
   return {
     recordFile: args.recordFile,
     sruUrl,
@@ -364,6 +442,9 @@ function buildTrace({args, sruUrl, validatorOptions, merge, logItems, outcome, o
       merge,
       unique: args.unique === 'on',
       validate: args.validate === 'on',
+      sruMode,
+      stubFile: args.stubResults ?? args.replay ?? null,
+      captureFile: args.record ?? null,
       matchFailuresAsNew: args.matchFailuresAsNew,
       matchPackages: validatorOptions.matchOptionsList.map(o => o.matchPackageName),
       matchSelectorRules: validatorOptions.matchSelectorRules,
@@ -424,6 +505,12 @@ export function printTrace(trace) {
   const {options} = trace;
   console.log(`Record:    ${trace.recordFile}`);
   console.log(`SRU:       ${trace.sruUrl}`);
+  if (options.stubFile) {
+    console.log(`SRU source: ${options.sruMode} file ${options.stubFile}`);
+  }
+  if (options.captureFile) {
+    console.log(`SRU capture: ${options.captureFile}`);
+  }
   console.log(`Options:   operation=${options.operation}${options.targetId ? ` targetId=${options.targetId}` : ''} merge=${options.merge} unique=${options.unique} validate=${options.validate} matchFailuresAsNew=${options.matchFailuresAsNew ?? 'config-default'} packages=${options.matchPackages.join(',')} selectorRules=${options.matchSelectorRules.join(',')} stopWhenFound=${options.stopWhenFound} thresholds=${JSON.stringify(options.thresholds)}`);
   console.log('');
   console.log(`Matcher stages (${trace.matcherReports.length}):`);

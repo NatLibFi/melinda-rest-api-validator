@@ -1,11 +1,11 @@
 import assert from 'node:assert';
-import {mkdtempSync, writeFileSync} from 'node:fs';
+import {mkdtempSync, readFileSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {describe, it, before, after} from 'node:test';
 import {MarcRecord} from '@natlibfi/marc-record';
 import {MARCXML} from '@natlibfi/marc-record-serializers';
-import {parseArgs, runCli, loadStubFile, createStubFetch, createRecordFetch} from './cli.js';
+import {parseArgs, runCli, loadStubFile, createStubFetch, createRecordFetch, DUMMY_SRU_URL} from './cli.js';
 
 // Shared fixtures for the stubbed-SRU pipeline tests: the candidate shares the
 // melinda 035 id with the incoming record, so the IDS matcher finds it at 1.0
@@ -171,6 +171,36 @@ describe('parseArgs (cli, UPDATE options)', () => {
     writeFileSync(recordFile, JSON.stringify({leader: '00000nam a2200000 a 4500', fields: [{tag: '001', value: '000012345'}]}));
     const args = parseArgs([recordFile, '--operation', 'UPDATE', '--target-id', '000012345']);
     assert.strictEqual(args.targetId, '000012345');
+  });
+});
+
+describe('parseArgs (cli, SRU source flags)', () => {
+  it('Should parse --stub-results, --replay and --record into their own fields', () => {
+    const stubArgs = parseArgs(['rec.json', '--stub-results', 'stub.json']);
+    assert.strictEqual(stubArgs.stubResults, 'stub.json');
+    assert.strictEqual(stubArgs.replay, undefined);
+    assert.strictEqual(stubArgs.record, undefined);
+
+    const replayArgs = parseArgs(['rec.json', '--replay', 'capture.json']);
+    assert.strictEqual(replayArgs.replay, 'capture.json');
+    assert.strictEqual(replayArgs.stubResults, undefined);
+    assert.strictEqual(replayArgs.record, undefined);
+
+    const recordArgs = parseArgs(['rec.json', '--record', 'capture.json']);
+    assert.strictEqual(recordArgs.record, 'capture.json');
+    assert.strictEqual(recordArgs.stubResults, undefined);
+    assert.strictEqual(recordArgs.replay, undefined);
+  });
+
+  it('Should fail when two of --stub-results / --replay / --record are given', () => {
+    assert.throws(() => parseArgs(['rec.json', '--stub-results', 'a.json', '--replay', 'b.json']), /cannot be combined/);
+    assert.throws(() => parseArgs(['rec.json', '--stub-results', 'a.json', '--record', 'b.json']), /cannot be combined/);
+    assert.throws(() => parseArgs(['rec.json', '--replay', 'a.json', '--record', 'b.json']), /cannot be combined/);
+  });
+
+  it('Should parse the SRU source flags without a sru-url (runCli enforces it per mode)', () => {
+    const args = parseArgs(['rec.json', '--stub-results', 'stub.json']);
+    assert.strictEqual(args.sruUrl, undefined);
   });
 });
 
@@ -570,5 +600,149 @@ describe('runCli (cli entry gate, stubbed SRU)', () => {
     assert.strictEqual(trace.options.operation, 'UPDATE');
     assert.strictEqual(trace.options.targetId, CANDIDATE_ID);
     assert.strictEqual(fetchCalls, 0);
+  });
+});
+
+// --stub-results: the fixture (a capture of a live run) serves all SRU traffic.
+// The test never provides stub responses itself — a sentinel global fetch that
+// throws proves the run is fully offline; the stub comes from the CLI flag
+describe('runCli (cli --stub-results, offline fixture)', () => {
+  let recordFile;
+  let fixtureFile;
+  let emptyFixtureFile;
+  const originalFetch = globalThis.fetch;
+
+  before(async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'validator-cli-'));
+    recordFile = join(dir, 'record.json');
+    fixtureFile = join(dir, 'fixture.json');
+    emptyFixtureFile = join(dir, 'empty.json');
+    writeFileSync(recordFile, JSON.stringify(record));
+    writeFileSync(emptyFixtureFile, JSON.stringify({entries: []}));
+    // Capture a fixture from a "live" run whose transport is faked by the test
+    globalThis.fetch = async () => new Response(sruResponseXml, {status: 200, headers: {'Content-Type': 'text/xml'}});
+    await runCli([recordFile, '--sru-url', SRU_URL, '--match-packages', 'IDS', '--record', fixtureFile]);
+    globalThis.fetch = originalFetch;
+  });
+
+  it('Should run the full pipeline fully offline from the stub file (no fetch call at all)', async () => {
+    let fetchCalls = 0;
+    globalThis.fetch = async () => {
+      fetchCalls += 1;
+      throw new Error('network disabled in test');
+    };
+    try {
+      const {trace, exitCode} = await runCli([recordFile, '--sru-url', SRU_URL, '--match-packages', 'IDS', '--stub-results', fixtureFile]);
+
+      assert.strictEqual(exitCode, 0);
+      assert.strictEqual(trace.outcome.kind, 'conflict');
+      assert.strictEqual(trace.outcome.status, 409);
+      assert.strictEqual(trace.options.sruMode, 'stub');
+      assert.strictEqual(trace.options.stubFile, fixtureFile);
+      assert.strictEqual(trace.options.captureFile, null);
+      // the IDS matcher stage ran against the stubbed candidate
+      assert.strictEqual(trace.matcherReports[0].matchAmount, 1);
+      assert.deepStrictEqual(trace.matcherReports[0].matchIds, [CANDIDATE_ID]);
+      assert.strictEqual(fetchCalls, 0);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('Should not require --sru-url for a stub run (placeholder SRU_URL used, no traffic)', async () => {
+    const previousSruUrl = process.env.SRU_URL;
+    delete process.env.SRU_URL;
+    globalThis.fetch = async () => { throw new Error('network disabled in test'); };
+    try {
+      const {trace, exitCode} = await runCli([recordFile, '--stub-results', emptyFixtureFile, '--unique', 'off']);
+
+      assert.strictEqual(exitCode, 0);
+      assert.strictEqual(trace.outcome.kind, 'wouldSkipValidation');
+      assert.strictEqual(trace.sruUrl, DUMMY_SRU_URL);
+      assert.strictEqual(trace.options.sruMode, 'stub');
+    } finally {
+      if (previousSruUrl !== undefined) {
+        process.env.SRU_URL = previousSruUrl;
+      }
+      globalThis.fetch = originalFetch;
+    }
+  });
+});
+
+// --record -> --replay round trip: a fake live SRU (installed by the test) is
+// recorded to a capture file; a second run replays the capture offline (sentinel
+// fetch that throws) and must produce the same decision and matcher sections
+describe('runCli (cli --record / --replay round-trip)', () => {
+  let recordFile;
+  let captureFile;
+  const originalFetch = globalThis.fetch;
+
+  before(() => {
+    const dir = mkdtempSync(join(tmpdir(), 'validator-cli-'));
+    recordFile = join(dir, 'record.json');
+    captureFile = join(dir, 'capture.json');
+    writeFileSync(recordFile, JSON.stringify(record));
+  });
+
+  it('Should record a live run and replay it with identical decision and matcher sections', async () => {
+    // Run 1: record; the fake "live" SRU answers every request with the candidate
+    globalThis.fetch = async () => new Response(sruResponseXml, {status: 200, headers: {'Content-Type': 'text/xml'}});
+    let recorded;
+    try {
+      const recordedResult = await runCli([recordFile, '--sru-url', SRU_URL, '--match-packages', 'IDS', '--merge', 'on', '--record', captureFile]);
+      recorded = recordedResult.trace;
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+
+    assert.strictEqual(recorded.options.sruMode, 'record');
+    assert.strictEqual(recorded.options.captureFile, captureFile);
+    assert.strictEqual(recorded.outcome.kind, 'merge');
+
+    // The capture file exists in the unified format, keyed by exact SRU request URLs
+    const captured = JSON.parse(readFileSync(captureFile, 'utf8'));
+    assert.ok(Array.isArray(captured.entries));
+    assert.ok(captured.entries.length > 0);
+    for (const entry of captured.entries) {
+      assert.ok(entry.url.startsWith(SRU_URL));
+      assert.strictEqual(entry.status, 200);
+    }
+
+    // Run 2: replay the capture; the sentinel fetch proves the run never hits the network
+    let fetchCalls = 0;
+    globalThis.fetch = async () => {
+      fetchCalls += 1;
+      throw new Error('network disabled in test');
+    };
+    let replayed;
+    try {
+      const replayedResult = await runCli([recordFile, '--sru-url', SRU_URL, '--match-packages', 'IDS', '--merge', 'on', '--replay', captureFile]);
+      replayed = replayedResult.trace;
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+
+    assert.strictEqual(fetchCalls, 0);
+    assert.strictEqual(replayed.options.sruMode, 'replay');
+    assert.strictEqual(replayed.options.stubFile, captureFile);
+    assert.strictEqual(replayed.options.captureFile, null);
+
+    // Decision + matcher sections identical between record and replay runs
+    assert.deepStrictEqual(replayed.outcome, recorded.outcome);
+    assert.deepStrictEqual(replayed.matcherReports, recorded.matcherReports);
+    assert.deepStrictEqual(replayed.candidates, recorded.candidates);
+    assert.deepStrictEqual(replayed.merge, recorded.merge);
+  });
+
+  it('Should require a sru-url for record runs (no env fallback)', async () => {
+    const previousSruUrl = process.env.SRU_URL;
+    delete process.env.SRU_URL;
+    try {
+      await assert.rejects(runCli(['rec.json', '--record', 'capture.json']), /No SRU endpoint given/);
+    } finally {
+      if (previousSruUrl !== undefined) {
+        process.env.SRU_URL = previousSruUrl;
+      }
+    }
   });
 });
