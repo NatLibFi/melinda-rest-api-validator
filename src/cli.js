@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /**
- * Validator dev CLI: run the CREATE validation pipeline offline against a
- * read-only SRU endpoint and print the decision trace (dry-run import
- * decisions: "what would the production pipeline decide for this record?").
+ * Validator dev CLI: run the CREATE / UPDATE validation decision pipeline
+ * offline against a read-only SRU endpoint and print the decision trace
+ * (dry-run import decisions: "what would the production pipeline decide for
+ * this record?").
  *
  * Usage:
  *   node src/cli.js record.json --sru-url https://sru.api.melinda.kansalliskirjasto.fi/bib/prv
@@ -11,7 +12,8 @@
  * - Input: one record JSON in internal MarcRecord format ({leader, fields})
  *   (same shape as used in validations.test.js / the importer's processLoad).
  * - Live dependency: read-only SRU ONLY (candidate searches + rec.id
- *   getRecord on the merge path). No Mongo, no AMQP, no Aleph writes.
+ *   getRecord of the target record on the merge and UPDATE paths). No Mongo,
+ *   no AMQP, no Aleph writes.
  * - Exit codes: 0 when the pipeline reaches a decision (create / merge /
  *   skip / 409 conflict / validation failed), 1 on CLI usage errors or
  *   pipeline errors.
@@ -24,14 +26,20 @@
 import {readFileSync, writeFileSync} from 'node:fs';
 import {pathToFileURL} from 'node:url';
 
+import {isValidAlephId, getRecordMetadata} from './utils.js';
+
 export const USAGE = `Usage: melinda-validator-cli <record.json> [options]
 
-Runs the validator's CREATE decision pipeline (match chain -> matchValidation
--> match selector -> merge / update validations) offline against a read-only
-SRU endpoint and prints the decision trace.
+Runs the validator's decision pipeline offline against a read-only SRU
+endpoint and prints the decision trace. The CREATE operation runs the match
+chain -> matchValidation -> match selector -> merge / update validations; the
+UPDATE operation runs the update validations against the target record.
 
 Options:
   --sru-url <url>                  SRU endpoint (or env SRU_URL). Required.
+  --operation CREATE|UPDATE        Operation to probe (default: CREATE)
+  --target-id <id>                 Target record id, required with --operation UPDATE
+                                   (9-digit Aleph id; must match the record's 001 if present)
   --match-packages <a,b,c>         Match packages to run
                                    (default: env VALIDATOR_MATCH_PACKAGES or IDS,STANDARD_IDS,CONTENTALT)
   --merge on|off                   Run the merge path when matches are found (default: off)
@@ -44,7 +52,7 @@ Options:
 
 Record input: one record JSON in internal MarcRecord format ({leader, fields}).
 Only RECORD_TYPE=bib is supported. Read-only SRU traffic only (no Mongo / AMQP / Aleph).
-Exit codes: 0 = decision reached (create / merge / skip / 409 conflict / validation failed), 1 = error.`;
+Exit codes: 0 = decision reached (create / merge / update / skip / 409 conflict / validation failed), 1 = error.`;
 
 class CliError extends Error { }
 
@@ -53,6 +61,8 @@ export function parseArgs(argv) {
     recordFile: undefined,
     sruUrl: undefined,
     matchPackages: undefined,
+    operation: 'CREATE',
+    targetId: undefined,
     merge: 'off',
     matchFailuresAsNew: undefined,
     matchSelectorRules: undefined,
@@ -78,6 +88,10 @@ export function parseArgs(argv) {
       args.output = next();
     } else if (arg === '--sru-url') {
       args.sruUrl = next();
+    } else if (arg === '--operation') {
+      args.operation = parseOperation(arg, next());
+    } else if (arg === '--target-id') {
+      args.targetId = next();
     } else if (arg === '--match-packages') {
       args.matchPackages = next();
     } else if (arg === '--merge') {
@@ -97,6 +111,19 @@ export function parseArgs(argv) {
     throw new CliError(`Expected exactly one record file, got ${positionals.length}. See --help.`);
   }
   args.recordFile = positionals[0];
+
+  if (args.operation === 'UPDATE') {
+    if (!args.targetId) {
+      throw new CliError('--operation UPDATE requires --target-id <id>');
+    }
+    if (!isValidAlephId(args.targetId)) {
+      throw new CliError(`Invalid --target-id: ${args.targetId} (expected a 9-digit Aleph id)`);
+    }
+    const f001 = getRecord001(args.recordFile);
+    if (f001 !== undefined && f001 !== args.targetId) {
+      throw new CliError(`--target-id ${args.targetId} does not match the record's 001 (${f001})`);
+    }
+  }
   return args;
 }
 
@@ -112,6 +139,20 @@ function parseZeroOne(flag, value) {
     return value === '1';
   }
   throw new CliError(`Invalid value for ${flag}: ${value} (use 0|1)`);
+}
+
+function parseOperation(flag, value) {
+  if (value === 'CREATE' || value === 'UPDATE') {
+    return value;
+  }
+  throw new CliError(`Invalid value for ${flag}: ${value} (use CREATE|UPDATE)`);
+}
+
+// Read the 001 value from the record file for the UPDATE --target-id mismatch check
+function getRecord001(recordFile) {
+  const recordObject = JSON.parse(readFileSync(recordFile, 'utf8'));
+  const f001 = (recordObject.fields ?? []).find(field => field.tag === '001');
+  return f001 ? f001.value : undefined;
 }
 
 export async function runCli(argv) {
@@ -177,27 +218,37 @@ async function runPipeline({args, sruUrl, validatorOptions, validationsFactory, 
   };
 
   // no sruClient/matchers injected -> factory builds the real ones from validatorOptions
-  const {createValidations} = await validationsFactory(mongoLogOperator, fixRecord, validatorOptions, {});
+  const {createValidations, updateValidations} = await validationsFactory(mongoLogOperator, fixRecord, validatorOptions, {});
 
+  const operation = args.operation;
   const merge = args.merge === 'on';
   const operationSettings = {validate: false, unique: true, merge};
   if (args.matchFailuresAsNew !== undefined) {
     operationSettings.matchFailuresAsNew = args.matchFailuresAsNew;
   }
 
+  // Production fills recordMetadata from the record (all sourceIds for CREATE,
+  // the first/best set for UPDATE); the CLI supplies only the blobSequence
+  const recordMetadata = getRecordMetadata({record, recordMetadata: {blobSequence: 1}, getAllSourceIds: operation === 'CREATE'});
+
   const headers = {
     correlationId: `validator-cli-${Date.now()}`,
-    operation: 'CREATE',
+    operation,
     cataloger: {id: 'VALIDATOR_CLI'},
-    recordMetadata: {blobSequence: 1},
+    recordMetadata,
     operationSettings
   };
+  if (operation === 'UPDATE') {
+    headers.id = args.targetId;
+  }
 
   try {
-    const {result, headers: outHeaders} = await createValidations({record, headers});
+    const {result, headers: outHeaders} = operation === 'UPDATE'
+      ? await updateValidations({updateId: args.targetId, updateRecord: record, updateOperation: 'UPDATE', headers})
+      : await createValidations({record, headers});
     // Production throws 422 for a failed validationService result; below the interface
     // layer the same result is reachable, so surface it as a decision
-    const outcome = result.failed ? classifyFailed(result) : classifySuccess(outHeaders, headers.operation);
+    const outcome = result.failed ? classifyFailed(result) : classifySuccess(outHeaders, operation);
     return buildTrace({args, sruUrl, validatorOptions, merge, logItems, outcome, outHeaders});
   } catch (err) {
     return buildTrace({args, sruUrl, validatorOptions, merge, logItems, outcome: classifyError(err), outHeaders: null});
@@ -212,6 +263,8 @@ function buildTrace({args, sruUrl, validatorOptions, merge, logItems, outcome, o
     recordFile: args.recordFile,
     sruUrl,
     options: {
+      operation: args.operation,
+      targetId: args.targetId,
       merge,
       matchFailuresAsNew: args.matchFailuresAsNew,
       matchPackages: validatorOptions.matchOptionsList.map(o => o.matchPackageName),
@@ -273,7 +326,7 @@ export function printTrace(trace) {
   const {options} = trace;
   console.log(`Record:    ${trace.recordFile}`);
   console.log(`SRU:       ${trace.sruUrl}`);
-  console.log(`Options:   merge=${options.merge} matchFailuresAsNew=${options.matchFailuresAsNew ?? 'config-default'} packages=${options.matchPackages.join(',')} selectorRules=${options.matchSelectorRules.join(',')} stopWhenFound=${options.stopWhenFound} thresholds=${JSON.stringify(options.thresholds)}`);
+  console.log(`Options:   operation=${options.operation}${options.targetId ? ` targetId=${options.targetId}` : ''} merge=${options.merge} matchFailuresAsNew=${options.matchFailuresAsNew ?? 'config-default'} packages=${options.matchPackages.join(',')} selectorRules=${options.matchSelectorRules.join(',')} stopWhenFound=${options.stopWhenFound} thresholds=${JSON.stringify(options.thresholds)}`);
   console.log('');
   console.log(`Matcher stages (${trace.matcherReports.length}):`);
   for (const report of trace.matcherReports) {

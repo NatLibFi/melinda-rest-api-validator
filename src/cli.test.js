@@ -7,6 +7,38 @@ import {MarcRecord} from '@natlibfi/marc-record';
 import {MARCXML} from '@natlibfi/marc-record-serializers';
 import {parseArgs, runCli} from './cli.js';
 
+// Shared fixtures for the stubbed-SRU pipeline tests: the candidate shares the
+// melinda 035 id with the incoming record, so the IDS matcher finds it at 1.0
+const SRU_URL = 'http://sru-cli-test.example/bib/prv';
+const CANDIDATE_ID = '000012345';
+const record = {
+  leader: '00000nam a2200000 a 4500',
+  fields: [
+    {tag: '001', value: CANDIDATE_ID},
+    {tag: '035', ind1: ' ', ind2: ' ', subfields: [{code: 'a', value: '(FI-MELINDA)012345678'}]},
+    {tag: '100', ind1: '0', ind2: ' ', subfields: [{code: 'a', value: 'author, of the'}]},
+    {tag: '245', ind1: '1', ind2: ' ', subfields: [{code: 'a', value: 'cli test title.'}, {code: 'b', value: 'subtitle'}]},
+    {tag: '020', ind1: ' ', ind2: ' ', subfields: [{code: 'a', value: '978-1-23456-7-8'}]}
+  ]
+};
+
+const candidateXml = MARCXML.to(new MarcRecord(record, {subfieldValues: false}));
+const sruResponseXml = `<?xml version="1.0" encoding="UTF-8"?>
+<zs:searchRetrieveResponse xmlns:zs="http://www.loc.gov/zhals/schema/v1/">
+  <zs:numberOfRecords>1</zs:numberOfRecords>
+  <zs:records>
+    <zs:record>
+      <zs:recordPosition>1</zs:recordPosition>
+      <zs:recordData>${candidateXml}</zs:recordData>
+    </zs:record>
+  </zs:records>
+</zs:searchRetrieveResponse>`;
+const emptySruResponseXml = `<?xml version="1.0" encoding="UTF-8"?>
+<zs:searchRetrieveResponse xmlns:zs="http://www.loc.gov/zhals/schema/v1/">
+  <zs:numberOfRecords>0</zs:numberOfRecords>
+  <zs:records/>
+</zs:searchRetrieveResponse>`;
+
 describe('parseArgs (cli)', () => {
   it('Should parse a record file and all flags', () => {
     const args = parseArgs([
@@ -33,6 +65,49 @@ describe('parseArgs (cli)', () => {
     assert.strictEqual(args.merge, 'off');
     assert.strictEqual(args.matchFailuresAsNew, undefined);
     assert.strictEqual(args.sruUrl, undefined);
+  });
+
+  it('Should default operation to CREATE and targetId to undefined', () => {
+    const args = parseArgs(['rec.json']);
+    assert.strictEqual(args.operation, 'CREATE');
+    assert.strictEqual(args.targetId, undefined);
+  });
+
+  it('Should parse --operation UPDATE and --target-id', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'validator-cli-'));
+    const recordFile = join(dir, 'record.json');
+    // No 001 in the record: --target-id is still accepted
+    writeFileSync(recordFile, JSON.stringify({leader: '00000nam a2200000 a 4500', fields: []}));
+    const args = parseArgs([recordFile, '--operation', 'UPDATE', '--target-id', '000012345']);
+    assert.strictEqual(args.operation, 'UPDATE');
+    assert.strictEqual(args.targetId, '000012345');
+  });
+
+  it('Should fail on invalid --operation value', () => {
+    assert.throws(() => parseArgs(['rec.json', '--operation', 'DELETE']), /Invalid value for --operation/);
+  });
+
+  it('Should fail on UPDATE without --target-id', () => {
+    assert.throws(() => parseArgs(['rec.json', '--operation', 'UPDATE']), /--operation UPDATE requires --target-id/);
+  });
+
+  it('Should fail on UPDATE with an invalid target id shape', () => {
+    assert.throws(() => parseArgs(['rec.json', '--operation', 'UPDATE', '--target-id', 'abc12345']), /Invalid --target-id/);
+  });
+
+  it('Should fail when --target-id differs from the record 001', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'validator-cli-'));
+    const recordFile = join(dir, 'record.json');
+    writeFileSync(recordFile, JSON.stringify({leader: '00000nam a2200000 a 4500', fields: [{tag: '001', value: '000099999'}]}));
+    assert.throws(() => parseArgs([recordFile, '--operation', 'UPDATE', '--target-id', '000012345']), /does not match the record's 001/);
+  });
+
+  it('Should accept --target-id that matches the record 001', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'validator-cli-'));
+    const recordFile = join(dir, 'record.json');
+    writeFileSync(recordFile, JSON.stringify({leader: '00000nam a2200000 a 4500', fields: [{tag: '001', value: '000012345'}]}));
+    const args = parseArgs([recordFile, '--operation', 'UPDATE', '--target-id', '000012345']);
+    assert.strictEqual(args.targetId, '000012345');
   });
 
   it('Should accept the --output long form', () => {
@@ -80,35 +155,10 @@ describe('parseArgs (cli)', () => {
 // Pipeline wiring test: runCli() against the REAL validator pipeline (config +
 // validationsFactory + real SRU client + real matchers) with the SRU HTTP
 // transport stubbed (global fetch). The stub returns the same candidate record
-// for every candidate search and for the rec.id lookup used on the merge path.
-// The candidate shares the melinda 035 id with the incoming record, so the IDS
-// matcher finds it at 1.0.
+// for every candidate search and for the rec.id lookup used on the merge and
+// UPDATE paths. The candidate shares the melinda 035 id with the incoming
+// record, so the IDS matcher finds it at 1.0.
 describe('runCli (cli pipeline wiring, stubbed SRU)', () => {
-  const SRU_URL = 'http://sru-cli-test.example/bib/prv';
-  const CANDIDATE_ID = '000012345';
-  const record = {
-    leader: '00000nam a2200000 a 4500',
-    fields: [
-      {tag: '001', value: CANDIDATE_ID},
-      {tag: '035', ind1: ' ', ind2: ' ', subfields: [{code: 'a', value: '(FI-MELINDA)012345678'}]},
-      {tag: '100', ind1: '0', ind2: ' ', subfields: [{code: 'a', value: 'author, of the'}]},
-      {tag: '245', ind1: '1', ind2: ' ', subfields: [{code: 'a', value: 'cli test title.'}, {code: 'b', value: 'subtitle'}]},
-      {tag: '020', ind1: ' ', ind2: ' ', subfields: [{code: 'a', value: '978-1-23456-7-8'}]}
-    ]
-  };
-
-  const candidateXml = MARCXML.to(new MarcRecord(record, {subfieldValues: false}));
-  const sruResponseXml = `<?xml version="1.0" encoding="UTF-8"?>
-<zs:searchRetrieveResponse xmlns:zs="http://www.loc.gov/zhals/schema/v1/">
-  <zs:numberOfRecords>1</zs:numberOfRecords>
-  <zs:records>
-    <zs:record>
-      <zs:recordPosition>1</zs:recordPosition>
-      <zs:recordData>${candidateXml}</zs:recordData>
-    </zs:record>
-  </zs:records>
-</zs:searchRetrieveResponse>`;
-
   let recordFile;
   const originalFetch = globalThis.fetch;
 
@@ -163,14 +213,43 @@ describe('runCli (cli pipeline wiring, stubbed SRU)', () => {
     assert.strictEqual(trace.merge.databaseId, CANDIDATE_ID);
     assert.ok(trace.merge.mergedRecord);
   });
+
+  it('Should run the UPDATE pipeline and report update into the target id', async () => {
+    const {trace, exitCode} = await runCli([recordFile, '--sru-url', SRU_URL, '--operation', 'UPDATE', '--target-id', CANDIDATE_ID]);
+
+    assert.strictEqual(exitCode, 0);
+    assert.strictEqual(trace.options.operation, 'UPDATE');
+    assert.strictEqual(trace.options.targetId, CANDIDATE_ID);
+    assert.strictEqual(trace.outcome.kind, 'update');
+    assert.strictEqual(trace.outcome.operation, 'UPDATE');
+    assert.strictEqual(trace.outcome.id, CANDIDATE_ID);
+
+    // The UPDATE probe has no match stage and no merge
+    assert.deepStrictEqual(trace.matcherReports, []);
+    assert.deepStrictEqual(trace.candidates, []);
+    assert.strictEqual(trace.merge, null);
+  });
+
+  it('Should run the merge path on UPDATE with merge on', async () => {
+    const {trace, exitCode} = await runCli([recordFile, '--sru-url', SRU_URL, '--operation', 'UPDATE', '--target-id', CANDIDATE_ID, '--merge', 'on']);
+
+    assert.strictEqual(exitCode, 0);
+    assert.strictEqual(trace.options.merge, true);
+    assert.strictEqual(trace.outcome.kind, 'update');
+    assert.strictEqual(trace.outcome.id, CANDIDATE_ID);
+
+    // MERGE_LOG captured: merged into the target, database record preferred
+    assert.strictEqual(trace.merge.databaseId, CANDIDATE_ID);
+    assert.strictEqual(trace.merge.preference.value, 'B');
+    assert.ok(trace.merge.mergedRecord);
+  });
 });
 
 // Validation-failure wiring: a record that fails the built-in validations (003 is
 // present but not FI-MELINDA) with no candidates in the database. Production throws
 // 422 for this; the CLI reports it as the `failed` outcome with exit 0.
 describe('runCli (cli validation failure, stubbed SRU)', () => {
-  const SRU_URL = 'http://sru-cli-test.example/bib/prv';
-  const record = {
+  const bad003Record = {
     leader: '00000nam a2200000 a 4500',
     fields: [
       {tag: '001', value: '000099999'},
@@ -182,19 +261,13 @@ describe('runCli (cli validation failure, stubbed SRU)', () => {
     ]
   };
 
-  const emptySruResponseXml = `<?xml version="1.0" encoding="UTF-8"?>
-<zs:searchRetrieveResponse xmlns:zs="http://www.loc.gov/zhals/schema/v1/">
-  <zs:numberOfRecords>0</zs:numberOfRecords>
-  <zs:records/>
-</zs:searchRetrieveResponse>`;
-
   let recordFile;
   const originalFetch = globalThis.fetch;
 
   before(() => {
     const dir = mkdtempSync(join(tmpdir(), 'validator-cli-'));
     recordFile = join(dir, 'record.json');
-    writeFileSync(recordFile, JSON.stringify(record));
+    writeFileSync(recordFile, JSON.stringify(bad003Record));
     globalThis.fetch = async () => new Response(emptySruResponseXml, {status: 200, headers: {'Content-Type': 'text/xml'}});
   });
 
@@ -211,6 +284,76 @@ describe('runCli (cli validation failure, stubbed SRU)', () => {
     assert.ok(trace.outcome.messages.length > 0);
     assert.strictEqual(trace.outcome.messages[0].state, 'invalid');
     assert.strictEqual(trace.candidates.length, 0);
+    assert.strictEqual(trace.merge, null);
+  });
+});
+
+// UPDATE probe against an empty database: the rec.id lookup finds nothing, so the
+// pipeline errors with 404 (probe-setup failure, not a decision)
+describe('runCli (cli UPDATE not found, stubbed SRU)', () => {
+  let recordFile;
+  const originalFetch = globalThis.fetch;
+
+  before(() => {
+    const dir = mkdtempSync(join(tmpdir(), 'validator-cli-'));
+    recordFile = join(dir, 'record.json');
+    writeFileSync(recordFile, JSON.stringify(record));
+    globalThis.fetch = async () => new Response(emptySruResponseXml, {status: 200, headers: {'Content-Type': 'text/xml'}});
+  });
+
+  after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it('Should report a 404 error when the target record is not in the SRU', async () => {
+    const {trace, exitCode} = await runCli([recordFile, '--sru-url', SRU_URL, '--operation', 'UPDATE', '--target-id', CANDIDATE_ID]);
+
+    assert.strictEqual(exitCode, 1);
+    assert.strictEqual(trace.outcome.kind, 'error');
+    assert.strictEqual(trace.outcome.status, 404);
+    assert.match(trace.outcome.message, new RegExp(`Cannot find record ${CANDIDATE_ID} to update`));
+  });
+});
+
+// UPDATE probe where the incoming record fails the built-in validations (003 is
+// present but not FI-MELINDA): production throws 422, the CLI reports the `failed`
+// outcome with exit 0
+describe('runCli (cli UPDATE validation failure, stubbed SRU)', () => {
+  const bad003UpdateRecord = {
+    leader: '00000nam a2200000 a 4500',
+    fields: [
+      {tag: '001', value: CANDIDATE_ID},
+      {tag: '003', value: 'FI-OTHER'},
+      {tag: '035', ind1: ' ', ind2: ' ', subfields: [{code: 'a', value: '(FI-MELINDA)012345678'}]},
+      {tag: '245', ind1: '1', ind2: ' ', subfields: [{code: 'a', value: 'cli test title.'}, {code: 'b', value: 'subtitle'}]}
+    ]
+  };
+  // The stub returns the same record as the existing target record; the CAT
+  // histories match and the incoming record fails the built-in validations
+  const targetXml = MARCXML.to(new MarcRecord(bad003UpdateRecord, {subfieldValues: false}));
+  const targetResponseXml = sruResponseXml.replace(candidateXml, targetXml);
+
+  let recordFile;
+  const originalFetch = globalThis.fetch;
+
+  before(() => {
+    const dir = mkdtempSync(join(tmpdir(), 'validator-cli-'));
+    recordFile = join(dir, 'record.json');
+    writeFileSync(recordFile, JSON.stringify(bad003UpdateRecord));
+    globalThis.fetch = async () => new Response(targetResponseXml, {status: 200, headers: {'Content-Type': 'text/xml'}});
+  });
+
+  after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it('Should report VALIDATION FAILED when the incoming record fails the built-in validations', async () => {
+    const {trace, exitCode} = await runCli([recordFile, '--sru-url', SRU_URL, '--operation', 'UPDATE', '--target-id', CANDIDATE_ID]);
+
+    assert.strictEqual(exitCode, 0);
+    assert.strictEqual(trace.outcome.kind, 'failed');
+    assert.strictEqual(trace.outcome.status, 422);
+    assert.ok(trace.outcome.messages.length > 0);
     assert.strictEqual(trace.merge, null);
   });
 });
