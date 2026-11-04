@@ -13,7 +13,8 @@
  * - Live dependency: read-only SRU ONLY (candidate searches + rec.id
  *   getRecord on the merge path). No Mongo, no AMQP, no Aleph writes.
  * - Exit codes: 0 when the pipeline reaches a decision (create / merge /
- *   skip / 409 conflict), 1 on CLI usage errors or pipeline errors.
+ *   skip / 409 conflict / validation failed), 1 on CLI usage errors or
+ *   pipeline errors.
  *
  * Note: src/config.js reads env vars at module load. The CLI applies its
  * options to process.env BEFORE importing config.js, so within one process
@@ -43,7 +44,7 @@ Options:
 
 Record input: one record JSON in internal MarcRecord format ({leader, fields}).
 Only RECORD_TYPE=bib is supported. Read-only SRU traffic only (no Mongo / AMQP / Aleph).
-Exit codes: 0 = decision reached (create / merge / skip / 409 conflict), 1 = error.`;
+Exit codes: 0 = decision reached (create / merge / skip / 409 conflict / validation failed), 1 = error.`;
 
 class CliError extends Error { }
 
@@ -193,8 +194,11 @@ async function runPipeline({args, sruUrl, validatorOptions, validationsFactory, 
   };
 
   try {
-    const {headers: outHeaders} = await createValidations({record, headers});
-    return buildTrace({args, sruUrl, validatorOptions, merge, logItems, outcome: classifySuccess(outHeaders), outHeaders});
+    const {result, headers: outHeaders} = await createValidations({record, headers});
+    // Production throws 422 for a failed validationService result; below the interface
+    // layer the same result is reachable, so surface it as a decision
+    const outcome = result.failed ? classifyFailed(result) : classifySuccess(outHeaders, headers.operation);
+    return buildTrace({args, sruUrl, validatorOptions, merge, logItems, outcome, outHeaders});
   } catch (err) {
     return buildTrace({args, sruUrl, validatorOptions, merge, logItems, outcome: classifyError(err), outHeaders: null});
   }
@@ -203,7 +207,7 @@ async function runPipeline({args, sruUrl, validatorOptions, validationsFactory, 
 function buildTrace({args, sruUrl, validatorOptions, merge, logItems, outcome, outHeaders}) {
   const matchLog = logItems.find(item => item.logItemType === 'MATCH_LOG');
   const mergeLog = logItems.find(item => item.logItemType === 'MERGE_LOG');
-  const exitCode = ['create', 'merge', 'skip', 'conflict'].includes(outcome.kind) ? 0 : 1;
+  const exitCode = ['create', 'merge', 'skip', 'conflict', 'update', 'failed'].includes(outcome.kind) ? 0 : 1;
   return {
     recordFile: args.recordFile,
     sruUrl,
@@ -241,15 +245,21 @@ function summarizeCandidate(match) {
   };
 }
 
-function classifySuccess(outHeaders) {
+function classifySuccess(outHeaders, requestedOperation) {
   const {operation, id, notes} = outHeaders;
   if (operation === 'UPDATE') {
-    return {kind: 'merge', operation, id, notes: notes ?? []};
+    // An out-header UPDATE from a CREATE entry means the record was merged into a
+    // candidate; a direct UPDATE probe keeps the UPDATE operation
+    return {kind: requestedOperation === 'UPDATE' ? 'update' : 'merge', operation, id, notes: notes ?? []};
   }
   if (operation === 'SKIPPED_UPDATE' || operation === 'SKIPPED_CHANGE') {
     return {kind: 'skip', operation, id, notes: notes ?? []};
   }
   return {kind: 'create', operation, notes: notes ?? []};
+}
+
+function classifyFailed(result) {
+  return {kind: 'failed', status: 422, messages: result.messages ?? []};
 }
 
 function classifyError(err) {
@@ -283,12 +293,21 @@ export function printTrace(trace) {
   }
   console.log('');
   console.log(`Decision: ${describeDecision(trace.outcome)}`);
+  if (trace.outcome.kind === 'failed') {
+    for (const message of trace.outcome.messages) {
+      console.log(`  ${message.description}: ${message.messages?.join('; ') ?? 'invalid'}`);
+    }
+  }
 }
 
 function describeDecision(outcome) {
   switch (outcome.kind) {
     case 'create':
       return 'CREATE (new record)';
+    case 'update':
+      return `UPDATE ${outcome.id}`;
+    case 'failed':
+      return 'VALIDATION FAILED (422 in production)';
     case 'merge':
       return `MERGE -> UPDATE into ${outcome.id} (${lastNote(outcome.notes) ?? 'merged'})`;
     case 'skip':

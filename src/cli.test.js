@@ -164,3 +164,53 @@ describe('runCli (cli pipeline wiring, stubbed SRU)', () => {
     assert.ok(trace.merge.mergedRecord);
   });
 });
+
+// Validation-failure wiring: a record that fails the built-in validations (003 is
+// present but not FI-MELINDA) with no candidates in the database. Production throws
+// 422 for this; the CLI reports it as the `failed` outcome with exit 0.
+describe('runCli (cli validation failure, stubbed SRU)', () => {
+  const SRU_URL = 'http://sru-cli-test.example/bib/prv';
+  const record = {
+    leader: '00000nam a2200000 a 4500',
+    fields: [
+      {tag: '001', value: '000099999'},
+      {tag: '003', value: 'FI-OTHER'},
+      {tag: '035', ind1: ' ', ind2: ' ', subfields: [{code: 'a', value: '(FI-MELINDA)012345678'}]},
+      {tag: '100', ind1: '0', ind2: ' ', subfields: [{code: 'a', value: 'author, of the'}]},
+      {tag: '245', ind1: '1', ind2: ' ', subfields: [{code: 'a', value: 'cli test title.'}, {code: 'b', value: 'subtitle'}]},
+      {tag: '020', ind1: ' ', ind2: ' ', subfields: [{code: 'a', value: '978-1-23456-7-8'}]}
+    ]
+  };
+
+  const emptySruResponseXml = `<?xml version="1.0" encoding="UTF-8"?>
+<zs:searchRetrieveResponse xmlns:zs="http://www.loc.gov/zhals/schema/v1/">
+  <zs:numberOfRecords>0</zs:numberOfRecords>
+  <zs:records/>
+</zs:searchRetrieveResponse>`;
+
+  let recordFile;
+  const originalFetch = globalThis.fetch;
+
+  before(() => {
+    const dir = mkdtempSync(join(tmpdir(), 'validator-cli-'));
+    recordFile = join(dir, 'record.json');
+    writeFileSync(recordFile, JSON.stringify(record));
+    globalThis.fetch = async () => new Response(emptySruResponseXml, {status: 200, headers: {'Content-Type': 'text/xml'}});
+  });
+
+  after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it('Should report VALIDATION FAILED with exit 0 when the record fails the built-in validations', async () => {
+    const {trace, exitCode} = await runCli([recordFile, '--sru-url', SRU_URL, '--match-packages', 'IDS']);
+
+    assert.strictEqual(exitCode, 0);
+    assert.strictEqual(trace.outcome.kind, 'failed');
+    assert.strictEqual(trace.outcome.status, 422);
+    assert.ok(trace.outcome.messages.length > 0);
+    assert.strictEqual(trace.outcome.messages[0].state, 'invalid');
+    assert.strictEqual(trace.candidates.length, 0);
+    assert.strictEqual(trace.merge, null);
+  });
+});
