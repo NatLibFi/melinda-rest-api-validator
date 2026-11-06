@@ -33,7 +33,8 @@ const MANAGED_VARIABLES = [
   'MATCHING_THRESHOLD',
   'MATCHING_TRESHOLD',
   'MAX_MATCHES',
-  'MAX_CANDIDATES'
+  'MAX_CANDIDATES',
+  'MATCH_SELECTOR_RULES'
 ];
 
 const createChildEnv = (overrides) => {
@@ -131,6 +132,16 @@ const BIB_MAX_CANDIDATES = {IDS: 50, STANDARD_IDS: 50, CONTENT: 50, CONTENTALT: 
 // defaults, so unset boolean switches stay numeric 0/1 (not false/true).
 const DEFAULT_LOG_OPTIONS = {logNoMatches: 0, logInputRecord: 0, logResultRecord: 0};
 
+const DEFAULT_MATCH_SELECTOR_RULES = [
+  'MELINDA_ID',
+  'LOCAL_SID',
+  'SAME_LOW',
+  'NAT_BIB',
+  'LOW_COUNT',
+  'ENCODING_LEVEL',
+  'PREPUB_LEVEL'
+];
+
 const getExpectedMatchOptions = (packages, {sruUrl, threshold = 0.8999}) =>
   packages.map((matchPackageName) => ({
     matchPackageName,
@@ -154,7 +165,8 @@ const getExpectedValidatorOptions = ({
   stopWhenFound,
   acceptZeroWithMaxCandidates,
   matchFailuresAsNew,
-  logOptions
+  logOptions,
+  matchSelectorRules = DEFAULT_MATCH_SELECTOR_RULES
 }) => ({
   recordType,
   preValidationFixOptions,
@@ -163,6 +175,7 @@ const getExpectedValidatorOptions = ({
   preImportFixOptions: fixes.BIB_PREIMPORT_FIX_SETTINGS,
   sruUrl,
   matchOptionsList: getExpectedMatchOptions(matchPackages, {sruUrl, threshold}),
+  matchSelectorRules,
   stopWhenFound,
   acceptZeroWithMaxCandidates,
   matchFailuresAsNew,
@@ -360,5 +373,30 @@ describe('config import failures (subprocess)', () => {
       VALIDATOR_MATCH_PACKAGES: 'FOO'
     });
     assertThrow(result, 'Unsupported match validation package');
+  });
+
+  it('throws at import when MATCH_SELECTOR_RULES contains an unknown rule', () => {
+    const result = runConfigDump({
+      RECORD_TYPE: 'bib',
+      SRU_URL: 'http://sru',
+      MATCH_SELECTOR_RULES: 'MELINDA_ID, PROBAB'
+    });
+    assertThrow(result, 'Unknown match selector rules: PROBAB');
+  });
+});
+
+describe('MATCH_SELECTOR_RULES (subprocess: env is read at import time)', () => {
+  const BIB_ENV = {RECORD_TYPE: 'bib', SRU_URL: 'http://sru.selector'};
+
+  it('passes through a valid custom rule subset in the given order', () => {
+    const {exitCode, dump} = runConfigDump({...BIB_ENV, MATCH_SELECTOR_RULES: 'LOCAL_SID,NAT_BIB'});
+    assert.strictEqual(exitCode, 0);
+    assert.deepStrictEqual(dump.validatorOptions.matchSelectorRules, ['LOCAL_SID', 'NAT_BIB']);
+  });
+
+  it('trims whitespace around the comma-separated rule names', () => {
+    const {exitCode, dump} = runConfigDump({...BIB_ENV, MATCH_SELECTOR_RULES: 'MELINDA_ID, LOCAL_SID'});
+    assert.strictEqual(exitCode, 0);
+    assert.deepStrictEqual(dump.validatorOptions.matchSelectorRules, ['MELINDA_ID', 'LOCAL_SID']);
   });
 });

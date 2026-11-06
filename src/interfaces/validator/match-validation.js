@@ -7,6 +7,11 @@ import matchValidator from '@natlibfi/melinda-record-match-validator';
 const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator:match-validation');
 const debugData = debug.extend('data');
 
+/**
+ * @deprecated Use the match-selector flow instead (validations.js calls matchValidation
+ * per candidate, then sortCandidatesByRules from match-selector.js).
+ * Kept for now: it may still be referenced by tests or other code.
+ */
 export async function matchValidationForMatchResults(record, matchResults) {
   // Format is used to format the candidaterecords (that are in the external format after being fetched from SRU to the internal format)
   //const {formatRecord} = format;
