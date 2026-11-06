@@ -5,7 +5,7 @@ import {join} from 'node:path';
 import {describe, it, before, after} from 'node:test';
 import {MarcRecord} from '@natlibfi/marc-record';
 import {MARCXML} from '@natlibfi/marc-record-serializers';
-import {parseArgs, runCli, loadStubFile, createStubFetch, createRecordFetch, DUMMY_SRU_URL} from './cli.js';
+import {parseArgs, runCli, loadStubFile, createStubFetch, createRecordFetch, DUMMY_SRU_URL, USAGE} from './cli.js';
 
 // Shared fixtures for the stubbed-SRU pipeline tests: the candidate shares the
 // melinda 035 id with the incoming record, so the IDS matcher finds it at 1.0
@@ -72,8 +72,10 @@ describe('parseArgs (cli)', () => {
     assert.strictEqual(args.output, 'out.json');
   });
 
-  it('Should fail on missing record file', () => {
-    assert.throws(() => parseArgs(['--sru-url', 'http://x']), /Expected exactly one record file/);
+  it('Should treat a flag-only invocation (no record file) like --help', () => {
+    const args = parseArgs(['--sru-url', 'http://x']);
+    assert.strictEqual(args.help, true);
+    assert.strictEqual(args.recordFile, undefined);
   });
 
   it('Should fail on two record files', () => {
@@ -126,6 +128,37 @@ describe('parseArgs (cli)', () => {
         process.env.SRU_URL = previous;
       }
     }
+  });
+});
+
+describe('cli help and bare invocation', () => {
+  it('Should parse --help (and -h) before the record-file positional count', () => {
+    for (const flag of ['--help', '-h']) {
+      const args = parseArgs([flag]);
+      assert.strictEqual(args.help, true);
+      assert.strictEqual(args.recordFile, undefined);
+    }
+  });
+
+  it('Should treat a bare invocation (no args) like --help', () => {
+    const args = parseArgs([]);
+    assert.strictEqual(args.help, true);
+    assert.strictEqual(args.recordFile, undefined);
+  });
+
+  it('Should return exit code 0 and a null trace for --help (no pipeline run)', async () => {
+    const result = await runCli(['--help']);
+    assert.strictEqual(result.args.help, true);
+    assert.strictEqual(result.trace, null);
+    assert.strictEqual(result.exitCode, 0);
+    assert.match(USAGE, /^Usage: melinda-validator-cli/);
+  });
+
+  it('Should return exit code 0 and a null trace for a bare invocation (no pipeline run)', async () => {
+    const result = await runCli([]);
+    assert.strictEqual(result.args.help, true);
+    assert.strictEqual(result.trace, null);
+    assert.strictEqual(result.exitCode, 0);
   });
 });
 

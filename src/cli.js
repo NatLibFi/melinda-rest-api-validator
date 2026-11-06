@@ -139,6 +139,17 @@ export function parseArgs(argv) {
     }
   }
 
+  // --help / bare invocation win over the record-file positional count:
+  // both print usage with exit 0 (see main)
+  if (positionals.length === 0) {
+    args.help = true;
+  }
+  if (args.help) {
+    if (positionals.length > 0) {
+      args.recordFile = positionals[0];
+    }
+    return args;
+  }
   if (positionals.length !== 1) {
     throw new CliError(`Expected exactly one record file, got ${positionals.length}. See --help.`);
   }
