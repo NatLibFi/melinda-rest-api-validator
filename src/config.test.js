@@ -130,7 +130,7 @@ const BIB_MAX_CANDIDATES = {IDS: 50, STANDARD_IDS: 50, CONTENT: 50, CONTENTALT: 
 // defaults, so unset boolean switches stay numeric 0/1 (not false/true).
 const DEFAULT_LOG_OPTIONS = {logNoMatches: 0, logInputRecord: 0, logResultRecord: 0};
 
-const getExpectedMatchOptions = (packages, {sruUrl, threshold = 0.9}) =>
+const getExpectedMatchOptions = (packages, {sruUrl, threshold = 0.8999}) =>
   packages.map((matchPackageName) => ({
     matchPackageName,
     maxMatches: BIB_MAX_MATCHES[matchPackageName],

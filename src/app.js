@@ -164,16 +164,17 @@ export default async function ({
     const {correlationId} = message.properties;
     logger.debug(`app/checkAmqp: Found message for correlationId: ${correlationId}`);
 
-    // checkAndSetState checks that the queueItem is not too old, sets the state and
-    // returns { status: 'updated' } if okay ({ status: 'timeout' } when too old, ABORT)
-    // http, did createPrio in state QUEUE_ITEM_STATE.VALIDATOR.PENDING_VALIDATION
-    // this is just for prio
+    // checkAndSetState({state: VALIDATOR.VALIDATING}) returns:
+    // - 'updated': queueItem was past the timeout window and its state was set to VALIDATING
+    // - 'unchanged': pre-checks found the item already in a terminal state (ABORT/ERROR/DONE) or not old enough yet
+    // - 'timeout': the set attempt failed and the item is ABORT
+    // Only 'updated' is processed; anything else is acked and dropped.
 
     const {status: freshStatus} = await mongoOperator.checkAndSetState({correlationId, state: QUEUE_ITEM_STATE.VALIDATOR.VALIDATING});
     if (freshStatus === 'updated') {
       return processFreshMessage({message, mongoOperator, amqpOperator, prio});
     }
-    // queueItem was too old, queueItem was set to ABORT
+    // not 'updated': nothing to process
     await amqpOperator.ackMessages([message]);
     return initCheck();
   }

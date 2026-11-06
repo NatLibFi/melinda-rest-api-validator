@@ -135,7 +135,7 @@ function generateMaxCandidates(validatorMatchPackage) {
 
 function generateThreshold(validatorMatchPackage) {
   debug(`Threshold for ${validatorMatchPackage} uses environment variable`);
-  return readEnvironmentVariable('MATCHING_TRESHOLD', {defaultValue: 0.9, format: v => Number(v)});
+  return readEnvironmentVariable('MATCHING_TRESHOLD', {defaultValue: 0.8999, format: v => Number(v)});
 }
 
 function generatePreValidationFixOptions() {
