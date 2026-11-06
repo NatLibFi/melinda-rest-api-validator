@@ -374,4 +374,29 @@ describe('config import failures (subprocess)', () => {
     });
     assertThrow(result, 'Unsupported match validation package');
   });
+
+  it('throws at import when MATCH_SELECTOR_RULES contains an unknown rule', () => {
+    const result = runConfigDump({
+      RECORD_TYPE: 'bib',
+      SRU_URL: 'http://sru',
+      MATCH_SELECTOR_RULES: 'MELINDA_ID, PROBAB'
+    });
+    assertThrow(result, 'Unknown match selector rules: PROBAB');
+  });
+});
+
+describe('MATCH_SELECTOR_RULES (subprocess: env is read at import time)', () => {
+  const BIB_ENV = {RECORD_TYPE: 'bib', SRU_URL: 'http://sru.selector'};
+
+  it('passes through a valid custom rule subset in the given order', () => {
+    const {exitCode, dump} = runConfigDump({...BIB_ENV, MATCH_SELECTOR_RULES: 'LOCAL_SID,NAT_BIB'});
+    assert.strictEqual(exitCode, 0);
+    assert.deepStrictEqual(dump.validatorOptions.matchSelectorRules, ['LOCAL_SID', 'NAT_BIB']);
+  });
+
+  it('trims whitespace around the comma-separated rule names', () => {
+    const {exitCode, dump} = runConfigDump({...BIB_ENV, MATCH_SELECTOR_RULES: 'MELINDA_ID, LOCAL_SID'});
+    assert.strictEqual(exitCode, 0);
+    assert.deepStrictEqual(dump.validatorOptions.matchSelectorRules, ['MELINDA_ID', 'LOCAL_SID']);
+  });
 });

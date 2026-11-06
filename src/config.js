@@ -96,7 +96,7 @@ function generateMatchOptionsList() {
 function generateMatchSelectorRules() {
   const matchSelectorRules = readEnvironmentVariable('MATCH_SELECTOR_RULES', {
     defaultValue: KNOWN_MATCH_SELECTOR_RULES.join(',')
-  }).split(',');
+  }).split(',').map(rule => rule.trim());
 
   const unknownRules = matchSelectorRules.filter(rule => !KNOWN_MATCH_SELECTOR_RULES.includes(rule));
   if (unknownRules.length > 0) {

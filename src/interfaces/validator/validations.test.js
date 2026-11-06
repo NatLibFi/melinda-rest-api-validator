@@ -360,6 +360,62 @@ describe('createValidations (merge, valid match)', () => {
   });
 });
 
+describe('createValidations (match selector rules)', () => {
+  const makeCandidatePair = () => {
+    const candidateObject = fixture('01-single-valid', 'candidates.json')[0].record;
+    // 'cand-full' has the better encoding level (LDR/17 '1' -> preference index 1)
+    // than 'cand-low' (LDR/17 'z' -> preference index 8), but the lower probability
+    const fullLevelLeader = `${candidateObject.leader.slice(0, 17)}1${candidateObject.leader.slice(18)}`;
+    const fullLevel = new MarcRecord({...candidateObject, leader: fullLevelLeader}, {subfieldValues: false});
+    const lowLevel = new MarcRecord(candidateObject, {subfieldValues: false});
+    return [
+      {candidate: {id: 'cand-full', record: fullLevel}, probability: 0.5},
+      {candidate: {id: 'cand-low', record: lowLevel}, probability: 0.9}
+    ];
+  };
+
+  it('Should pick the higher-probability candidate when matchSelectorRules is empty (factory default)', async () => {
+    const record = incomingRecord('01-single-valid');
+    const matches = makeCandidatePair();
+    const matchers = [async () => matchResult({matches, candidateCount: matches.length})];
+    const sruClient = makeSruClient({
+      'cand-full': matches[0].candidate.record,
+      'cand-low': matches[1].candidate.record
+    });
+    const headers = makeHeaders({}, {merge: true});
+    const {createValidations} = await makeCreateValidations({matchers, sruClient, record});
+
+    const {headers: newHeaders} = await createValidations({record, headers});
+
+    assert.equal(newHeaders.operation, 'UPDATE');
+    assert.equal(newHeaders.id, 'cand-low');
+    assert.match(newHeaders.notes[1], /^Merged to cand-low preferring/u);
+  });
+
+  it('Should pick the rule-favored candidate when matchSelectorRules ranks it first', async () => {
+    const record = incomingRecord('01-single-valid');
+    const matches = makeCandidatePair();
+    const matchers = [async () => matchResult({matches, candidateCount: matches.length})];
+    const sruClient = makeSruClient({
+      'cand-full': matches[0].candidate.record,
+      'cand-low': matches[1].candidate.record
+    });
+    const headers = makeHeaders({}, {merge: true});
+    const {createValidations} = await makeCreateValidations({
+      matchers, sruClient, record,
+      options: {matchSelectorRules: ['ENCODING_LEVEL']}
+    });
+
+    const {headers: newHeaders} = await createValidations({record, headers});
+
+    // ENCODING_LEVEL is sorted ASC, so the lower preference index ('1' -> 1)
+    // beats the higher one ('z' -> 8) despite the lower probability
+    assert.equal(newHeaders.operation, 'UPDATE');
+    assert.equal(newHeaders.id, 'cand-full');
+    assert.match(newHeaders.notes[1], /^Merged to cand-full preferring/u);
+  });
+});
+
 describe('createValidations (stopWhenFound)', () => {
   it('Should stop matching after the first match when stopWhenFound is on', async () => {
     const record = makeRecord([titleField('foo.', 'bar')]);
