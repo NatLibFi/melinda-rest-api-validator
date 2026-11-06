@@ -1,0 +1,6 @@
+{
+  "description": "getCatalogerForLog passes a plain string cataloger through",
+  "logFunction": "getCatalogerForLog",
+  "cataloger": "raw-string",
+  "expectedCataloger": "raw-string"
+}

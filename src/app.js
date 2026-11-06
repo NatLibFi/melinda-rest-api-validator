@@ -18,16 +18,18 @@ const setTimeoutPromise = promisify(setTimeout);
 
 // eslint-disable-next-line max-lines-per-function
 export default async function ({
-  pollRequest, pollWaitTime, amqpUrl, mongoUri, validatorOptions, splitterOptions, recordType
+  pollRequest, pollWaitTime, amqpUrl, mongoUri, validatorOptions, splitterOptions, recordType, deps = {}
 }) {
   const logger = createLogger();
   const collection = pollRequest ? 'prio' : 'bulk';
   const prio = pollRequest;
-  const mongoOperator = await mongoFactory(mongoUri, collection);
+  const mongoOperator = deps.mongoOperator ?? await mongoFactory(mongoUri, collection);
   // secord parameter is true for running amqpHealthCheck, which errors if channel and/or connection gets closed
-  const amqpOperator = await amqpFactory(amqpUrl, true);
-  const mongoLogOperator = await mongoLogFactory(mongoUri);
-  const validator = await validatorFactory({validatorOptions, mongoLogOperator});
+  const amqpOperator = deps.amqpOperator ?? await amqpFactory(amqpUrl, true);
+  const mongoLogOperator = deps.mongoLogOperator ?? await mongoLogFactory(mongoUri);
+  const validator = await validatorFactory({
+    validatorOptions, mongoLogOperator, sruClient: deps.sruClient, matchers: deps.matchers
+  });
   const toMarcRecords = await toMarcRecordFactory({amqpOperator, mongoOperator, mongoLogOperator, splitterOptions});
 
   logger.info(`Started Melinda-rest-api-validator: ${pollRequest ? 'PRIORITY' : 'BULK'} for ${recordType} records`);
@@ -162,15 +164,17 @@ export default async function ({
     const {correlationId} = message.properties;
     logger.debug(`app/checkAmqp: Found message for correlationId: ${correlationId}`);
 
-    // checkAndSetState checks that the queueItem is not too old, sets state and return true if okay
-    // http, did createPrio in state QUEUE_ITEM_STATE.VALIDATOR.PENDING_VALIDATION
-    // this is just for prio
+    // checkAndSetState({state: VALIDATOR.VALIDATING}) returns:
+    // - 'updated': queueItem was past the timeout window and its state was set to VALIDATING
+    // - 'unchanged': pre-checks found the item already in a terminal state (ABORT/ERROR/DONE) or not old enough yet
+    // - 'timeout': the set attempt failed and the item is ABORT
+    // Only 'updated' is processed; anything else is acked and dropped.
 
-    const fresh = await mongoOperator.checkAndSetState({correlationId, state: QUEUE_ITEM_STATE.VALIDATOR.VALIDATING});
-    if (fresh) {
+    const {status: freshStatus} = await mongoOperator.checkAndSetState({correlationId, state: QUEUE_ITEM_STATE.VALIDATOR.VALIDATING});
+    if (freshStatus === 'updated') {
       return processFreshMessage({message, mongoOperator, amqpOperator, prio});
     }
-    // queueItem was too old, queueItem was set to ABORT
+    // not 'updated': nothing to process
     await amqpOperator.ackMessages([message]);
     return initCheck();
   }
@@ -236,7 +240,6 @@ export default async function ({
     logger.silly(`app/processValidated: noop ${noop}`);
 
     if (noop) {
-      logger.debug(`FOO`);
       return setNoopResult({correlationId, processResult, mongoOperator, prio});
     }
 
@@ -506,7 +509,7 @@ export default async function ({
         // setState to IMPORTER.IN_QUEUE if we're not validating the bulk job
 
         if (noop && !validateRecords) {
-          await await mongoOperator.setState({correlationId, state: 'DONE'});
+          await mongoOperator.setState({correlationId, state: 'DONE'});
           return initCheck();
         }
 

@@ -1,0 +1,31 @@
+{
+  "description": "logMergeAction logs a MERGE_LOG item with the database record preferred (value B)",
+  "logFunction": "logMergeAction",
+  "id": "dbId-7",
+  "preference": {
+    "name": "database record preferred",
+    "value": "B"
+  },
+  "expectedLogItem": {
+    "logItemType": "MERGE_LOG",
+    "cataloger": "cat7",
+    "correlationId": "corr-7",
+    "blobSequence": 4,
+    "operation": "CREATE",
+    "databaseId": "dbId-7",
+    "preference": {
+      "name": "database record preferred",
+      "value": "B",
+      "recordName": "databaseRecord"
+    },
+    "incomingRecord": {
+      "001": "in-7"
+    },
+    "databaseRecord": {
+      "001": "db-7"
+    },
+    "mergedRecord": {
+      "001": "merged-7"
+    }
+  }
+}

@@ -28,9 +28,9 @@ export function updateField001ToParamId(id, record) {
 
 export function getRecordMetadata({record, number = undefined, recordMetadata = undefined, getAllSourceIds = false}) {
   if (recordMetadata) {
-    const sourceIds = recordMetadata.sourceIds || record ? getSourceIdsFromRecord(record, getAllSourceIds) : undefined;
-    const title = recordMetadata.title || record ? getRecordTitle(record) : undefined;
-    const standardIdentifiers = recordMetadata.standardIdentifiers || record ? getRecordStandardIdentifiers(record) : undefined;
+    const sourceIds = recordMetadata.sourceIds || (record ? getSourceIdsFromRecord(record, getAllSourceIds) : undefined);
+    const title = recordMetadata.title || (record ? getRecordTitle(record) : undefined);
+    const standardIdentifiers = recordMetadata.standardIdentifiers || (record ? getRecordStandardIdentifiers(record) : undefined);
     const blobSequence = recordMetadata.blobSequence || number || 1;
     return {sourceIds, blobSequence, title, standardIdentifiers};
   }

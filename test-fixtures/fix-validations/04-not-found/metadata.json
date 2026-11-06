@@ -1,0 +1,12 @@
+{
+  "description": "SRU returns no record -> 404 Cannot find record",
+  "fixType": "FIX",
+  "validate": true,
+  "sruScenario": "notfound",
+  "expectedError": {
+    "status": 404,
+    "payload": {
+      "message": "Cannot find record 000019640 to fix"
+    }
+  }
+}

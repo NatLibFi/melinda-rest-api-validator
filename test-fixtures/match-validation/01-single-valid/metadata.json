@@ -1,0 +1,7 @@
+{
+  "description": "returns the single valid match as the best result",
+  "expectedBestId": "cand1",
+  "expectedOrder": [
+    "cand1"
+  ]
+}

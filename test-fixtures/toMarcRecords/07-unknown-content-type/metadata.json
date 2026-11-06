@@ -1,0 +1,20 @@
+{
+  "description": "unknown contentType rejects with 415 before reading the stream",
+  "contentType": "application/gzip",
+  "operation": "CREATE",
+  "failOnError": false,
+  "keepSplitterReport": "NONE",
+  "rawPayload": "x",
+  "expected": {
+    "result": "rejected",
+    "rejectStatus": 415,
+    "rejectPayload": "Invalid content-type",
+    "checked": [
+      {
+        "queue": "CREATE.corr-1",
+        "style": "messages",
+        "purge": true
+      }
+    ]
+  }
+}

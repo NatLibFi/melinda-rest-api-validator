@@ -1,0 +1,8 @@
+{
+  "description": "returns an empty matchValidationResult when all matches are invalid",
+  "expectedBestId": null,
+  "expectedOrder": [
+    "cand1",
+    "cand2"
+  ]
+}
