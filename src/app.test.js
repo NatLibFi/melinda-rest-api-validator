@@ -673,9 +673,10 @@ describe('prio mode (stale items and errors)', () => {
       const response = queueItem.recordResponses[0];
       // 500 is not mapped to a status name by the commons, it stays numeric
       assert.equal(response.detailedRecordStatus, 500);
-      // BUG (pinned, not fixed): the facade wraps non-ValidationErrors with
-      // `throw new Error(err)`, so the surfaced message is the stringified error
-      assert.match(response.message, /^Error: /u);
+      // the facade rethrows the original plain Error (no status/payload), so the
+      // surfaced message is the original error's message (status stays 500, which
+      // commons does not map, so it appends the unknown-status suffix)
+      assert.equal(response.message, 'SRU is down - Unknown recordStatus: 500');
       // no recordMetadata in the payload -> the message headers metadata is used
       assert.equal(response.recordMetadata.blobSequence, 1);
       assert.equal(response.databaseId, '000020001');
@@ -692,8 +693,8 @@ describe('prio mode (stale items and errors)', () => {
       queueItems: [{correlationId: 'corr1', state: 'PENDING_VALIDATION', operationSettings: {}}],
       sruClient: makeSruClient({'000020001': new Error('SRU is down')})
     });
-    // headers deliberately omit recordMetadata; the facade wraps the plain
-    // SRU error with `throw new Error(err)`, so the payload has no
+    // headers deliberately omit recordMetadata; the facade rethrows the plain
+    // SRU error as-is, so the payload (built from error.message) has no
     // recordMetadata either
     const headers = makePrioHeaders(
       {operation: 'UPDATE', id: '000020001', recordMetadata: undefined},
@@ -715,7 +716,7 @@ describe('prio mode (stale items and errors)', () => {
       assert.equal(errorState.state, 'ERROR');
       assert.equal(errorState.errorStatus, 500);
       const response = queueItem.recordResponses[0];
-      assert.match(response.message, /^Error: /u);
+      assert.equal(response.message, 'SRU is down - Unknown recordStatus: 500');
       // neither the message headers nor the error payload carry
       // recordMetadata, so the response has none either
       assert.strictEqual(response.recordMetadata, undefined);
@@ -930,9 +931,10 @@ describe('bulk mode (stream to records and validation)', () => {
       assert.equal(response.detailedRecordStatus, 'UNPROCESSABLE_ENTITY');
       // keepSplitterReport NONE: the splitter report is only logged, not stored
       assert.deepStrictEqual(queueItem.splitterReports, []);
-      assert.ok(mongoLogOperator.state.logItems.some(({logItemType}) => logItemType === 'SPLITTER_LOG'));
-      // the reader 'end' handler finishes ~500 ms later and removes the queue
+      // the reader 'end' handler finishes ~500 ms later, writes the single
+      // splitter log entry and removes the queue
       await removed;
+      assert.ok(mongoLogOperator.state.logItems.some(({logItemType}) => logItemType === 'SPLITTER_LOG'));
       assert.deepStrictEqual(amqpOperator.state.removed, [`CREATE.${correlationId}`]);
 
       await drain();
@@ -1102,10 +1104,11 @@ describe('bulk mode (stream to records and validation)', () => {
     }
   });
 
-  it('Should crash when the bulk stream errors with a non-ApiError (stuck in QUEUING_IN_PROGRESS)', async () => {
-    // a non-ApiError from streamToRecords is logged and rethrown, so the app
-    // dies and the queueItem is left stuck in QUEUING_IN_PROGRESS (documented
-    // in app.js: the app has no handling for this state)
+  it('Should mark the item ERROR when the bulk stream errors with a non-ApiError, then crash', async () => {
+    // a non-ApiError from streamToRecords is logged, the queueItem is marked
+    // ERROR (best effort) with the error info, and the ORIGINAL error is
+    // rethrown so the app dies - the item is no longer left stuck in
+    // QUEUING_IN_PROGRESS across a restart
     const correlationId = 'corrB9';
     const {promise, amqpOperator, mongoOperator} = await runApp({
       pollRequest: false,
@@ -1117,12 +1120,50 @@ describe('bulk mode (stream to records and validation)', () => {
 
     try {
       await assert.rejects(promise, (err) => {
-        assert.equal(err.constructor.name, 'Error');
-        assert.match(err.message, /TypeError/u);
+        assert(err instanceof TypeError);
+        assert.equal(err.message, 'stream.on is not a function');
         return true;
       });
       const queueItem = mongoOperator.items.get(correlationId);
-      assert.deepStrictEqual(queueItem.stateLog.map(({state}) => state), ['QUEUING_IN_PROGRESS']);
+      assert.deepStrictEqual(queueItem.stateLog.map(({state}) => state), ['QUEUING_IN_PROGRESS', 'ERROR']);
+      const errorState = queueItem.stateLog[1];
+      assert.deepStrictEqual(errorState.errorMessage, {message: 'stream.on is not a function'});
+      // a TypeError has no status: 500 is recorded
+      assert.equal(errorState.errorStatus, 500);
+    } finally {
+      amqpOperator.stop();
+      mongoOperator.stop();
+    }
+  });
+
+  it('Should error a stale QUEUING_IN_PROGRESS item on restart without reprocessing it', async () => {
+    // a crashed/restarted previous worker leaves the item stuck in
+    // QUEUING_IN_PROGRESS; a fresh process must error it out on its first
+    // poll instead of re-splitting (a half-split bulk job could double-write
+    // record items)
+    const correlationId = 'corrB10';
+    const {amqpOperator, mongoOperator, drain} = await runApp({
+      pollRequest: false,
+      queueItems: [makeBulkItem(correlationId, 'QUEUING_IN_PROGRESS', {validate: false})]
+      // no stream seeded: reprocessing is not even possible, and it must not
+      // be attempted in the first place
+    });
+
+    await mongoOperator.onEvent('state', 'ERROR');
+    try {
+      const queueItem = mongoOperator.items.get(correlationId);
+      assert.equal(queueItem.state, 'ERROR');
+      assert.deepStrictEqual(queueItem.stateLog, [{
+        state: 'ERROR',
+        errorMessage: {message: 'Worker restarted while the item was being queued/split; the item is left as stale and is not reprocessed.'},
+        errorStatus: 500
+      }]);
+      // no reprocessing: nothing went to any queue and no records were read
+      assert.deepStrictEqual(amqpOperator.state.sent, []);
+      assert.deepStrictEqual(queueItem.recordResponses, []);
+      assert.deepStrictEqual(queueItem.splitterReports, []);
+
+      await drain();
     } finally {
       amqpOperator.stop();
       mongoOperator.stop();

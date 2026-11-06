@@ -864,9 +864,8 @@ describe('updateValidations (merge for updates)', () => {
 
     await assert.rejects(updateValidations({updateId, updateRecord: incoming, headers}), (err) => {
       assert.equal(err.status, 422);
-      // BUG (pinned, not fixed): mergeRecordForUpdates sets `errorMessage = err` (the Error
-      // object), so the message is the stringified object instead of err.message
-      assert.match(err.payload.message, /Merge errored: Error: fix boom/u);
+      // mergeRecordForUpdates surfaces err.message, so the message reads "Merge errored: fix boom"
+      assert.match(err.payload.message, /Merge errored: fix boom/u);
       return true;
     });
   });

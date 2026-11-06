@@ -19,26 +19,18 @@ describe('validateChanges', () => {
     fixura: {
       reader: READERS.JSON
     },
-    callback: ({getFixture, expectedResult, skipValidation}) => {
+    callback: ({getFixture, expectedResult}) => {
 
       const record1 = new MarcRecord(getFixture('record1.json'), {subfieldValues: false});
       const record2 = new MarcRecord(getFixture('record2.json'), {subfieldValues: false});
       debugData(`Record1:\n${record1}`);
       debugData(`Record2:\n${record2}`);
 
-      if (skipValidation) {
-        debug(`Running validation with (4th param) validate: false`);
-        const result = validateChanges({incomingRecord: record1, existingRecord: record2, existingId: '000123456', recordMetadata: 'recordMetadata', validate: false});
-        debug(`Result: ${result}`);
-        assert.equal(result.changeValidationResult, 'skipped');
-        return;
-      }
-
       /*
       if (expectedToThrow) {
         debugData(`Expecting error: ${expectedToThrow}, ${expectedStatus}, ${expectedError}`);
         try {
-          validateChanges({incomingRecord: record1, existingRecord: record2, validate: true});
+          validateChanges({incomingRecord: record1, existingRecord: record2});
           throw new Error('Expected an error');
         } catch (err) {
 
@@ -53,7 +45,7 @@ describe('validateChanges', () => {
       */
 
       try {
-        const result = validateChanges({incomingRecord: record1, existingRecord: record2, validate: true});
+        const result = validateChanges({incomingRecord: record1, existingRecord: record2});
         debug('Did not get an error.');
         assert.deepStrictEqual(result.changeValidationResult, expectedResult);
       } catch (err) {

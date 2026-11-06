@@ -90,7 +90,7 @@ export default async function ({validatorOptions, mongoLogOperator, sruClient, m
     const combinedRecordMetadata = getRecordMetadata({record, recordMetadata, getAllSourceIds});
     logger.debug(`Combined recordMetadata: ${JSON.stringify(combinedRecordMetadata)}`);
 
-    logRecord(mongoLogOperator, {headers, record, recordMetadata: combinedRecordMetadata, logItemType: LOG_ITEM_TYPE.INPUT_RECORD_LOG, logConfig: validatorOptions.logOptions.logInputRecord});
+    await logRecord(mongoLogOperator, {headers, record, recordMetadata: combinedRecordMetadata, logItemType: LOG_ITEM_TYPE.INPUT_RECORD_LOG, logConfig: validatorOptions.logOptions.logInputRecord});
 
     // Create here also headers.id for batchBulk -records
     // For CREATE: blobSequence, for UPDATE: id from record (001)
@@ -114,6 +114,8 @@ export default async function ({validatorOptions, mongoLogOperator, sruClient, m
     logger.debug(`New headers: ${JSON.stringify(newHeaders)}`);
 
     // Currently do not allow total skipping of validations for batchBulk and prio (streamBulk-records skip validation as default)
+    // Two-layer semantics: validate/merge/unique decide whether a record enters the validation
+    // pipeline at all; once the pipeline runs, all checks run unconditionally (no granular skipping)
     const validateRecords = operationSettings.merge || operationSettings.unique || operationSettings.validate || operationSettings.noStream || operationSettings.prio;
     logger.debug(`We need to validate records: ${validateRecords}`);
     logger.debug(`-- merge: ${operationSettings.merge} || unique: ${operationSettings.unique} || validate: ${operationSettings.validate} || noStream: ${operationSettings.noStream} || prio: ${operationSettings.prio}`);
@@ -165,7 +167,7 @@ export default async function ({validatorOptions, mongoLogOperator, sruClient, m
         logger.debug(`New payload: ${JSON.stringify(newPayload)}`);
         throw new ValidationError(status, newPayload);
       }
-      throw new Error(err);
+      throw err;
     }
 
     function alephValidateRecord(recordObject) {

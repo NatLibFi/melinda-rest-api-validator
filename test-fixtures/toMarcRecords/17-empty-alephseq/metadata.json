@@ -1,5 +1,5 @@
 {
-  "description": "empty alephseq stream rejects with 422 and writes the splitter log twice (no return after the reject)",
+  "description": "empty alephseq stream rejects with 422 and writes one splitter log entry",
   "contentType": "application/alephseq",
   "operation": "CREATE",
   "failOnError": false,
@@ -17,13 +17,6 @@
       }
     ],
     "logItems": [
-      {
-        "logItemType": "SPLITTER_LOG",
-        "correlationId": "corr-1",
-        "recordNumber": 0,
-        "sequenceNumber": 0,
-        "readerErrors": []
-      },
       {
         "logItemType": "SPLITTER_LOG",
         "correlationId": "corr-1",

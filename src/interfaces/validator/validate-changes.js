@@ -9,12 +9,7 @@ const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator:
 const debugData = debug.extend('data');
 
 // Checks that the incomingRecord and existingRecord are not identical
-export function validateChanges({incomingRecord, existingRecord, validate = true}) {
-
-  if (validate === false) {
-    debug(`Skipping validateChanges. Validate: ${validate}`);
-    return {changeValidationResult: 'skipped'};
-  }
+export function validateChanges({incomingRecord, existingRecord}) {
 
   // Optimize the check by first counting the fields
   const incomingActualFieldTags = incomingRecord.fields.filter(isActualContentField).map(field => field.tag);

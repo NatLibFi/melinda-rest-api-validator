@@ -56,8 +56,9 @@ export async function validationsFactory(
 
     const {recordMetadata, operationSettings, cataloger} = headers;
 
+    // operationSettings.validate is the pipeline-entry switch (see the checkMongo/processLoad gates);
+    // once the pipeline runs, all checks run unconditionally
     // Currently also melinda-api-http forces all validations (validate=true) for prio and batchBulk
-    const runValidations = operationSettings.validate || true;
     const skipLowValidation = operationSettings.skipLowValidation || false;
 
     if (updateId) {
@@ -75,7 +76,7 @@ export async function validationsFactory(
 
       // aleph-record-load-api cannot currently update a record if the existing record is deleted
       logger.verbose('Checking whether the existing record is deleted');
-      validateExistingRecord(existingRecord, recordMetadata, runValidations);
+      validateExistingRecord(existingRecord, recordMetadata);
 
       // Merge for updates (do not run if record is already merged CREATE)
       logger.debug(`Check whether merge is needed for update`);
@@ -83,10 +84,10 @@ export async function validationsFactory(
       const updateMergeNeeded = operationSettings.merge && updateOperation !== 'updateAfterMerge';
       const {mergedRecord: updatedRecordAfterMerge, headers: newHeaders} = updateMergeNeeded ? await mergeRecordForUpdates({record: updateRecord, existingRecord, id: updateId, headers}) : {mergedRecord: updateRecord, headers};
 
-      runValidateOwnChanges({cataloger, incomingRecord: updatedRecordAfterMerge, existingRecord, operation: headers.operation, recordMetadata, runValidations, skipLowValidation});
+      runValidateOwnChanges({cataloger, incomingRecord: updatedRecordAfterMerge, existingRecord, operation: headers.operation, recordMetadata, skipLowValidation});
 
       logger.verbose('Checking CAT field history');
-      validateRecordState({incomingRecord: updatedRecordAfterMerge, existingRecord, existingId: updateId, recordMetadata, validate: runValidations, mergedIncomingRecord: operationSettings.merge});
+      validateRecordState({incomingRecord: updatedRecordAfterMerge, existingRecord, existingId: updateId, recordMetadata, mergedIncomingRecord: operationSettings.merge});
       // Note validationService = validation.js from melinda-rest-api-commons
       // which uses marc-record-validate
       // currently checks only that possible f003 has value FI-MELINDA
@@ -96,14 +97,15 @@ export async function validationsFactory(
       logger.debug(`mergeValidationResult: ${JSON.stringify(mergeValidationResult)}`);
 
       // validationResults: {record, failed: true/false, messages: []}
-      const validationResults = runValidations ? await validationService(updatedRecordAfterMerge) : {record: updatedRecordAfterMerge, failed: false};
+      const validationResults = await validationService(updatedRecordAfterMerge);
 
       // Validator checks here (if needed), if the update would actually change the database record
       logger.verbose(`Checking if the update actually changes the existing record. (skipNoChangeUpdates: ${operationSettings.skipNoChangeUpdates})`);
 
-      const {changeValidationResult} = validateChanges({incomingRecord: updatedRecordAfterMerge, existingRecord, validate: operationSettings.skipNoChangeUpdates && runValidations});
+      // skipNoChangeUpdates gates the change check: when it is off, no-change updates are not skipped
+      const {changeValidationResult} = operationSettings.skipNoChangeUpdates ? validateChanges({incomingRecord: updatedRecordAfterMerge, existingRecord}) : {};
 
-      logger.debug(changeValidationResult === 'skipped' ? `-- ChangeValidation not needed` : `-- ChangeValidationResult: ${JSON.stringify(changeValidationResult)}`);
+      logger.debug(`-- ChangeValidationResult: ${JSON.stringify(changeValidationResult)}`);
 
       if (changeValidationResult === false) {
         const newNote = `No changes detected while trying to update existing record ${updateId}, update skipped.`;
@@ -125,14 +127,15 @@ export async function validationsFactory(
 
   async function createValidations({record, headers}) {
     const {recordMetadata, cataloger, operationSettings} = headers;
+    // operationSettings.validate is the pipeline-entry switch (see the checkMongo/processLoad gates);
+    // once the pipeline runs, all checks run unconditionally
     // Currently force all validations for prio and batchBulk
-    const runValidations = operationSettings.validate || true;
     const skipLowValidation = operationSettings.skipLowValidation || false;
     const handleMatchFailuresAsNew = operationSettings.matchFailuresAsNew ? operationSettings.matchFailuresAsNew : matchFailuresAsNew;
 
     logger.verbose(`Validations for CREATE operation. Unique: ${operationSettings.unique}, merge: ${operationSettings.merge}`);
 
-    runValidateOwnChanges({cataloger, incomingRecord: record, operation: headers.operation, recordMetadata, runValidations, skipLowValidation});
+    runValidateOwnChanges({cataloger, incomingRecord: record, operation: headers.operation, recordMetadata, skipLowValidation});
 
     if (operationSettings.unique || operationSettings.merge) {
       logger.verbose('Attempting to find matching records in the SRU');
@@ -163,7 +166,7 @@ export async function validationsFactory(
         // Should we also validate the matches before erroring? Now we error also those cases, where the match would fail matchValidation
         const matchResultsForLog = matches.map((match, index) => ({action: false, preference: false, message: 'Validation not run', matchSequence: index, ...match}));
 
-        logMatchAction(mongoLogOperator, {headers, record, matchResultsForLog, matcherReports, logNoMatches: logOptions.logNoMatches});
+        await logMatchAction(mongoLogOperator, {headers, record, matchResultsForLog, matcherReports, logNoMatches: logOptions.logNoMatches});
         throw new ValidationError(httpStatus.CONFLICT, {message: 'Duplicates in database', ids: matches.map(({candidate: {id}}) => id), recordMetadata});
       }
 
@@ -175,7 +178,7 @@ export async function validationsFactory(
 
       logger.verbose('No matching records');
       // MATCH_LOG for no matches
-      logMatchAction(mongoLogOperator, {headers, record, matchResultsForLog: [], matcherReports, logNoMatches: logOptions.logNoMatches});
+      await logMatchAction(mongoLogOperator, {headers, record, matchResultsForLog: [], matcherReports, logNoMatches: logOptions.logNoMatches});
       return noValidMatches({record, recordMetadata, headers: newHeaders});
     }
 
@@ -219,7 +222,7 @@ export async function validationsFactory(
       const mergeValidationResult = {merged: mergeResult.status, mergedId: id, preference: preference.value};
 
       // Log merge-action here
-      logMergeAction(mongoLogOperator, {headers, record, existingRecord, id, preference, mergeResult});
+      await logMergeAction(mongoLogOperator, {headers, record, existingRecord, id, preference, mergeResult});
 
       logger.verbose(`PostMergeFixing merged record: ${JSON.stringify(postMergeFixOptions)}`);
       const postMergeFixedRecordObject = await fixRecord(mergeResult.record, postMergeFixOptions);
@@ -228,7 +231,7 @@ export async function validationsFactory(
     } catch (err) {
       logger.error(`mergeRecordForUpdates errored: ${err}`);
       logError(err);
-      const errorMessage = err;
+      const errorMessage = err.message;
       throw new ValidationError(httpStatus.UNPROCESSABLE_ENTITY, {message: `Merge errored: ${errorMessage}`, recordMetadata});
     }
   }
@@ -260,7 +263,7 @@ export async function validationsFactory(
       const {matchValidationResult, sortedValidatedMatchResults} = await matchValidationForMatchResults(record, matchResults);
       logger.silly(`MatchValidationResult: ${inspect(matchValidationResult, {colors: true, maxArrayLength: 3, depth: 3})}}`);
 
-      logMatchAction(mongoLogOperator, {headers, record, matchResultsForLog: sortedValidatedMatchResults, matcherReports});
+      await logMatchAction(mongoLogOperator, {headers, record, matchResultsForLog: sortedValidatedMatchResults, matcherReports});
 
       // Check error cases
       // Note that if we had stopWhenFound active, and did not run all the matchers because a match was found, we'll probably have cases, where we error records, that might
@@ -324,7 +327,7 @@ export async function validationsFactory(
     }
   }
 
-  function runValidateOwnChanges({cataloger, incomingRecord, existingRecord, operation, recordMetadata, runValidations, skipLowValidation}) {
+  function runValidateOwnChanges({cataloger, incomingRecord, existingRecord, operation, recordMetadata, skipLowValidation}) {
     logger.debug(`cataloger: ${JSON.stringify(cataloger)}`);
     if (skipLowValidation) {
       logger.verbose(`skipLowValidation: ${skipLowValidation} - not checkin LOW-tag authorization`);
@@ -334,7 +337,7 @@ export async function validationsFactory(
     // what if we have empty authorization?
     if (cataloger.id && cataloger.authorization) {
       logger.verbose('Checking LOW-tag authorization');
-      validateOwnChanges({ownTags: cataloger.authorization, incomingRecord, existingRecord, operation, recordMetadata, validate: runValidations});
+      validateOwnChanges({ownTags: cataloger.authorization, incomingRecord, existingRecord, operation, recordMetadata});
       return;
     }
     logger.verbose(`No cataloger.authorization available for checking LOW-tags`);
@@ -375,7 +378,7 @@ export async function validationsFactory(
       // Should we write merge-note here?
 
       // Log merge-action here
-      logMergeAction(mongoLogOperator, {headers, record, existingRecord: validatedMatchResult.candidate.record, id: validatedMatchResult.candidate.id, preference: validatedMatchResult.preference, mergeResult});
+      await logMergeAction(mongoLogOperator, {headers, record, existingRecord: validatedMatchResult.candidate.record, id: validatedMatchResult.candidate.id, preference: validatedMatchResult.preference, mergeResult});
 
       const newHeaders = updateHeadersAfterMerge({mergeValidationResult, headers});
 

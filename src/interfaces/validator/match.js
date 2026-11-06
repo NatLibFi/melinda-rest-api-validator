@@ -143,10 +143,10 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
       // SRU unexpected errors: non-200 responses from SRU server etc.
       if (err.message.startsWith('SRU error')) {
         logger.verbose(`Matcher ${matcherSequence} (${matcherName}) resulted in SRU unexpected error: ${err.message}`);
-        throw new Error(err);
+        throw err;
       }
 
-      throw new Error(err);
+      throw err;
     }
   }
   // if no more matchers

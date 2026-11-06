@@ -99,7 +99,8 @@
           "value": "LOAD-ID"
         },
         {
-          "code": "b"
+          "code": "b",
+          "value": "undefined"
         },
         {
           "code": "c",

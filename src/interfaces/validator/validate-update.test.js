@@ -19,23 +19,15 @@ describe('validateUpdate', () => {
     fixura: {
       reader: READERS.JSON
     },
-    callback: ({getFixture, expectedResult, cataloger, skipValidation = false}) => {
+    callback: ({getFixture, expectedResult, cataloger}) => {
 
       const record1 = new MarcRecord(getFixture('record1.json'), {subfieldValues: false});
       const record2 = new MarcRecord(getFixture('record2.json'), {subfieldValues: false});
       debugData(`Record1:\n${record1}`);
       debugData(`Record2:\n${record2}`);
 
-      if (skipValidation) {
-        debug(`Running validation with validate: false`);
-        const result = validateUpdate({incomingRecord: record1, existingRecord: record2, cataloger, validate: false});
-        debug(`Result: ${JSON.stringify(result)}`);
-        assert.equal(result.updateValidationResult, 'skipped');
-        return;
-      }
-
       try {
-        const result = validateUpdate({incomingRecord: record1, existingRecord: record2, cataloger, validate: true});
+        const result = validateUpdate({incomingRecord: record1, existingRecord: record2, cataloger});
         debug('Did not get an error.');
         assert.deepStrictEqual(result.updateValidationResult, expectedResult);
       } catch (err) {

@@ -64,30 +64,6 @@
             "error": "boom"
           }
         ]
-      },
-      {
-        "logItemType": "SPLITTER_LOG",
-        "correlationId": "corr-1",
-        "recordNumber": 0,
-        "sequenceNumber": 1,
-        "readerErrors": [
-          {
-            "sequenceNumber": 1,
-            "error": "boom"
-          }
-        ]
-      },
-      {
-        "logItemType": "SPLITTER_LOG",
-        "correlationId": "corr-1",
-        "recordNumber": 0,
-        "sequenceNumber": 1,
-        "readerErrors": [
-          {
-            "sequenceNumber": 1,
-            "error": "boom"
-          }
-        ]
       }
     ],
     "blobSizes": [

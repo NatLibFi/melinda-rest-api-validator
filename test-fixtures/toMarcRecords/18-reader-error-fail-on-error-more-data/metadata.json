@@ -32,30 +32,6 @@
         "logItemType": "SPLITTER_LOG",
         "correlationId": "corr-1",
         "recordNumber": 0,
-        "sequenceNumber": 1,
-        "readerErrors": [
-          {
-            "sequenceNumber": 1,
-            "error": "Record is invalid: instance.fields does not meet minimum length of 1"
-          }
-        ]
-      },
-      {
-        "logItemType": "SPLITTER_LOG",
-        "correlationId": "corr-1",
-        "recordNumber": 0,
-        "sequenceNumber": 2,
-        "readerErrors": [
-          {
-            "sequenceNumber": 1,
-            "error": "Record is invalid: instance.fields does not meet minimum length of 1"
-          }
-        ]
-      },
-      {
-        "logItemType": "SPLITTER_LOG",
-        "correlationId": "corr-1",
-        "recordNumber": 0,
         "sequenceNumber": 2,
         "readerErrors": [
           {

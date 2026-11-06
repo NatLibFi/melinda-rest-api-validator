@@ -73,23 +73,15 @@ describe('validateRecordState', () => {
     fixura: {
       reader: READERS.JSON
     },
-    callback: ({getFixture, expectedToThrow, expectedStatus, expectedError, skipValidation, updateCats, mergedIncomingRecord = true}) => {
+    callback: ({getFixture, expectedToThrow, expectedStatus, expectedError, updateCats, mergedIncomingRecord = true}) => {
 
       const record1 = updateCatsInRecord(new MarcRecord(getFixture('record1.json'), {subfieldValues: false}), updateCats);
       const record2 = updateCatsInRecord(new MarcRecord(getFixture('record2.json'), {subfieldValues: false}), updateCats);
 
-      if (skipValidation) {
-        debug(`Running validation with (4th param) validate: false`);
-        const result = validateRecordState({incomingRecord: record1, existingRecord: record2, existingId: '000123456', recordMetadata: 'recordMetadata', validate: false, mergedIncomingRecord});
-        debug(`Result: ${result}`);
-        assert.equal(result, 'skipped');
-        return;
-      }
-
       if (expectedToThrow) {
         debugData(`Expecting error: ${expectedToThrow}, ${expectedStatus}, ${expectedError}`);
         try {
-          validateRecordState({incomingRecord: record1, existingRecord: record2, existingId: '000123456', recordMetadata: 'recordMetadata', validate: true, mergedIncomingRecord});
+          validateRecordState({incomingRecord: record1, existingRecord: record2, existingId: '000123456', recordMetadata: 'recordMetadata', mergedIncomingRecord});
           throw new Error('Expected an error');
         } catch (err) {
 
@@ -103,7 +95,7 @@ describe('validateRecordState', () => {
       }
 
       try {
-        validateRecordState({incomingRecord: record1, existingRecord: record2, existingId: '000123456', recordMetadata: 'recordMetadata', validate: true, mergedIncomingRecord});
+        validateRecordState({incomingRecord: record1, existingRecord: record2, existingId: '000123456', recordMetadata: 'recordMetadata', mergedIncomingRecord});
         debug('Did not get an error.');
       } catch (err) {
         debugData(err);

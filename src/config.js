@@ -40,6 +40,13 @@ const matchFailuresAsNew = readEnvironmentVariable('MATCH_FAILURES_AS_NEW', {def
 
 // We could have also settings matchValidation and merge here
 
+// MATCHING_TRESHOLD is the deprecated spelling of MATCHING_THRESHOLD.
+// The correctly spelled name wins; the old name still works as a fallback.
+const usesDeprecatedThresholdVariable = process.env.MATCHING_THRESHOLD === undefined && process.env.MATCHING_TRESHOLD !== undefined;
+if (usesDeprecatedThresholdVariable) {
+  console.warn('Environment variable MATCHING_TRESHOLD is deprecated and will be removed in a future major version. Use MATCHING_THRESHOLD instead.'); // eslint-disable-line no-console
+}
+
 export const validatorOptions = {
   recordType,
   preValidationFixOptions: generatePreValidationFixOptions(),
@@ -135,7 +142,8 @@ function generateMaxCandidates(validatorMatchPackage) {
 
 function generateThreshold(validatorMatchPackage) {
   debug(`Threshold for ${validatorMatchPackage} uses environment variable`);
-  return readEnvironmentVariable('MATCHING_TRESHOLD', {defaultValue: 0.8999, format: v => Number(v)});
+  const name = usesDeprecatedThresholdVariable ? 'MATCHING_TRESHOLD' : 'MATCHING_THRESHOLD';
+  return readEnvironmentVariable(name, {defaultValue: 0.8999, format: v => Number(v)});
 }
 
 function generatePreValidationFixOptions() {

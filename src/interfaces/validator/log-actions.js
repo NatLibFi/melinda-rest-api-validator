@@ -5,7 +5,7 @@ import {LOG_ITEM_TYPE} from '@natlibfi/melinda-rest-api-commons';
 const logger = createLogger();
 
 // logRecord
-export function logRecord(mongoLogOperator, {headers, record, recordMetadata, logItemType, logConfig}) {
+export async function logRecord(mongoLogOperator, {headers, record, recordMetadata, logItemType, logConfig}) {
 
   if (logConfig) {
     logger.debug(`Logging record to mongoLogs here (logConfig: ${logConfig}): `);
@@ -22,14 +22,14 @@ export function logRecord(mongoLogOperator, {headers, record, recordMetadata, lo
     };
 
     logger.silly(`RecordLogItem to add: ${inspect(recordLogItem)}`);
-    mongoLogOperator.addLogItem(recordLogItem);
+    await mongoLogOperator.addLogItem(recordLogItem);
 
     return;
   }
   logger.debug(`NOT logging record to mongoLogs here (logConfig: ${logConfig}): `);
 }
 
-export function logMatchAction(mongoLogOperator, {headers, record, matchResultsForLog = [], matcherReports, logNoMatches = false}) {
+export async function logMatchAction(mongoLogOperator, {headers, record, matchResultsForLog = [], matcherReports, logNoMatches = false}) {
 
   if (!logNoMatches && matchResultsForLog.length < 1) {
     logger.debug(`No matches, logNoMatches: ${logNoMatches} - not logging matchAction to mongoLogs`);
@@ -66,12 +66,12 @@ export function logMatchAction(mongoLogOperator, {headers, record, matchResultsF
   };
 
   logger.silly(`MatchLogItem to add: ${inspect(matchLogItem)}`);
-  mongoLogOperator.addLogItem(matchLogItem);
+  await mongoLogOperator.addLogItem(matchLogItem);
 
   return;
 }
 
-export function logMergeAction(mongoLogOperator, {headers, record, preference, existingRecord, id, mergeResult}) {
+export async function logMergeAction(mongoLogOperator, {headers, record, preference, existingRecord, id, mergeResult}) {
   logger.silly(inspect(headers));
   logger.debug(`Logging the mergeAction to mongoLogs here`);
 
@@ -97,7 +97,7 @@ export function logMergeAction(mongoLogOperator, {headers, record, preference, e
   };
 
   logger.silly(inspect(mergeLogItem));
-  mongoLogOperator.addLogItem(mergeLogItem);
+  await mongoLogOperator.addLogItem(mergeLogItem);
 
   return;
 }

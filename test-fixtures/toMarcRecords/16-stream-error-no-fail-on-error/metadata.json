@@ -1,5 +1,5 @@
 {
-  "description": "non-record stream error rejects even with failOnError off (only Record is invalid errors are skipped); keepSplitterReport ERROR pushes the report",
+  "description": "non-record stream errors fail the bulk by design even with failOnError=false (failOnError governs per-record tolerance only); keepSplitterReport ERROR pushes the report",
   "contentType": "application/xml",
   "operation": "UPDATE",
   "failOnError": false,
@@ -62,53 +62,9 @@
             "error": "boom"
           }
         ]
-      },
-      {
-        "recordNumber": 0,
-        "sequenceNumber": 1,
-        "readerErrors": [
-          {
-            "sequenceNumber": 1,
-            "error": "boom"
-          }
-        ]
-      },
-      {
-        "recordNumber": 0,
-        "sequenceNumber": 1,
-        "readerErrors": [
-          {
-            "sequenceNumber": 1,
-            "error": "boom"
-          }
-        ]
       }
     ],
     "logItems": [
-      {
-        "logItemType": "SPLITTER_LOG",
-        "correlationId": "corr-1",
-        "recordNumber": 0,
-        "sequenceNumber": 1,
-        "readerErrors": [
-          {
-            "sequenceNumber": 1,
-            "error": "boom"
-          }
-        ]
-      },
-      {
-        "logItemType": "SPLITTER_LOG",
-        "correlationId": "corr-1",
-        "recordNumber": 0,
-        "sequenceNumber": 1,
-        "readerErrors": [
-          {
-            "sequenceNumber": 1,
-            "error": "boom"
-          }
-        ]
-      },
       {
         "logItemType": "SPLITTER_LOG",
         "correlationId": "corr-1",

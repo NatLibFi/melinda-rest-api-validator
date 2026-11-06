@@ -18,17 +18,9 @@ describe('validateExistingRecord', () => {
     fixura: {
       reader: READERS.JSON
     },
-    callback: ({getFixture, expectedToThrow, expectedStatus, expectedError, skipValidation}) => {
+    callback: ({getFixture, expectedToThrow, expectedStatus, expectedError}) => {
 
       const record = new MarcRecord(getFixture('record.json'), {subfieldValues: false});
-
-      if (skipValidation) {
-        debug(`Running validation with (3rd param) validate: false`);
-        const result = validateExistingRecord(record, 'recordMetadata', false);
-        debug(`Result: ${result}`);
-        assert.equal(result, 'skipped');
-        return;
-      }
 
       debugData(`Expecting error: ${expectedToThrow}, ${expectedStatus}, ${expectedError}`);
 

@@ -1,5 +1,5 @@
 {
-  "description": "validate=false still validates: runValidations is validate || true, so a deleted record is rejected",
+  "description": "validate:false does not skip checks once the pipeline runs (validate is the pipeline-entry switch); a deleted existing record is rejected with 404 regardless",
   "fixType": "FIX",
   "validate": false,
   "sruScenario": "found",

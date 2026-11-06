@@ -17,12 +17,7 @@ const catalogerToConversionNameMapping = {
   ]
 };
 
-export function validateUpdate({incomingRecord, existingRecord, cataloger, validate = true}) {
-
-  if (validate === false) {
-    debug(`Skipping validateUpdate. Validate: ${validate}`);
-    return {updateValidationResult: 'skipped'};
-  }
+export function validateUpdate({incomingRecord, existingRecord, cataloger}) {
 
   const actualCataloger = cataloger && cataloger.id ? cataloger.id : cataloger;
   debug(`Found cataloger ${actualCataloger} from ${JSON.stringify(cataloger)}`);

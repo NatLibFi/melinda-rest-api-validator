@@ -9,15 +9,11 @@ import {Error as ValidationError} from '@natlibfi/melinda-commons';
 import {toTwoDigits, normalizeEmptySubfields} from '../../utils.js';
 
 // Checks that the modification history is identical
-export function validateRecordState({incomingRecord, existingRecord, existingId, recordMetadata, validate, mergedIncomingRecord = true}) {
+export function validateRecordState({incomingRecord, existingRecord, existingId, recordMetadata, mergedIncomingRecord = true}) {
   //const logger = createLogger();
   const debug = createDebugLogger('@natlibfi/melinda-rest-api-validator:validator:validate-record-state');
   const debugData = debug.extend('data');
 
-  if (validate === false) {
-    debug(`Skipping validateRecordState. Validate: ${validate}`);
-    return 'skipped';
-  }
   debug(`mergedIncomingRecord: ${mergedIncomingRecord}`);
 
   // MarcRecord.get returns empty array if there are no matching fields in the record

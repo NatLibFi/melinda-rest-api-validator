@@ -57,10 +57,16 @@ export default function ({amqpOperator, mongoOperator, splitterOptions, mongoLog
           logger.debug(`Error is a recordError: ${recordError}`);
 
           const recordResponseItem = createRecordResponseItem({responseStatus: httpStatus.UNPROCESSABLE_ENTITY, responsePayload: cleanErrorMessage, recordMetadata: getRecordMetadata({record: undefined, number: sequenceNumber}), id: undefined});
-          addRecordResponseItem({recordResponseItem, correlationId, mongoOperator});
+          addRecordResponseItem({recordResponseItem, correlationId, mongoOperator})
+            .catch(error => {
+              logger.debug(`Adding recordResponseItem for errored reader event failed: ${JSON.stringify(error)}`);
+              logError(error);
+            });
 
+          // failOnError governs per-record "Record is invalid" errors only.
+          // Any other (stream-level) reader error fails the bulk by design: the worker cannot
+          // distinguish a bad record from a broken source, and must not hand on a silently truncated result set.
           if (failOnError || !recordError) {
-            createSplitterReportAndLogs();
             reject(new ApiError(httpStatus.UNPROCESSABLE_ENTITY, `Invalid payload! (${sequenceNumber}) ${cleanErrorMessage}`));
           }
         })
@@ -97,7 +103,11 @@ export default function ({amqpOperator, mongoOperator, splitterOptions, mongoLog
               logger.debug(`Record ${number} has no valid id for ${headers.operation}. Available id: $<${id}>.`);
               const responsePayload = {message: `Invalid payload! Record ${number} has no valid id for ${headers.operation}. Available id: <${id}>.`};
               const recordResponseItem = createRecordResponseItem({responseStatus: httpStatus.UNPROCESSABLE_ENTITY, responsePayload, recordMetadata, id: undefined});
-              addRecordResponseItem({recordResponseItem, correlationId, mongoOperator});
+              addRecordResponseItem({recordResponseItem, correlationId, mongoOperator})
+                .catch(error => {
+                  logger.debug(`Adding recordResponseItem for invalid id failed: ${JSON.stringify(error)}`);
+                  logError(error);
+                });
 
               readerErrors.push({sequenceNumber, error: responsePayload});
               transformerErrored = true;
@@ -134,7 +144,11 @@ export default function ({amqpOperator, mongoOperator, splitterOptions, mongoLog
             const status = headers.operation === OPERATIONS.CREATE ? 'CREATED' : 'UPDATED';
             const databaseId = headers.operation === OPERATIONS.CREATE ? '000000000' : id;
             const recordResponseItem = createRecordResponseItem({responseStatus: status, responsePayload: 'Record read from stream. Noop.', recordMetadata, id: databaseId});
-            addRecordResponseItem({recordResponseItem, correlationId, mongoOperator});
+            addRecordResponseItem({recordResponseItem, correlationId, mongoOperator})
+              .catch(error => {
+                logger.debug(`Adding recordResponseItem for noop failed: ${JSON.stringify(error)}`);
+                logError(error);
+              });
 
             return log100thQueue(number, 'noop response created');
           }
@@ -142,31 +156,37 @@ export default function ({amqpOperator, mongoOperator, splitterOptions, mongoLog
         .on('end', async () => {
           logger.debug(`We got end from the reader`);
           await setTimeoutPromise(500); // Makes sure that even slowest promise is in the array
-          const queue = validateRecords ? `${QUEUE_ITEM_STATE.VALIDATOR.PENDING_VALIDATION}.${correlationId}` : `${headers.operation}.${correlationId}`;
+          try {
+            const queue = validateRecords ? `${QUEUE_ITEM_STATE.VALIDATOR.PENDING_VALIDATION}.${correlationId}` : `${headers.operation}.${correlationId}`;
 
-          logger.verbose(`Read ${promises.length} records from stream (${recordNumber} recs, ${readerErrors.length} errors from ${sequenceNumber} reader events.)`);
-          logger.info(`Sending ${promises.length} records to queue ${queue}! This might take some time!`);
-          // Add blobSize, just for completeness sake
-          mongoOperator.setBlobSize({correlationId, blobSize: sequenceNumber});
+            logger.verbose(`Read ${promises.length} records from stream (${recordNumber} recs, ${readerErrors.length} errors from ${sequenceNumber} reader events.)`);
+            logger.info(`Sending ${promises.length} records to queue ${queue}! This might take some time!`);
+            // Add blobSize, just for completeness sake
+            await mongoOperator.setBlobSize({correlationId, blobSize: sequenceNumber});
 
-          if (promises.length === 0) {
-            logger.debug(`Got no record promises from reader stream`);
+            if (promises.length === 0) {
+              // An empty bulk has no records to validate; failing with 422 is intentional
+              // (succeeding would mask an upstream failure), independent of failOnError.
+              logger.debug(`Got no record promises from reader stream`);
+              reject(new ApiError(httpStatus.UNPROCESSABLE_ENTITY, 'Invalid payload!'));
+            } else {
+              await Promise.all(promises);
+              logger.info(`Request handling done for ${correlationId}`);
+            }
+
             createSplitterReportAndLogs();
-            reject(new ApiError(httpStatus.UNPROCESSABLE_ENTITY, 'Invalid payload!'));
-          }
 
-          await Promise.all(promises);
-          logger.info(`Request handling done for ${correlationId}`);
-
-          createSplitterReportAndLogs();
-
-          if ((readerErrored || transformerErrored) && failOnError) {
-            logger.debug(`Reader or transformer errored, failOnError active, removing the queue.`);
-            amqpOperator.removeQueue(`${headers.operation}.${correlationId}`);
+            if ((readerErrored || transformerErrored) && failOnError) {
+              logger.debug(`Reader or transformer errored, failOnError active, removing the queue.`);
+              await amqpOperator.removeQueue(`${headers.operation}.${correlationId}`);
+            }
             return resolve();
-          }
-          return resolve();
 
+          } catch (error) {
+            logger.debug(`toMarcRecords 'end' handler errored: ${JSON.stringify(error)}`);
+            logError(error);
+            reject(error);
+          }
         });
 
       function createSplitterReportAndLogs() {
@@ -180,12 +200,18 @@ export default function ({amqpOperator, mongoOperator, splitterOptions, mongoLog
         };
 
         logger.silly(`${inspect(splitterLogItem, {depth: 6})}`);
-        mongoLogOperator.addLogItem(splitterLogItem);
+        Promise.resolve(mongoLogOperator.addLogItem(splitterLogItem)).catch(error => {
+          logger.debug(`Adding splitter log item failed: ${JSON.stringify(error)}`);
+          logError(error);
+        });
 
         logger.debug(`Creating splitterReport to queueItem if needed`);
         if ((keepSplitterReport === 'ALL') || (keepSplitterReport === 'ERROR' && (readerErrored || transformerErrored))) { 
           logger.debug(`Got ${readerErrors.length} errors. Pushing report to mongo`);
-          mongoOperator.pushMessages({correlationId, messages: [splitterReport], messageField: 'splitterReport'});
+          Promise.resolve(mongoOperator.pushMessages({correlationId, messages: [splitterReport], messageField: 'splitterReport'})).catch(error => {
+            logger.debug(`Pushing splitterReport failed: ${JSON.stringify(error)}`);
+            logError(error);
+          });
           return;
         }
         return;
@@ -216,6 +242,7 @@ export default function ({amqpOperator, mongoOperator, splitterOptions, mongoLog
         return ISO2709.reader(stream, {subfieldValues: false});
       }
 
+      // 415 is thrown before any record exists; there is nothing to skip, so it is always fatal.
       throw new ApiError(httpStatus.UNSUPPORTED_MEDIA_TYPE, 'Invalid content-type');
     }
 
