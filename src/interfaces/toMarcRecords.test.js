@@ -187,4 +187,74 @@ describe('toMarcRecords (stream splitting)', () => {
       assert.equal(amqpOperator.state.sent.length, 100);
     });
   });
+
+  describe('toMarcRecords (record response write containment)', () => {
+    it('Should contain a record response push failure on the invalid-id and noop paths', async () => {
+      // addRecordResponseItem is a fire-and-forget write; a push failure on
+      // the invalid-id and noop paths must be contained like the reader-error
+      // path, not surface as an unhandled rejection that exits the worker.
+      const amqpOperator = createFakeAmqpOperator();
+      const mongoLogOperator = createFakeMongoLogOperator();
+      const pushAttempts = [];
+      const mongoOperator = {
+        pushMessages: async ({messageField}) => {
+          pushAttempts.push(messageField);
+          if (messageField === 'records') {
+            throw new Error('mongo down');
+          }
+          return [];
+        },
+        setBlobSize: async () => []
+      };
+      const previousLogLevel = process.env.LOG_LEVEL;
+      process.env.LOG_LEVEL = 'debug';
+      const {streamToRecords} = streamToRecordsFactory({
+        amqpOperator, mongoOperator, mongoLogOperator,
+        splitterOptions: {failBulkOnError: false, keepSplitterReport: 'NONE'}
+      });
+      const unhandled = [];
+      const onUnhandledRejection = (reason) => unhandled.push(reason);
+      process.on('unhandledRejection', onUnhandledRejection);
+      const captured = [];
+      const stdoutStream = process.stdout;
+      const originalWrite = stdoutStream.write.bind(stdoutStream);
+      process.stdout.write = (chunk, ...args) => {captured.push(String(chunk)); return originalWrite(chunk, ...args);};
+      try {
+        // Invalid-id path: UPDATE record without a 001 -> id is undefined.
+        // With failOnError false the bulk still resolves (transformerErrored).
+        const invalidIdRecord = makeRecord([
+          {tag: '245', ind1: '1', ind2: ' ', subfields: [{code: 'a', value: 'title without id.'}]}
+        ]);
+        const invalidIdHeaders = {operation: 'UPDATE', correlationId: 'corr-pushfail', cataloger: {id: 'user1'}};
+        await streamToRecords({
+          correlationId: 'corr-pushfail', headers: invalidIdHeaders, contentType: 'application/json',
+          stream: Readable.from([JSON.stringify([invalidIdRecord])]), validateRecords: false, noop: false, failOnError: false
+        });
+
+        // Noop path: CREATE with noop and no validation skips the queue and
+        // writes a record response instead.
+        const noopRecord = makeRecord([
+          {tag: '245', ind1: '1', ind2: ' ', subfields: [{code: 'a', value: 'noop title.'}]}
+        ]);
+        const noopHeaders = {operation: 'CREATE', correlationId: 'corr-pushfail', cataloger: {id: 'user1'}};
+        await streamToRecords({
+          correlationId: 'corr-pushfail', headers: noopHeaders, contentType: 'application/json',
+          stream: Readable.from([JSON.stringify([noopRecord])]), validateRecords: false, noop: true, failOnError: false
+        });
+      } finally {
+        process.removeListener('unhandledRejection', onUnhandledRejection);
+        process.stdout.write = originalWrite;
+        if (previousLogLevel === undefined) delete process.env.LOG_LEVEL; else process.env.LOG_LEVEL = previousLogLevel;
+      }
+      // Both response writes were attempted and rejected...
+      assert.deepStrictEqual(pushAttempts, ['records', 'records']);
+      // ...and the rejection was caught (logged), never left unhandled.
+      assert.deepStrictEqual(unhandled, []);
+      const output = captured.join('');
+      assert.ok(output.includes('Adding recordResponseItem for invalid id failed'), 'output did not contain the invalid-id containment line');
+      assert.ok(output.includes('Adding recordResponseItem for noop failed'), 'output did not contain the noop containment line');
+      // The transform outcome is unchanged: nothing queued, no response items.
+      assert.deepStrictEqual(amqpOperator.state.sent, []);
+    });
+  });
 });

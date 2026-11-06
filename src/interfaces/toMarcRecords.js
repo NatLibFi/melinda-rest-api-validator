@@ -103,7 +103,11 @@ export default function ({amqpOperator, mongoOperator, splitterOptions, mongoLog
               logger.debug(`Record ${number} has no valid id for ${headers.operation}. Available id: $<${id}>.`);
               const responsePayload = {message: `Invalid payload! Record ${number} has no valid id for ${headers.operation}. Available id: <${id}>.`};
               const recordResponseItem = createRecordResponseItem({responseStatus: httpStatus.UNPROCESSABLE_ENTITY, responsePayload, recordMetadata, id: undefined});
-              addRecordResponseItem({recordResponseItem, correlationId, mongoOperator});
+              addRecordResponseItem({recordResponseItem, correlationId, mongoOperator})
+                .catch(error => {
+                  logger.debug(`Adding recordResponseItem for invalid id failed: ${JSON.stringify(error)}`);
+                  logError(error);
+                });
 
               readerErrors.push({sequenceNumber, error: responsePayload});
               transformerErrored = true;
@@ -140,7 +144,11 @@ export default function ({amqpOperator, mongoOperator, splitterOptions, mongoLog
             const status = headers.operation === OPERATIONS.CREATE ? 'CREATED' : 'UPDATED';
             const databaseId = headers.operation === OPERATIONS.CREATE ? '000000000' : id;
             const recordResponseItem = createRecordResponseItem({responseStatus: status, responsePayload: 'Record read from stream. Noop.', recordMetadata, id: databaseId});
-            addRecordResponseItem({recordResponseItem, correlationId, mongoOperator});
+            addRecordResponseItem({recordResponseItem, correlationId, mongoOperator})
+              .catch(error => {
+                logger.debug(`Adding recordResponseItem for noop failed: ${JSON.stringify(error)}`);
+                logError(error);
+              });
 
             return log100thQueue(number, 'noop response created');
           }
