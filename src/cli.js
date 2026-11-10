@@ -22,8 +22,10 @@
  *   usage errors or pipeline errors.
  *
  * Note: src/config.js reads env vars at module load. The CLI applies its
- * options to process.env BEFORE importing config.js, so within one process
- * the config reflects the first runCli() invocation only.
+ * options to process.env BEFORE importing config.js. The config import is
+ * keyed by the resolved record type, so within one process each record type
+ * gets its config from the environment as set by the first runCli() call
+ * that used it.
  */
 /* eslint-disable no-console */
 import {readFileSync, writeFileSync, realpathSync} from 'node:fs';
@@ -41,7 +43,14 @@ UPDATE operation runs the update validations against the target record.
 Options:
   --sru-url <url>                  SRU endpoint (or env SRU_URL). Required for live and
                                    --record runs; not needed for --stub-results / --replay
-                                   (no wire traffic) or a would-skip run (all entry gates off)
+                                   (no wire traffic), a would-skip run (all entry gates off)
+                                   or an autname CREATE run (validation probe, no SRU traffic)
+  --record-type bib|autname        Record type to probe (default: env RECORD_TYPE, else bib).
+                                   autname has no match stage: --merge on, --unique on and
+                                   the match flags (--match-packages / --match-selector-rules /
+                                   --match-failures-as-new) are rejected for it. A CREATE run
+                                   is a validation probe needing no SRU traffic; an UPDATE
+                                   probe works against an autname SRU endpoint via --sru-url
   --operation CREATE|UPDATE        Operation to probe (default: CREATE)
   --target-id <id>                 Target record id, required with --operation UPDATE
                                    (9-digit Aleph id; must match the record's 001 if present)
@@ -63,7 +72,8 @@ Options:
   -h, --help                       Show this help
 
 Record input: one record JSON in internal MarcRecord format ({leader, fields}).
-Only RECORD_TYPE=bib is supported. Read-only SRU traffic only (no Mongo / AMQP / Aleph).
+Record type: --record-type bib|autname (default: env RECORD_TYPE, else bib); see the
+flag description for the autname restrictions. Read-only SRU traffic only (no Mongo / AMQP / Aleph).
 SRU source: --stub-results / --replay / --record are mutually exclusive. Fixture and
 capture files share one format: {entries: [{url, status, body}]} keyed by the exact SRU
 request URL (built from the SRU endpoint, or a placeholder endpoint when none is given).
@@ -77,6 +87,7 @@ export function parseArgs(argv) {
   const args = {
     recordFile: undefined,
     sruUrl: undefined,
+    recordType: undefined,
     matchPackages: undefined,
     operation: 'CREATE',
     targetId: undefined,
@@ -110,6 +121,8 @@ export function parseArgs(argv) {
       args.output = next();
     } else if (arg === '--sru-url') {
       args.sruUrl = next();
+    } else if (arg === '--record-type') {
+      args.recordType = parseRecordType(arg, next());
     } else if (arg === '--operation') {
       args.operation = parseOperation(arg, next());
     } else if (arg === '--target-id') {
@@ -198,6 +211,35 @@ function parseOperation(flag, value) {
     return value;
   }
   throw new CliError(`Invalid value for ${flag}: ${value} (use CREATE|UPDATE)`);
+}
+
+function parseRecordType(flag, value) {
+  if (value === 'bib' || value === 'autname') {
+    return value;
+  }
+  throw new CliError(`Invalid value for ${flag}: ${value} (use bib|autname)`);
+}
+
+// autname gates, mirroring the production 400 in the validator interface:
+// merge and unique are not yet usable with non-bib records, and the match
+// flags are no-ops for autname, so they are rejected explicitly instead of
+// implying they do anything. Runs before the dynamic config import and any
+// pipeline work
+function validateRecordTypeGates(args, recordType) {
+  if (recordType !== 'autname') {
+    return;
+  }
+  if (args.merge === 'on' || args.unique === 'on') {
+    throw new CliError('merge and unique are not yet usable with non-bib records (autname): use --merge off and --unique off');
+  }
+  const matchFlags = [
+    args.matchPackages !== undefined && '--match-packages',
+    args.matchSelectorRules !== undefined && '--match-selector-rules',
+    args.matchFailuresAsNew !== undefined && '--match-failures-as-new'
+  ].filter(Boolean);
+  if (matchFlags.length > 0) {
+    throw new CliError(`${matchFlags.join(', ')} are no-ops for autname records and cannot be combined with --record-type autname`);
+  }
 }
 
 // Read the 001 value from the record file for the UPDATE --target-id mismatch check
@@ -306,24 +348,36 @@ export async function runCli(argv) {
     return {args, trace: null, exitCode: 0};
   }
 
+  // Resolve the record type before anything that touches config or the
+  // pipeline: the flag wins, then env RECORD_TYPE, then bib. The autname
+  // gates run right here, before the dynamic config import and any pipeline work
+  const recordType = args.recordType ?? (process.env.RECORD_TYPE || 'bib');
+  if (recordType !== 'bib' && recordType !== 'autname') {
+    throw new CliError(`Invalid record type: ${recordType} (allowed values: bib, autname)`);
+  }
+  validateRecordTypeGates(args, recordType);
+
   const sruMode = sruModeOf(args);
   const givenUrl = args.sruUrl ?? process.env.SRU_URL;
   // stub/replay runs are fully offline: the URL only feeds config.js and the
   // fetch interceptor's match prefix (DUMMY_SRU_URL when absent). A would-skip
-  // live run (all entry gates off) makes no SRU requests either, so it needs no
-  // endpoint: DUMMY_SRU_URL stands in for config.js and is never hit
+  // live run (all entry gates off) makes no SRU requests either, and an
+  // autname CREATE run makes none at all (no match stage and no getRecord on
+  // the CREATE path), so neither needs an endpoint: DUMMY_SRU_URL stands in
+  // for config.js and is never hit
   const wouldSkip = args.merge !== 'on' && args.unique !== 'on' && args.validate !== 'on';
-  const sruUrl = sruMode === 'stub' || sruMode === 'replay' || (sruMode === 'live' && wouldSkip) ? givenUrl ?? DUMMY_SRU_URL : givenUrl;
+  const autnameCreateNoSru = recordType === 'autname' && args.operation === 'CREATE';
+  const sruUrl = sruMode === 'stub' || sruMode === 'replay' || (sruMode === 'live' && (wouldSkip || autnameCreateNoSru)) ? givenUrl ?? DUMMY_SRU_URL : givenUrl;
   if (!sruUrl) {
     throw new CliError('No SRU endpoint given: use --sru-url <url> or set env SRU_URL');
   }
 
-  applyCliEnv(args, sruUrl);
+  applyCliEnv(args, sruUrl, recordType);
 
   const stopNoiseSuppression = suppressEnvNoise(process.env.LOG_LEVEL);
   let loaded;
   try {
-    loaded = await loadValidator();
+    loaded = await loadValidator(recordType);
   } finally {
     stopNoiseSuppression();
   }
@@ -360,12 +414,9 @@ export async function runCli(argv) {
 }
 
 // Apply CLI options to env BEFORE config.js is imported (it reads env at module load)
-function applyCliEnv(args, sruUrl) {
+function applyCliEnv(args, sruUrl, recordType) {
   process.env.SRU_URL = sruUrl;
-  process.env.RECORD_TYPE = process.env.RECORD_TYPE || 'bib';
-  if (process.env.RECORD_TYPE !== 'bib') {
-    throw new CliError(`Only RECORD_TYPE=bib is supported (got ${process.env.RECORD_TYPE})`);
-  }
+  process.env.RECORD_TYPE = recordType;
   if (args.matchPackages) {
     process.env.VALIDATOR_MATCH_PACKAGES = args.matchPackages;
   }
@@ -417,9 +468,13 @@ function suppressEnvNoise(logLevel) {
   };
 }
 
-async function loadValidator() {
+// config.js is imported keyed by the record type: it reads env at module
+// load and Node caches modules per URL, so each record type within one
+// process gets its config from the environment set by the first runCli()
+// call that used it
+async function loadValidator(recordType) {
   const [{validatorOptions}, {validationsFactory}, {MarcRecord}, {fixes}] = await Promise.all([
-    import('./config.js'),
+    import(`./config.js?recordType=${recordType}`),
     import('./interfaces/validator/validations.js'),
     import('@natlibfi/marc-record'),
     import('@natlibfi/melinda-rest-api-commons')
@@ -498,6 +553,7 @@ function buildTrace({args, sruUrl, validatorOptions, merge, logItems, outcome, o
     sruUrl,
     options: {
       operation: args.operation,
+      recordType: validatorOptions.recordType,
       targetId: args.targetId,
       merge,
       unique: args.unique === 'on',
@@ -571,7 +627,7 @@ export function printTrace(trace) {
   if (options.captureFile) {
     console.log(`SRU capture: ${options.captureFile}`);
   }
-  console.log(`Options:   operation=${options.operation}${options.targetId ? ` targetId=${options.targetId}` : ''} merge=${options.merge} unique=${options.unique} validate=${options.validate} matchFailuresAsNew=${options.matchFailuresAsNew ?? 'config-default'} packages=${options.matchPackages.join(',')} selectorRules=${options.matchSelectorRules.join(',')} stopWhenFound=${options.stopWhenFound} thresholds=${JSON.stringify(options.thresholds)}`);
+  console.log(`Options:   operation=${options.operation} recordType=${options.recordType}${options.targetId ? ` targetId=${options.targetId}` : ''} merge=${options.merge} unique=${options.unique} validate=${options.validate} matchFailuresAsNew=${options.matchFailuresAsNew ?? 'config-default'} packages=${options.matchPackages.join(',')} selectorRules=${options.matchSelectorRules.join(',')} stopWhenFound=${options.stopWhenFound} thresholds=${JSON.stringify(options.thresholds)}`);
   console.log('');
   console.log(`Matcher stages (${trace.matcherReports.length}):`);
   for (const report of trace.matcherReports) {

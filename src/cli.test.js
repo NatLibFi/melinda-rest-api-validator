@@ -7,7 +7,7 @@ import {fileURLToPath} from 'node:url';
 import {describe, it, before, after} from 'node:test';
 import {MarcRecord} from '@natlibfi/marc-record';
 import {MARCXML} from '@natlibfi/marc-record-serializers';
-import {parseArgs, runCli, loadStubFile, createStubFetch, createRecordFetch, DUMMY_SRU_URL, USAGE} from './cli.js';
+import {parseArgs, runCli, loadStubFile, createStubFetch, createRecordFetch, DUMMY_SRU_URL, USAGE, printTrace} from './cli.js';
 
 // Shared fixtures for the stubbed-SRU pipeline tests: the candidate shares the
 // melinda 035 id with the incoming record, so the IDS matcher finds it at 1.0
@@ -114,6 +114,16 @@ describe('parseArgs (cli)', () => {
 
   it('Should fail on invalid --match-failures-as-new value', () => {
     assert.throws(() => parseArgs(['rec.json', '--match-failures-as-new', 'true']), /Invalid value for --match-failures-as-new/);
+  });
+
+  it('Should parse --record-type bib and autname, defaulting to undefined', () => {
+    assert.strictEqual(parseArgs(['rec.json', '--record-type', 'bib']).recordType, 'bib');
+    assert.strictEqual(parseArgs(['rec.json', '--record-type', 'autname']).recordType, 'autname');
+    assert.strictEqual(parseArgs(['rec.json']).recordType, undefined);
+  });
+
+  it('Should fail on invalid --record-type value', () => {
+    assert.throws(() => parseArgs(['rec.json', '--record-type', 'foo']), /Invalid value for --record-type: foo \(use bib\|autname\)/);
   });
 
   it('Should fail on missing flag value', () => {
@@ -655,6 +665,222 @@ describe('runCli (cli entry gate, stubbed SRU)', () => {
         process.env.SRU_URL = previousSruUrl;
       }
     }
+  });
+});
+
+// autname record type: there is no match stage, so merge/unique and the match
+// flags are rejected (mirroring the production 400). The meaningful runs are a
+// CREATE validation probe (no SRU traffic at all) and an UPDATE probe against
+// an autname SRU endpoint. The records carry 001 + 150/700-style aut fields +
+// 003, no bib fields
+describe('runCli (cli autname record type, stubbed SRU)', () => {
+  const autnameRecord = {
+    leader: '00000nam a2200000 a 4500',
+    fields: [
+      {tag: '001', value: '000012345'},
+      {tag: '150', ind1: ' ', ind2: '0', subfields: [{code: 'a', value: 'author, of the'}]},
+      {tag: '700', ind1: ' ', ind2: ' ', subfields: [{code: 'a', value: 'second, author name'}]},
+      {tag: '035', ind1: ' ', ind2: ' ', subfields: [{code: 'a', value: '(FI-MELINDA)012345678'}]},
+      {tag: '003', value: 'FI-MELINDA'}
+    ]
+  };
+  // 003 present but not FI-MELINDA: fails the built-in validations, like the
+  // bib validation-failure test
+  const badAutnameRecord = {
+    ...autnameRecord,
+    fields: autnameRecord.fields.map(field => (field.tag === '003' ? {tag: '003', value: 'FI-OTHER'} : field))
+  };
+  const autnameTargetXml = MARCXML.to(new MarcRecord(autnameRecord, {subfieldValues: false}));
+  const autnameTargetResponseXml = `<?xml version="1.0" encoding="UTF-8"?>
+<zs:searchRetrieveResponse xmlns:zs="http://www.loc.gov/zhals/schema/v1/">
+  <zs:numberOfRecords>1</zs:numberOfRecords>
+  <zs:records>
+    <zs:record>
+      <zs:recordPosition>1</zs:recordPosition>
+      <zs:recordData>${autnameTargetXml}</zs:recordData>
+    </zs:record>
+  </zs:records>
+</zs:searchRetrieveResponse>`;
+
+  let recordFile;
+  let badRecordFile;
+  let bibRecordFile;
+  const originalFetch = globalThis.fetch;
+  const previousRecordType = process.env.RECORD_TYPE;
+  let fetchCalls = 0;
+
+  before(() => {
+    const dir = mkdtempSync(join(tmpdir(), 'validator-cli-'));
+    recordFile = join(dir, 'record.json');
+    badRecordFile = join(dir, 'bad.json');
+    bibRecordFile = join(dir, 'bib.json');
+    writeFileSync(recordFile, JSON.stringify(autnameRecord));
+    writeFileSync(badRecordFile, JSON.stringify(badAutnameRecord));
+    writeFileSync(bibRecordFile, JSON.stringify(record));
+    globalThis.fetch = async () => {
+      fetchCalls += 1;
+      return new Response(emptySruResponseXml, {status: 200, headers: {'Content-Type': 'text/xml'}});
+    };
+  });
+
+  after(() => {
+    globalThis.fetch = originalFetch;
+    if (previousRecordType === undefined) {
+      delete process.env.RECORD_TYPE;
+    } else {
+      process.env.RECORD_TYPE = previousRecordType;
+    }
+  });
+
+  it('Should default recordType to bib when the flag and env RECORD_TYPE are unset', async () => {
+    const previous = process.env.RECORD_TYPE;
+    delete process.env.RECORD_TYPE;
+    try {
+      const {trace} = await runCli([bibRecordFile, '--sru-url', SRU_URL, '--unique', 'off', '--validate', 'on']);
+
+      assert.strictEqual(trace.options.recordType, 'bib');
+    } finally {
+      if (previous !== undefined) {
+        process.env.RECORD_TYPE = previous;
+      }
+    }
+  });
+
+  it('Should reject autname with --merge on (mirrors the production 400)', async () => {
+    await assert.rejects(
+      runCli(['rec.json', '--record-type', 'autname', '--merge', 'on']),
+      /merge and unique are not yet usable with non-bib records \(autname\)/
+    );
+  });
+
+  it('Should reject autname with --unique on (mirrors the production 400)', async () => {
+    await assert.rejects(
+      runCli(['rec.json', '--record-type', 'autname', '--unique', 'on']),
+      /merge and unique are not yet usable with non-bib records \(autname\)/
+    );
+  });
+
+  it('Should reject autname with any match flag', async () => {
+    await assert.rejects(
+      runCli(['rec.json', '--record-type', 'autname', '--unique', 'off', '--match-packages', 'IDS']),
+      /--match-packages are no-ops for autname records/
+    );
+    await assert.rejects(
+      runCli(['rec.json', '--record-type', 'autname', '--unique', 'off', '--match-selector-rules', 'MELINDA_ID']),
+      /--match-selector-rules are no-ops for autname records/
+    );
+    await assert.rejects(
+      runCli(['rec.json', '--record-type', 'autname', '--unique', 'off', '--match-failures-as-new', '1']),
+      /--match-failures-as-new are no-ops for autname records/
+    );
+  });
+
+  it('Should reject an invalid env RECORD_TYPE (allowed values listed)', async () => {
+    process.env.RECORD_TYPE = 'foo';
+    try {
+      await assert.rejects(runCli(['rec.json']), /Invalid record type: foo \(allowed values: bib, autname\)/);
+    } finally {
+      delete process.env.RECORD_TYPE;
+    }
+  });
+
+  it('Should run an autname CREATE validation probe with exit 0, create outcome and zero SRU traffic (no --sru-url needed)', async () => {
+    const previousSruUrl = process.env.SRU_URL;
+    delete process.env.SRU_URL;
+    fetchCalls = 0;
+    try {
+      const {trace, exitCode} = await runCli([recordFile, '--record-type', 'autname', '--unique', 'off', '--validate', 'on']);
+
+      assert.strictEqual(exitCode, 0);
+      assert.strictEqual(trace.outcome.kind, 'create');
+      assert.strictEqual(trace.outcome.operation, 'CREATE');
+      assert.strictEqual(trace.options.recordType, 'autname');
+      assert.strictEqual(trace.sruUrl, DUMMY_SRU_URL);
+      // no match stage for autname: no matcher reports, no candidates, no packages
+      assert.deepStrictEqual(trace.matcherReports, []);
+      assert.deepStrictEqual(trace.candidates, []);
+      assert.deepStrictEqual(trace.options.matchPackages, []);
+      assert.strictEqual(trace.merge, null);
+      assert.strictEqual(fetchCalls, 0);
+    } finally {
+      if (previousSruUrl !== undefined) {
+        process.env.SRU_URL = previousSruUrl;
+      }
+    }
+  });
+
+  it('Should report VALIDATION FAILED for an autname CREATE probe when the 003 is not FI-MELINDA', async () => {
+    const previousSruUrl = process.env.SRU_URL;
+    delete process.env.SRU_URL;
+    fetchCalls = 0;
+    try {
+      const {trace, exitCode} = await runCli([badRecordFile, '--record-type', 'autname', '--unique', 'off', '--validate', 'on']);
+
+      assert.strictEqual(exitCode, 0);
+      assert.strictEqual(trace.outcome.kind, 'failed');
+      assert.strictEqual(trace.outcome.status, 422);
+      assert.ok(trace.outcome.messages.length > 0);
+      assert.strictEqual(trace.options.recordType, 'autname');
+      assert.strictEqual(fetchCalls, 0);
+    } finally {
+      if (previousSruUrl !== undefined) {
+        process.env.SRU_URL = previousSruUrl;
+      }
+    }
+  });
+
+  it('Should run the autname UPDATE probe against the stubbed SRU target and report update', async () => {
+    globalThis.fetch = async () => new Response(autnameTargetResponseXml, {status: 200, headers: {'Content-Type': 'text/xml'}});
+    try {
+      const {trace, exitCode} = await runCli([recordFile, '--sru-url', SRU_URL, '--record-type', 'autname', '--operation', 'UPDATE', '--target-id', '000012345', '--unique', 'off', '--validate', 'on']);
+
+      assert.strictEqual(exitCode, 0);
+      assert.strictEqual(trace.outcome.kind, 'update');
+      assert.strictEqual(trace.outcome.operation, 'UPDATE');
+      assert.strictEqual(trace.outcome.id, '000012345');
+      assert.strictEqual(trace.options.recordType, 'autname');
+      assert.strictEqual(trace.options.targetId, '000012345');
+      // no match stage for autname: no matcher reports, no candidates, no merge
+      assert.deepStrictEqual(trace.matcherReports, []);
+      assert.deepStrictEqual(trace.candidates, []);
+      assert.strictEqual(trace.merge, null);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('Should report WOULD_SKIP_VALIDATION for an autname run with all gates off (no SRU traffic)', async () => {
+    fetchCalls = 0;
+    const {trace, exitCode} = await runCli([recordFile, '--sru-url', SRU_URL, '--record-type', 'autname', '--unique', 'off']);
+
+    assert.strictEqual(exitCode, 0);
+    assert.strictEqual(trace.outcome.kind, 'wouldSkipValidation');
+    assert.strictEqual(trace.options.recordType, 'autname');
+    assert.strictEqual(fetchCalls, 0);
+  });
+
+  it('Should print recordType in the Options line of the trace', async () => {
+    const previousSruUrl = process.env.SRU_URL;
+    delete process.env.SRU_URL;
+    let trace;
+    try {
+      ({trace} = await runCli([recordFile, '--record-type', 'autname', '--unique', 'off', '--validate', 'on']));
+    } finally {
+      if (previousSruUrl !== undefined) {
+        process.env.SRU_URL = previousSruUrl;
+      }
+    }
+
+    const lines = [];
+    const originalLog = console.log; // eslint-disable-line no-console
+    console.log = (...logArgs) => {lines.push(logArgs.join(' '));}; // eslint-disable-line no-console
+    try {
+      printTrace(trace);
+    } finally {
+      console.log = originalLog; // eslint-disable-line no-console
+    }
+    const optionsLine = lines.find(line => line.startsWith('Options:'));
+    assert.match(optionsLine, /recordType=autname/);
   });
 });
 

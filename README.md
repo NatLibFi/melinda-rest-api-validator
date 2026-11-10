@@ -156,6 +156,7 @@ melinda-validator-cli <record.json> --sru-url https://sru.api.melinda.kansallisk
 |------------------------|------------------------------------------------------------------------------------------------------|
 | `--sru-url <url>`      | SRU endpoint. Mandatory for live runs and `--record`; not needed with `--stub-results` / `--replay` (fully offline, the URL is not used on the wire) or for a would-skip run (all entry gates off — no SRU requests are issued). Defaults to the `SRU_URL` environment variable. |
 | `--operation CREATE\|UPDATE` | Operation to probe: `CREATE` (default) or `UPDATE`. `UPDATE` requires `--target-id`.        |
+| `--record-type bib\|autname` | Record type to probe. Defaults to the `RECORD_TYPE` environment variable, or `bib`. `autname` records have no match stage: `--merge on`, `--unique on` and the match flags (`--match-packages` / `--match-selector-rules` / `--match-failures-as-new`) are rejected for them — see "Autname records" below. |
 | `--target-id <id>`     | Target record id for `--operation UPDATE`. Must be a 9-digit Aleph id, and match the record's `001` if present. |
 | `--match-packages <a,b,c>` | Match packages to run. Defaults to the `VALIDATOR_MATCH_PACKAGES` environment variable, or `IDS,STANDARD_IDS,CONTENTALT`. |
 | `--merge on\|off`      | Run the merge path when matches are found. Defaults to `off` (report the conflict instead of merging). |
@@ -170,7 +171,8 @@ melinda-validator-cli <record.json> --sru-url https://sru.api.melinda.kansallisk
 | `-h, --help`           | Show the option reference.                                                                            |
 
 **Input**: one record JSON file in the internal `MarcRecord` format
-(`{leader, fields}`). Only `RECORD_TYPE=bib` is supported. The `UPDATE`
+(`{leader, fields}`). The record type comes from `--record-type`
+(default: the `RECORD_TYPE` environment variable, or `bib`). The `UPDATE`
 operation requires `--target-id`, and the record's `001` (if present) must
 match it.
 
@@ -187,6 +189,21 @@ pipeline). With `-o`, the same trace is written as JSON.
 `merge` / `unique` / `validate` is enabled. The CLI mirrors this: with all
 three off it reports `WOULD_SKIP_VALIDATION` (exit code `0`) without running
 the pipeline or issuing any SRU requests.
+
+**Autname records**: with `--record-type autname` there is no match stage, so
+`--merge on`, `--unique on` and the match flags
+(`--match-packages` / `--match-selector-rules` / `--match-failures-as-new`)
+are rejected — the CLI fails fast instead of implying they do anything. The
+meaningful runs are a `CREATE` probe with `--validate on` (a pure validation
+probe that issues no SRU requests — no `--sru-url` needed) and an `UPDATE`
+probe against an autname SRU endpoint:
+
+```sh
+melinda-validator-cli autname.json --record-type autname --unique off --validate on
+melinda-validator-cli autname.json --record-type autname --unique off --validate on \
+  --sru-url <https://your-sru-endpoint>/autname/prv \
+  --operation UPDATE --target-id 000012345
+```
 
 **Exit codes**: `0` when the pipeline reaches any decision (create / merge /
 update / skip / 409 conflict / validation failed / would-skip-validation);
