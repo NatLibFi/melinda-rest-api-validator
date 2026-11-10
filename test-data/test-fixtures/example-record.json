@@ -1,0 +1,11 @@
+{
+  "leader": "00000nam a22004934i 4500",
+  "fields": [
+    {"tag": "001", "value": "000012345"},
+    {"tag": "003", "value": "FI-MELINDA"},
+    {"tag": "035", "ind1": " ", "ind2": " ", "subfields": [{"code": "a", "value": "(FI-MELINDA)012345678"}]},
+    {"tag": "100", "ind1": "0", "ind2": " ", "subfields": [{"code": "a", "value": "example, author of the"}]},
+    {"tag": "245", "ind1": "1", "ind2": " ", "subfields": [{"code": "a", "value": "example record title."}]},
+    {"tag": "020", "ind1": " ", "ind2": " ", "subfields": [{"code": "a", "value": "978-1-23456-7-8"}]}
+  ]
+}

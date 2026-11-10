@@ -26,8 +26,8 @@
  * the config reflects the first runCli() invocation only.
  */
 /* eslint-disable no-console */
-import {readFileSync, writeFileSync} from 'node:fs';
-import {pathToFileURL} from 'node:url';
+import {readFileSync, writeFileSync, realpathSync} from 'node:fs';
+import {fileURLToPath} from 'node:url';
 
 import {isValidAlephId, getRecordMetadata} from './utils.js';
 
@@ -40,8 +40,8 @@ UPDATE operation runs the update validations against the target record.
 
 Options:
   --sru-url <url>                  SRU endpoint (or env SRU_URL). Required for live and
-                                   --record runs; optional for --stub-results / --replay
-                                   (the URL is not used on the wire in those modes)
+                                   --record runs; not needed for --stub-results / --replay
+                                   (no wire traffic) or a would-skip run (all entry gates off)
   --operation CREATE|UPDATE        Operation to probe (default: CREATE)
   --target-id <id>                 Target record id, required with --operation UPDATE
                                    (9-digit Aleph id; must match the record's 001 if present)
@@ -309,15 +309,25 @@ export async function runCli(argv) {
   const sruMode = sruModeOf(args);
   const givenUrl = args.sruUrl ?? process.env.SRU_URL;
   // stub/replay runs are fully offline: the URL only feeds config.js and the
-  // fetch interceptor's match prefix (DUMMY_SRU_URL when absent)
-  const sruUrl = sruMode === 'stub' || sruMode === 'replay' ? givenUrl ?? DUMMY_SRU_URL : givenUrl;
+  // fetch interceptor's match prefix (DUMMY_SRU_URL when absent). A would-skip
+  // live run (all entry gates off) makes no SRU requests either, so it needs no
+  // endpoint: DUMMY_SRU_URL stands in for config.js and is never hit
+  const wouldSkip = args.merge !== 'on' && args.unique !== 'on' && args.validate !== 'on';
+  const sruUrl = sruMode === 'stub' || sruMode === 'replay' || (sruMode === 'live' && wouldSkip) ? givenUrl ?? DUMMY_SRU_URL : givenUrl;
   if (!sruUrl) {
     throw new CliError('No SRU endpoint given: use --sru-url <url> or set env SRU_URL');
   }
 
   applyCliEnv(args, sruUrl);
 
-  const {validatorOptions, validationsFactory, MarcRecord, fixRecord} = await loadValidator();
+  const stopNoiseSuppression = suppressEnvNoise(process.env.LOG_LEVEL);
+  let loaded;
+  try {
+    loaded = await loadValidator();
+  } finally {
+    stopNoiseSuppression();
+  }
+  const {validatorOptions, validationsFactory, MarcRecord, fixRecord} = loaded;
 
   // Swap in the fetch interceptor for the duration of the pipeline run so all
   // SRU traffic (matcher searches + rec.id lookups) goes through it; the
@@ -366,6 +376,45 @@ function applyCliEnv(args, sruUrl) {
   process.env.LOG_NO_MATCHES = process.env.LOG_NO_MATCHES || '1';
   // Keep the trace output clean: suppress library log noise by default (override with env LOG_LEVEL)
   process.env.LOG_LEVEL = process.env.LOG_LEVEL || 'error';
+}
+
+// ---------------------------------------------------------------------------
+// Third-party env noise suppression
+//
+// Importing the validator dependencies emits two kinds of noise that their own
+// configuration cannot silence:
+//   - a "\u25c7 injected env (N) from .env" banner per dotenv.config() call: the
+//     natural package (pulled in by @natlibfi/melinda-record-matching) calls
+//     dotenv in five of its storage classes at module load (stdout)
+//   - "No environment variable set for X, using default value: \u2026" lines from
+//     readEnvironmentVariable in @natlibfi/melinda-{,backend-}commons, one per
+//     defaulted config variable (stderr)
+// Both fire at module load time, inside loadValidator's dynamic imports. The
+// filter routes exactly those lines away for the duration of the imports. It is
+// skipped when LOG_LEVEL=debug, so the noise stays visible while debugging
+// config (the CLI defaults LOG_LEVEL to 'error' when unset; see applyCliEnv)
+function suppressEnvNoise(logLevel) {
+  if (logLevel === 'debug') {
+    return () => {};
+  }
+  const originalError = console.error;
+  const originalLog = console.log;
+  console.error = (...args) => {
+    if (args.length === 1 && typeof args[0] === 'string' && /^No environment variable set for \S+, using default value: /.test(args[0])) {
+      return;
+    }
+    originalError(...args);
+  };
+  console.log = (...args) => {
+    if (args.length === 1 && typeof args[0] === 'string' && /\u25c7 injected env \(\d+\) from /.test(args[0])) {
+      return;
+    }
+    originalLog(...args);
+  };
+  return () => {
+    console.error = originalError;
+    console.log = originalLog;
+  };
 }
 
 async function loadValidator() {
@@ -515,7 +564,7 @@ function classifyError(err) {
 export function printTrace(trace) {
   const {options} = trace;
   console.log(`Record:    ${trace.recordFile}`);
-  console.log(`SRU:       ${trace.sruUrl}`);
+  console.log(`SRU:       ${trace.sruUrl}${trace.sruUrl === DUMMY_SRU_URL ? ' (placeholder, no SRU traffic)' : ''}`);
   if (options.stubFile) {
     console.log(`SRU source: ${options.sruMode} file ${options.stubFile}`);
   }
@@ -594,7 +643,10 @@ async function main() {
   }
 }
 
-const invokedDirectly = process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
+// import.meta.url is realpathed by Node, while process.argv[1] is the literal
+// path the user ran — comparing them directly misses symlinked invocations
+// (.bin/melinda-validator-cli, npm link, npx .), so compare realpaths instead
+const invokedDirectly = process.argv[1] !== undefined && fileURLToPath(import.meta.url) === realpathSync(process.argv[1]);
 if (invokedDirectly) {
   main();
 }

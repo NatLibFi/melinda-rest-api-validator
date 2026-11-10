@@ -139,12 +139,22 @@ paths).
 ### Usage
 
 ```sh
+node src/cli.js <record.json> --sru-url https://sru.api.melinda.kansalliskirjasto.fi/bib/prv [--options]
+```
+
+The package's `bin` entry (`melinda-validator-cli`, `./src/cli.js`) also works
+once the package is linked or installed locally — for example `npm link` from
+the package root (or `npm install ../melinda-rest-api-validator` from another
+project) puts `melinda-validator-cli` on your `PATH`, so the examples above and
+below can be run as `melinda-validator-cli …` instead of `node src/cli.js …`.
+
+```sh
 melinda-validator-cli <record.json> --sru-url https://sru.api.melinda.kansalliskirjasto.fi/bib/prv [--options]
 ```
 
 | Option                 | Description                                                                                          |
 |------------------------|------------------------------------------------------------------------------------------------------|
-| `--sru-url <url>`      | SRU endpoint. Mandatory for live runs and `--record`; optional with `--stub-results` / `--replay` (fully offline, the URL is not used on the wire). Defaults to the `SRU_URL` environment variable. |
+| `--sru-url <url>`      | SRU endpoint. Mandatory for live runs and `--record`; not needed with `--stub-results` / `--replay` (fully offline, the URL is not used on the wire) or for a would-skip run (all entry gates off — no SRU requests are issued). Defaults to the `SRU_URL` environment variable. |
 | `--operation CREATE\|UPDATE` | Operation to probe: `CREATE` (default) or `UPDATE`. `UPDATE` requires `--target-id`.        |
 | `--target-id <id>`     | Target record id for `--operation UPDATE`. Must be a 9-digit Aleph id, and match the record's `001` if present. |
 | `--match-packages <a,b,c>` | Match packages to run. Defaults to the `VALIDATOR_MATCH_PACKAGES` environment variable, or `IDS,STANDARD_IDS,CONTENTALT`. |
@@ -213,6 +223,52 @@ one format, keyed by the exact SRU request URL:
   in the same format — useful for pinning a specific candidate set or
   historical decision. A stub/replay run is fully offline: a URL with no
   fixture entry is a loud error — the run never falls back to the network.
+
+### Worked offline dry-run example
+
+A fully offline probe against a committed fixture: the example record
+(`test-data/test-fixtures/example-record.json`) carries the Melinda id
+`(FI-MELINDA)012345678`, and the fixture
+(`test-data/test-fixtures/stub-results.example.json`) serves an empty SRU
+response for the exact `melinda.melindaid=012345678` candidate search the CLI
+issues. With no `--sru-url`, the run keys the fixture against the placeholder
+endpoint, and nothing ever reaches the network:
+
+```sh
+node src/cli.js test-data/test-fixtures/example-record.json \
+  --stub-results test-data/test-fixtures/stub-results.example.json \
+  --match-packages IDS
+```
+
+```
+Record:    test-data/test-fixtures/example-record.json
+SRU:       http://sru.stub.invalid (placeholder, no SRU traffic)
+SRU source: stub file test-data/test-fixtures/stub-results.example.json
+Options:   operation=CREATE merge=false unique=true validate=false matchFailuresAsNew=config-default packages=IDS selectorRules=MELINDA_ID,LOCAL_SID,SAME_LOW,NAT_BIB,LOW_COUNT,ENCODING_LEVEL,PREPUB_LEVEL stopWhenFound=1 thresholds=[null]
+
+Matcher stages (1):
+  #1 IDS: matches=0 ids=[] candidates=0 conversionFailures=0 status={"status":true,"stopReason":""}
+
+Candidates (0):
+
+Decision: CREATE (new record)
+```
+
+Exit code `0`, decision `CREATE (new record)`: the IDS match found no
+candidate, so the production pipeline would import the record as new. Point
+the same command at a fixture whose SRU response contains a candidate record
+with the same Melinda id to probe the `409 CONFLICT` / `MERGE` paths the same
+way (see the "Record, then replay" example above for capturing such a
+fixture from a live endpoint).
+
+### Environment noise
+
+Importing the validator's dependencies emits third-party environment noise —
+a `dotenv` "injected env" banner (from the `natural` package, via
+`@natlibfi/melinda-record-matching`) and `No environment variable set for …`
+lines from `@natlibfi/melinda-backend-commons`. The CLI suppresses exactly
+those lines for the duration of the dependency import, so the trace output is
+clean by default. Run with `LOG_LEVEL=debug` to show them again.
 
 ## License and copyright
 

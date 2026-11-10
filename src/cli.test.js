@@ -1,7 +1,9 @@
 import assert from 'node:assert';
-import {mkdtempSync, readFileSync, writeFileSync} from 'node:fs';
+import {spawnSync} from 'node:child_process';
+import {mkdtempSync, readFileSync, writeFileSync, symlinkSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
+import {fileURLToPath} from 'node:url';
 import {describe, it, before, after} from 'node:test';
 import {MarcRecord} from '@natlibfi/marc-record';
 import {MARCXML} from '@natlibfi/marc-record-serializers';
@@ -634,6 +636,26 @@ describe('runCli (cli entry gate, stubbed SRU)', () => {
     assert.strictEqual(trace.options.targetId, CANDIDATE_ID);
     assert.strictEqual(fetchCalls, 0);
   });
+
+  it('Should not require --sru-url for a would-skip run (no SRU traffic possible)', async () => {
+    const previousSruUrl = process.env.SRU_URL;
+    delete process.env.SRU_URL;
+    fetchCalls = 0;
+    try {
+      const {trace, exitCode} = await runCli([recordFile, '--unique', 'off', '--merge', 'off', '--validate', 'off']);
+
+      assert.strictEqual(exitCode, 0);
+      assert.strictEqual(trace.outcome.kind, 'wouldSkipValidation');
+      assert.strictEqual(trace.options.sruMode, 'live');
+      // no endpoint given: the placeholder stands in for config.js and is never hit
+      assert.strictEqual(trace.sruUrl, DUMMY_SRU_URL);
+      assert.strictEqual(fetchCalls, 0);
+    } finally {
+      if (previousSruUrl !== undefined) {
+        process.env.SRU_URL = previousSruUrl;
+      }
+    }
+  });
 });
 
 // --stub-results: the fixture (a capture of a live run) serves all SRU traffic.
@@ -777,5 +799,20 @@ describe('runCli (cli --record / --replay round-trip)', () => {
         process.env.SRU_URL = previousSruUrl;
       }
     }
+  });
+});
+
+// Self-invocation guard: the CLI must run main() when launched through a
+// symlink (e.g. the .bin/melinda-validator-cli link from npm link or a local
+// install). import.meta.url is realpathed by Node while argv[1] is the literal
+// invocation path, so the guard compares realpaths (see the end of cli.js)
+describe('cli self-invocation through a symlink', () => {
+  it('Should print usage and exit 0 when spawned through a symlink to src/cli.js', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'validator-cli-'));
+    const symlink = join(dir, 'melinda-validator-cli');
+    symlinkSync(fileURLToPath(new URL('./cli.js', import.meta.url)), symlink);
+    const result = spawnSync(process.execPath, [symlink, '--help'], {encoding: 'utf8'});
+    assert.strictEqual(result.status, 0);
+    assert.match(result.stdout, /Usage: melinda-validator-cli/);
   });
 });
