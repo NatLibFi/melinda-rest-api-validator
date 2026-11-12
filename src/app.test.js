@@ -199,17 +199,25 @@ function makeMongoOperator({queueItems = [], streams = {}, freshStates = {}}) {
       item.stateLog.push({state: newState, errorMessage, errorStatus});
       trigger('state', newState);
     },
-    // checkAndSetState: returns {status:'updated'} and sets the state, or
-    // returns {status:'timeout'} and moves the queueItem to ABORT
+    // checkAndSetState: scripted per correlationId via freshStates; each
+    // scripted entry can be:
+    // - true: returns {status:'updated'} and sets the state
+    // - false: returns {status:'timeout'} and moves the queueItem to ABORT
+    // - 'unchanged': returns {status:'unchanged'} and leaves the queueItem
+    //   as-is (already terminal or not old enough yet)
     // (mirrors the real operator contract)
     async checkAndSetState({correlationId, state}) {
       const item = items.get(correlationId);
       const scripted = freshStates[correlationId] || [];
-      const fresh = scripted.length > 0 ? scripted.shift() : true;
-      item.state = fresh ? state : 'ABORT';
-      item.stateLog.push({state: item.state, fresh});
+      const next = scripted.length > 0 ? scripted.shift() : true;
+      if (typeof next === 'string') {
+        item.stateLog.push({state: item.state, fresh: next});
+        return {status: next, queueItem: item};
+      }
+      item.state = next ? state : 'ABORT';
+      item.stateLog.push({state: item.state, fresh: next});
       trigger('state', item.state);
-      return {status: fresh ? 'updated' : 'timeout', queueItem: item};
+      return {status: next ? 'updated' : 'timeout', queueItem: item};
     },
     stop() {
       stopped = true;
@@ -630,6 +638,66 @@ describe('prio mode (stale items and errors)', () => {
       assert.deepStrictEqual(amqpOperator.state.sent, []);
       assert.equal(amqpOperator.state.acked.length, 1);
       assert.deepStrictEqual(mongoLogOperator.state.logItems, []);
+
+      await drain(amqpOperator);
+    } finally {
+      amqpOperator.stop();
+    }
+  });
+
+  it('Should ack and drop a message when checkAndSetState reports an unchanged terminal item', async () => {
+    // The item is already DONE (redelivered message): the 'unchanged' status
+    // must be acked and dropped without reprocessing or re-enqueueing
+    const {amqpOperator, mongoOperator, mongoLogOperator, drain} = await runApp({
+      pollRequest: true,
+      queueItems: [{correlationId: 'corr1', state: 'DONE', operationSettings: {}}],
+      freshStates: {corr1: ['unchanged']},
+      sruClient: makeSruClient({'000020001': {leader: LEADER, fields: []}})
+    });
+    seedUpdateMessage(amqpOperator, {});
+
+    await amqpOperator.onEvent('ack', 'corr1');
+    // stop() in the finally: a failed assertion must never leave the loop spinning
+    try {
+      const queueItem = mongoOperator.items.get('corr1');
+      // the item keeps its terminal state, no ERROR, no reprocessing
+      assert.equal(queueItem.state, 'DONE');
+      assert.deepStrictEqual(queueItem.stateLog.map(({state}) => state), ['DONE']);
+      assert.deepStrictEqual(queueItem.recordResponses, []);
+      assert.deepStrictEqual(mongoLogOperator.state.logItems, []);
+      // the message was acked exactly once and nothing was re-enqueued
+      assert.equal(amqpOperator.state.acked.length, 1);
+      assert.deepStrictEqual(amqpOperator.state.sent, []);
+
+      await drain(amqpOperator);
+    } finally {
+      amqpOperator.stop();
+    }
+  });
+
+  it('Should ack and drop a message when checkAndSetState reports an unchanged not-old-enough item', async () => {
+    // The item is still PENDING_VALIDATION and not past the timeout window:
+    // 'unchanged' here means "not old enough yet", and the message must still
+    // be acked and dropped without reprocessing
+    const {amqpOperator, mongoOperator, mongoLogOperator, drain} = await runApp({
+      pollRequest: true,
+      queueItems: [{correlationId: 'corr1', state: 'PENDING_VALIDATION', operationSettings: {}}],
+      freshStates: {corr1: ['unchanged']},
+      sruClient: makeSruClient({'000020001': {leader: LEADER, fields: []}})
+    });
+    seedUpdateMessage(amqpOperator, {});
+
+    await amqpOperator.onEvent('ack', 'corr1');
+    // stop() in the finally: a failed assertion must never leave the loop spinning
+    try {
+      const queueItem = mongoOperator.items.get('corr1');
+      // the pending item is left untouched, no ERROR, no reprocessing
+      assert.equal(queueItem.state, 'PENDING_VALIDATION');
+      assert.deepStrictEqual(queueItem.stateLog.map(({state}) => state), ['PENDING_VALIDATION']);
+      assert.deepStrictEqual(queueItem.recordResponses, []);
+      assert.deepStrictEqual(mongoLogOperator.state.logItems, []);
+      assert.equal(amqpOperator.state.acked.length, 1);
+      assert.deepStrictEqual(amqpOperator.state.sent, []);
 
       await drain(amqpOperator);
     } finally {
