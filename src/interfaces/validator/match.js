@@ -33,7 +33,7 @@ export async function iterateMatchers({matchers, matchOptionsList, record, stopW
       // - candidate.record
       // - probability
       // - strategy (if returnStrategy option is true)
-      // - treshold (if returnStrategy option is true)
+      // - threshold (if returnStrategy option is true)
       // - matchQuery (if returnQuery option is true)
       // conversionFailures: array of errors contents ({status, payload: {message, id, data}}) (if returnFailures is true)
       // candidateCount: amount of matchCandidates that matcher retrieved from the database for matchDetection before stopping

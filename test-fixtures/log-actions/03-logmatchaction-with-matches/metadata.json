@@ -1,0 +1,74 @@
+{
+  "description": "logMatchAction logs a MATCH_LOG item with matcher reports attached per candidate",
+  "logFunction": "logMatchAction",
+  "logNoMatches": false,
+  "expectedLogItem": {
+    "logItemType": "MATCH_LOG",
+    "cataloger": "string-cat",
+    "correlationId": "corr-2",
+    "blobSequence": 3,
+    "operation": "UPDATE",
+    "incomingRecord": {
+      "001": "456"
+    },
+    "matchResult": [
+      {
+        "action": "merge",
+        "preference": {
+          "name": "first",
+          "value": "A"
+        },
+        "message": "matched",
+        "candidate": {
+          "id": "cand1",
+          "record": {
+            "f1": true
+          }
+        },
+        "probability": 0.95,
+        "matcherReports": [
+          {
+            "matchIds": [
+              "cand1"
+            ],
+            "matcher": "IDS",
+            "queries": 2
+          }
+        ]
+      },
+      {
+        "action": "merge",
+        "preference": {
+          "name": "second",
+          "value": "B"
+        },
+        "message": "matched",
+        "candidate": {
+          "id": "cand2",
+          "record": {
+            "f2": true
+          }
+        },
+        "probability": 0.9,
+        "matcherReports": []
+      }
+    ],
+    "matcherReports": [
+      {
+        "matchIds": [
+          "cand1"
+        ],
+        "matcher": "IDS",
+        "queries": 2
+      },
+      null,
+      {
+        "matchIds": [
+          "cand9"
+        ],
+        "matcher": "CONTENT",
+        "queries": 1
+      }
+    ]
+  }
+}

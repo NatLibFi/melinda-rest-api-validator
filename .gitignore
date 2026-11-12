@@ -32,3 +32,5 @@ coverage
 temp-test-data
 
 .DS_Store
+
+workspace/

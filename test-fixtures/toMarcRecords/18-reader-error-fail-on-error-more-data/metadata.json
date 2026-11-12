@@ -1,0 +1,78 @@
+{
+  "description": "after a reader error with failOnError, further data events are skipped (but still count as reader events)",
+  "contentType": "application/json",
+  "operation": "CREATE",
+  "failOnError": true,
+  "keepSplitterReport": "NONE",
+  "rawPayload": "[{\"leader\":\"x\",\"fields\":[]},{\"leader\":\"00000nam a2200000 a 4500\",\"fields\":[{\"tag\":\"001\",\"value\":\"000019640\"},{\"tag\":\"003\",\"value\":\"BIB\"},{\"tag\":\"245\",\"ind1\":\"1\",\"ind2\":\" \",\"subfields\":[{\"code\":\"a\",\"value\":\"foo.\"}]}]}]",
+  "expected": {
+    "result": "rejected",
+    "rejectStatus": 422,
+    "rejectPayload": "Invalid payload! (1) Record is invalid: instance.fields does not meet minimum length of 1",
+    "checked": [
+      {
+        "queue": "CREATE.corr-1",
+        "style": "messages",
+        "purge": true
+      }
+    ],
+    "recordItems": [
+      {
+        "databaseId": "000000000",
+        "recordMetadata": {
+          "blobSequence": 1
+        },
+        "recordStatus": "INVALID",
+        "detailedRecordStatus": "UNPROCESSABLE_ENTITY",
+        "message": "Record is invalid: instance.fields does not meet minimum length of 1"
+      }
+    ],
+    "logItems": [
+      {
+        "logItemType": "SPLITTER_LOG",
+        "correlationId": "corr-1",
+        "recordNumber": 0,
+        "sequenceNumber": 1,
+        "readerErrors": [
+          {
+            "sequenceNumber": 1,
+            "error": "Record is invalid: instance.fields does not meet minimum length of 1"
+          }
+        ]
+      },
+      {
+        "logItemType": "SPLITTER_LOG",
+        "correlationId": "corr-1",
+        "recordNumber": 0,
+        "sequenceNumber": 2,
+        "readerErrors": [
+          {
+            "sequenceNumber": 1,
+            "error": "Record is invalid: instance.fields does not meet minimum length of 1"
+          }
+        ]
+      },
+      {
+        "logItemType": "SPLITTER_LOG",
+        "correlationId": "corr-1",
+        "recordNumber": 0,
+        "sequenceNumber": 2,
+        "readerErrors": [
+          {
+            "sequenceNumber": 1,
+            "error": "Record is invalid: instance.fields does not meet minimum length of 1"
+          }
+        ]
+      }
+    ],
+    "blobSizes": [
+      {
+        "correlationId": "corr-1",
+        "blobSize": 2
+      }
+    ],
+    "removed": [
+      "CREATE.corr-1"
+    ]
+  }
+}

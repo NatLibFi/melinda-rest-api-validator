@@ -1,0 +1,6 @@
+{
+  "description": "logMatchAction does not log when there are no matches and logNoMatches is off",
+  "logFunction": "logMatchAction",
+  "logNoMatches": false,
+  "expectedLogItem": null
+}

@@ -1,0 +1,68 @@
+{
+  "description": "UPDATE record without 001 and failOnError off: not queued, INVALID response item with the no-valid-id message",
+  "contentType": "application/json",
+  "operation": "UPDATE",
+  "failOnError": false,
+  "keepSplitterReport": "ALL",
+  "rawPayload": "[{\"leader\":\"00000nam a2200000 a 4500\",\"fields\":[{\"tag\":\"245\",\"ind1\":\"1\",\"ind2\":\" \",\"subfields\":[{\"code\":\"a\",\"value\":\"foo.\"}]}]}]",
+  "expected": {
+    "result": "resolved",
+    "checked": [
+      {
+        "queue": "UPDATE.corr-1",
+        "style": "messages",
+        "purge": true
+      }
+    ],
+    "recordItems": [
+      {
+        "databaseId": "000000000",
+        "recordMetadata": {
+          "sourceIds": [],
+          "blobSequence": 1,
+          "title": "foo",
+          "standardIdentifiers": []
+        },
+        "recordStatus": "INVALID",
+        "detailedRecordStatus": "UNPROCESSABLE_ENTITY",
+        "message": "Invalid payload! Record 1 has no valid id for UPDATE. Available id: <undefined>."
+      }
+    ],
+    "splitterReports": [
+      {
+        "recordNumber": 1,
+        "sequenceNumber": 1,
+        "readerErrors": [
+          {
+            "sequenceNumber": 1,
+            "error": {
+              "message": "Invalid payload! Record 1 has no valid id for UPDATE. Available id: <undefined>."
+            }
+          }
+        ]
+      }
+    ],
+    "logItems": [
+      {
+        "logItemType": "SPLITTER_LOG",
+        "correlationId": "corr-1",
+        "recordNumber": 1,
+        "sequenceNumber": 1,
+        "readerErrors": [
+          {
+            "sequenceNumber": 1,
+            "error": {
+              "message": "Invalid payload! Record 1 has no valid id for UPDATE. Available id: <undefined>."
+            }
+          }
+        ]
+      }
+    ],
+    "blobSizes": [
+      {
+        "correlationId": "corr-1",
+        "blobSize": 1
+      }
+    ]
+  }
+}

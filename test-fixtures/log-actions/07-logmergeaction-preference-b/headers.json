@@ -1,0 +1,8 @@
+{
+  "cataloger": "cat7",
+  "correlationId": "corr-7",
+  "recordMetadata": {
+    "blobSequence": 4,
+    "operation": "CREATE"
+  }
+}

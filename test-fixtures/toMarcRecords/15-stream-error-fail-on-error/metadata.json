@@ -1,0 +1,103 @@
+{
+  "description": "stream error (non-record error) with failOnError rejects 422 and removes the queue",
+  "contentType": "application/xml",
+  "operation": "UPDATE",
+  "failOnError": true,
+  "keepSplitterReport": "NONE",
+  "streamError": "boom",
+  "records": [
+    {
+      "fields": [
+        {
+          "tag": "001",
+          "value": "000019640"
+        },
+        {
+          "tag": "003",
+          "value": "BIB"
+        },
+        {
+          "tag": "245",
+          "ind1": "1",
+          "ind2": " ",
+          "subfields": [
+            {
+              "code": "a",
+              "value": "foo."
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "expected": {
+    "result": "rejected",
+    "rejectStatus": 422,
+    "rejectPayload": "Invalid payload! (1) boom",
+    "checked": [
+      {
+        "queue": "UPDATE.corr-1",
+        "style": "messages",
+        "purge": true
+      }
+    ],
+    "recordItems": [
+      {
+        "databaseId": "000000000",
+        "recordMetadata": {
+          "blobSequence": 1
+        },
+        "recordStatus": "INVALID",
+        "detailedRecordStatus": "UNPROCESSABLE_ENTITY",
+        "message": "boom"
+      }
+    ],
+    "logItems": [
+      {
+        "logItemType": "SPLITTER_LOG",
+        "correlationId": "corr-1",
+        "recordNumber": 0,
+        "sequenceNumber": 1,
+        "readerErrors": [
+          {
+            "sequenceNumber": 1,
+            "error": "boom"
+          }
+        ]
+      },
+      {
+        "logItemType": "SPLITTER_LOG",
+        "correlationId": "corr-1",
+        "recordNumber": 0,
+        "sequenceNumber": 1,
+        "readerErrors": [
+          {
+            "sequenceNumber": 1,
+            "error": "boom"
+          }
+        ]
+      },
+      {
+        "logItemType": "SPLITTER_LOG",
+        "correlationId": "corr-1",
+        "recordNumber": 0,
+        "sequenceNumber": 1,
+        "readerErrors": [
+          {
+            "sequenceNumber": 1,
+            "error": "boom"
+          }
+        ]
+      }
+    ],
+    "blobSizes": [
+      {
+        "correlationId": "corr-1",
+        "blobSize": 1
+      }
+    ],
+    "removed": [
+      "UPDATE.corr-1"
+    ]
+  }
+}

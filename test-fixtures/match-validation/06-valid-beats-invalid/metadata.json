@@ -1,0 +1,8 @@
+{
+  "description": "selects the valid match even if an invalid match has a higher probability",
+  "expectedBestId": "cand2",
+  "expectedOrder": [
+    "cand2",
+    "cand1"
+  ]
+}

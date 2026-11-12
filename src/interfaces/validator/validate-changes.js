@@ -101,7 +101,7 @@ function normalizeRecord(record) {
   }
 
   function ldrIsValid(leader) {
-    if (!typeof leader === 'string' && !(leader instanceof String)) {
+    if (typeof leader !== 'string' && !(leader instanceof String)) {
       debug(`Non-string LDR, cannot normalize.`);
       return false;
     }
