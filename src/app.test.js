@@ -242,11 +242,21 @@ function makeMongoOperator({queueItems = [], streams = {}, freshStates = {}}) {
 }
 
 function makeLogOperator() {
-  const state = {logItems: [], removed: []};
+  const state = {logItems: [], removed: [], removeAttempts: []};
+  let removeError = null;
   return {
     state,
     addLogItem(logItem) {state.logItems.push(logItem);},
-    removeBySequences(correlationId, sequences) {state.removed.push({correlationId, sequences});}
+    failNextRemoveBySequencesWith(error) {removeError = error;},
+    async removeBySequences(correlationId, sequences) {
+      state.removeAttempts.push({correlationId, sequences});
+      if (removeError) {
+        const error = removeError;
+        removeError = null;
+        throw error;
+      }
+      state.removed.push({correlationId, sequences});
+    }
   };
 }
 
@@ -620,6 +630,52 @@ describe('prio mode (stale items and errors)', () => {
       assert.deepStrictEqual(amqpOperator.state.sent, []);
       assert.equal(amqpOperator.state.acked.length, 1);
       assert.deepStrictEqual(mongoLogOperator.state.logItems, []);
+
+      await drain(amqpOperator);
+    } finally {
+      amqpOperator.stop();
+    }
+  });
+
+  it('Should keep the skip result when the log cleanup fails', async () => {
+    // Best-effort containment: the skip response is persisted before the
+    // log-item cleanup, so a rejected removeBySequences must not flip the
+    // handled item to ERROR (or produce a second failed response)
+    const existing = {leader: LEADER, fields: [
+      {tag: '001', value: '000020001'},
+      titleField('foo.'),
+      {tag: '003', value: 'FI-MELINDA'},
+      catField('u1 20240101120000')
+    ]};
+    const {amqpOperator, mongoOperator, mongoLogOperator, drain} = await runApp({
+      pollRequest: true,
+      queueItems: [{correlationId: 'corr1', state: 'PENDING_VALIDATION', operationSettings: {}}],
+      sruClient: makeSruClient({'000020001': existing})
+    });
+    mongoLogOperator.failNextRemoveBySequencesWith(new Error('log cleanup down'));
+    amqpOperator.seedMessage('REQUESTS', makePrioMessage({
+      correlationId: 'corr1',
+      headers: makePrioHeaders(
+        {operation: 'UPDATE', id: '000020001', recordMetadata: {blobSequence: 2}},
+        {validate: true, unique: false, merge: false, skipNoChangeUpdates: true}
+      ),
+      data: existing
+    }));
+
+    await amqpOperator.onEvent('ack', 'corr1');
+    // stop() in the finally: a failed assertion must never leave the loop spinning
+    try {
+      const queueItem = mongoOperator.items.get('corr1');
+      // the skip response was persisted and the cleanup failure left no trace
+      assert.deepStrictEqual(queueItem.recordResponses.map(({detailedRecordStatus}) => detailedRecordStatus), ['SKIPPED_CHANGE']);
+      assert.equal(queueItem.recordResponses[0].recordStatus, 'SKIPPED');
+      // the item was handled as SKIPPED, not errored: no ERROR state, no throw
+      assert.deepStrictEqual(queueItem.stateLog.map(({state}) => state), ['VALIDATING', 'DONE']);
+      assert.equal(amqpOperator.state.acked.length, 1);
+      assert.deepStrictEqual(amqpOperator.state.sent, []);
+      // the cleanup was attempted once and nothing was removed
+      assert.deepStrictEqual(mongoLogOperator.state.removeAttempts, [{correlationId: 'corr1', sequences: [2]}]);
+      assert.deepStrictEqual(mongoLogOperator.state.removed, []);
 
       await drain(amqpOperator);
     } finally {

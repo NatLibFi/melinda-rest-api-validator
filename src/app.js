@@ -338,7 +338,13 @@ export default async function ({
     // (Move to an independent function)
     // We probably remove also inputRecordLogs here?
     const {blobSequence} = processResult.headers.recordMetadata;
-    mongoLogOperator.removeBySequences(correlationId, [blobSequence]);
+    // Best effort: the skip response is already persisted above, so a cleanup
+    // failure must not turn the handled item into an error
+    try {
+      await mongoLogOperator.removeBySequences(correlationId, [blobSequence]);
+    } catch (error) {
+      logError(error);
+    }
 
     if (prio) {
       await mongoOperator.checkAndSetState({correlationId, state: QUEUE_ITEM_STATE.DONE});
