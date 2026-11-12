@@ -122,6 +122,171 @@ Queue-item schema examle for a bulk job queueItem:
 }
 ```
 
+## Dev CLI
+
+The package installs a `melinda-validator-cli` binary that runs the
+validator's decision pipeline offline against a read-only SRU endpoint, and
+prints the decision trace: "what would the production pipeline decide for
+this record?" The `CREATE` operation runs the match chain -> match validation
+-> match selector -> merge / update validations; the `UPDATE` operation runs
+the update validations against the target record.
+
+It performs no writes. It uses no Mongo, no AMQP and no Aleph access; the only
+live dependency is read-only SRU traffic (candidate searches on the CREATE
+path, plus a `getRecord` fetch of the target record on the merge and UPDATE
+paths).
+
+### Usage
+
+```sh
+node src/cli.js <record.json> --sru-url https://sru.api.melinda.kansalliskirjasto.fi/bib/prv [--options]
+```
+
+The package's `bin` entry (`melinda-validator-cli`, `./src/cli.js`) also works
+once the package is linked or installed locally — for example `npm link` from
+the package root (or `npm install ../melinda-rest-api-validator` from another
+project) puts `melinda-validator-cli` on your `PATH`, so the examples above and
+below can be run as `melinda-validator-cli …` instead of `node src/cli.js …`.
+
+```sh
+melinda-validator-cli <record.json> --sru-url https://sru.api.melinda.kansalliskirjasto.fi/bib/prv [--options]
+```
+
+| Option                 | Description                                                                                          |
+|------------------------|------------------------------------------------------------------------------------------------------|
+| `--sru-url <url>`      | SRU endpoint. Mandatory for live runs and `--record`; not needed with `--stub-results` / `--replay` (fully offline, the URL is not used on the wire) or for a would-skip run (all entry gates off — no SRU requests are issued). Defaults to the `SRU_URL` environment variable. |
+| `--operation CREATE\|UPDATE` | Operation to probe: `CREATE` (default) or `UPDATE`. `UPDATE` requires `--target-id`.        |
+| `--record-type bib\|autname` | Record type to probe. Defaults to the `RECORD_TYPE` environment variable, or `bib`. `autname` records have no match stage: `--merge on`, `--unique on` and the match flags (`--match-packages` / `--match-selector-rules` / `--match-failures-as-new`) are rejected for them — see "Autname records" below. |
+| `--target-id <id>`     | Target record id for `--operation UPDATE`. Must be a 9-digit Aleph id, and match the record's `001` if present. |
+| `--match-packages <a,b,c>` | Match packages to run. Defaults to the `VALIDATOR_MATCH_PACKAGES` environment variable, or `IDS,STANDARD_IDS,CONTENTALT`. |
+| `--merge on\|off`      | Run the merge path when matches are found. Defaults to `off` (report the conflict instead of merging). |
+| `--unique on\|off`     | Enable the `unique` pipeline entry setting. Defaults to `on` (run the match stage).                |
+| `--validate on\|off`   | Enable the `validate` pipeline entry setting. Defaults to `off`.                                    |
+| `--match-failures-as-new 0\|1` | Treat a result where all matches fail match validation as a no-match result. Defaults to the `MATCH_FAILURES_AS_NEW` environment variable, or `0`. |
+| `--match-selector-rules <a,b,c>` | Match selection rules, in priority order. Defaults to the `MATCH_SELECTOR_RULES` environment variable, or all rules. |
+| `--stub-results <file.json>` | Serve SRU responses from a fixture file instead of live traffic (fully offline; a fixture miss is a hard error — the run never falls back to the network). Mutually exclusive with `--replay` and `--record`. |
+| `--replay <file.json>` | Replay a capture file written by `--record` (fully offline; a capture miss is a hard error). Mutually exclusive with `--stub-results` and `--record`. |
+| `--record <file.json>` | Run against the live SRU endpoint and capture all SRU traffic to `<file.json>` as a replay file. `--sru-url` is mandatory. Mutually exclusive with `--stub-results` and `--replay`. |
+| `-o, --output <file>`  | Write the full trace as JSON to `<file>`.                                                             |
+| `-h, --help`           | Show the option reference.                                                                            |
+
+**Input**: one record JSON file in the internal `MarcRecord` format
+(`{leader, fields}`). The record type comes from `--record-type`
+(default: the `RECORD_TYPE` environment variable, or `bib`). The `UPDATE`
+operation requires `--target-id`, and the record's `001` (if present) must
+match it.
+
+**Output**: a human-readable trace on stdout — the effective options, per-stage
+matcher reports (an `UPDATE` probe has no match stage), one line per candidate
+(id, probability, match validation action and preference), the merge target
+if one is chosen, and a final `Decision:` line (`CREATE`, `MERGE` into an id,
+`UPDATE`, `SKIPPED_*`, `409 CONFLICT` with the candidate ids, `VALIDATION
+FAILED` — production would reject the record with a 422 — or
+`WOULD_SKIP_VALIDATION` when the production entry gate would not run the
+pipeline). With `-o`, the same trace is written as JSON.
+
+**Production entry gate**: production runs the validation pipeline when any of
+`merge` / `unique` / `validate` is enabled. The CLI mirrors this: with all
+three off it reports `WOULD_SKIP_VALIDATION` (exit code `0`) without running
+the pipeline or issuing any SRU requests.
+
+**Autname records**: with `--record-type autname` there is no match stage, so
+`--merge on`, `--unique on` and the match flags
+(`--match-packages` / `--match-selector-rules` / `--match-failures-as-new`)
+are rejected — the CLI fails fast instead of implying they do anything. The
+meaningful runs are a `CREATE` probe with `--validate on` (a pure validation
+probe that issues no SRU requests — no `--sru-url` needed) and an `UPDATE`
+probe against an autname SRU endpoint:
+
+```sh
+melinda-validator-cli autname.json --record-type autname --unique off --validate on
+melinda-validator-cli autname.json --record-type autname --unique off --validate on \
+  --sru-url <https://your-sru-endpoint>/autname/prv \
+  --operation UPDATE --target-id 000012345
+```
+
+**Exit codes**: `0` when the pipeline reaches any decision (create / merge /
+update / skip / 409 conflict / validation failed / would-skip-validation);
+`1` on CLI usage errors or pipeline errors.
+
+Run `melinda-validator-cli --help` for the authoritative option reference.
+
+### Stubbing and replay
+
+`--stub-results`, `--replay` and `--record` replace the CLI's live SRU
+dependency with a file (pick at most one). Fixture and capture files share
+one format, keyed by the exact SRU request URL:
+
+```json
+{
+  "entries": [{"url": "...", "status": 200, "body": "<SRU XML>"}]
+}
+```
+
+- **Record, then replay.** Record once against a live endpoint and re-run
+  the same probe offline and deterministically:
+
+  ```sh
+  melinda-validator-cli record.json --sru-url https://.../bib/prv --record capture.json
+  melinda-validator-cli record.json --replay capture.json
+  ```
+
+  The capture's URLs are tied to the SRU endpoint used while recording, so
+  a replay matches a recorded run's requests exactly (paging parameters
+  included). In stub/replay mode `--sru-url` is optional; without it, the run
+  keys fixture URLs against a placeholder endpoint prefix instead.
+
+- **Static stub.** `--stub-results <file.json>` serves a hand-made fixture
+  in the same format — useful for pinning a specific candidate set or
+  historical decision. A stub/replay run is fully offline: a URL with no
+  fixture entry is a loud error — the run never falls back to the network.
+
+### Worked offline dry-run example
+
+A fully offline probe against a committed fixture: the example record
+(`test-data/test-fixtures/example-record.json`) carries the Melinda id
+`(FI-MELINDA)012345678`, and the fixture
+(`test-data/test-fixtures/stub-results.example.json`) serves an empty SRU
+response for the exact `melinda.melindaid=012345678` candidate search the CLI
+issues. With no `--sru-url`, the run keys the fixture against the placeholder
+endpoint, and nothing ever reaches the network:
+
+```sh
+node src/cli.js test-data/test-fixtures/example-record.json \
+  --stub-results test-data/test-fixtures/stub-results.example.json \
+  --match-packages IDS
+```
+
+```
+Record:    test-data/test-fixtures/example-record.json
+SRU:       http://sru.stub.invalid (placeholder, no SRU traffic)
+SRU source: stub file test-data/test-fixtures/stub-results.example.json
+Options:   operation=CREATE merge=false unique=true validate=false matchFailuresAsNew=config-default packages=IDS selectorRules=MELINDA_ID,LOCAL_SID,SAME_LOW,NAT_BIB,LOW_COUNT,ENCODING_LEVEL,PREPUB_LEVEL stopWhenFound=1 thresholds=[null]
+
+Matcher stages (1):
+  #1 IDS: matches=0 ids=[] candidates=0 conversionFailures=0 status={"status":true,"stopReason":""}
+
+Candidates (0):
+
+Decision: CREATE (new record)
+```
+
+Exit code `0`, decision `CREATE (new record)`: the IDS match found no
+candidate, so the production pipeline would import the record as new. Point
+the same command at a fixture whose SRU response contains a candidate record
+with the same Melinda id to probe the `409 CONFLICT` / `MERGE` paths the same
+way (see the "Record, then replay" example above for capturing such a
+fixture from a live endpoint).
+
+### Environment noise
+
+Importing the validator's dependencies emits third-party environment noise —
+a `dotenv` "injected env" banner (from the `natural` package, via
+`@natlibfi/melinda-record-matching`) and `No environment variable set for …`
+lines from `@natlibfi/melinda-backend-commons`. The CLI suppresses exactly
+those lines for the duration of the dependency import, so the trace output is
+clean by default. Run with `LOG_LEVEL=debug` to show them again.
+
 ## License and copyright
 
 Copyright (c) 2020-2026 **University Of Helsinki (The National Library Of Finland)**

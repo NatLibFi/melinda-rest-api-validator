@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "url": "http://sru.stub.invalid?operation=searchRetrieve&query=melinda.melindaid%3D012345678&startRecord=1&version=2.0&maximumRecords=50",
+      "status": 200,
+      "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<zs:searchRetrieveResponse xmlns:zs=\"http://www.loc.gov/zhals/schema/v1/\">\n  <zs:numberOfRecords>0</zs:numberOfRecords>\n  <zs:records/>\n</zs:searchRetrieveResponse>"
+    }
+  ]
+}
