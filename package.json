@@ -36,14 +36,14 @@
 		"dev:debug": "cross-env LOG_LEVEL=debug DEBUG=@natlibfi/* NODE_ENV=test npm run watch:test"
 	},
 	"dependencies": {
-		"@natlibfi/marc-record": "^10.0.2",
+		"@natlibfi/marc-record": "^11.0.3",
 		"@natlibfi/marc-record-merge": "^8.0.1",
-		"@natlibfi/marc-record-serializers": "11.0.3",
+		"@natlibfi/marc-record-serializers": "11.0.5",
 		"@natlibfi/marc-record-validators-melinda": "^12.0.15",
 		"@natlibfi/melinda-backend-commons": "^3.0.6",
-		"@natlibfi/melinda-commons": "^15.0.1",
+		"@natlibfi/melinda-commons": "^16.0.0",
 		"@natlibfi/melinda-marc-record-merge-reducers": "^4.0.0",
-		"@natlibfi/melinda-record-match-validator": "^3.2.5",
+		"@natlibfi/melinda-record-match-validator": "^4.1.0",
 		"@natlibfi/melinda-record-matching": "^6.0.2",
 		"@natlibfi/melinda-rest-api-commons": "6.2.0-alpha.2",
 		"@natlibfi/sru-client": "^7.0.1",
@@ -53,13 +53,14 @@
 		"http-status": "^2.1.0"
 	},
 	"devDependencies": {
-		"@natlibfi/fixugen": "^3.0.1",
-		"@natlibfi/fixura": "^4.0.1",
+		"@natlibfi/fixugen": "^4.0.0",
+		"@natlibfi/fixura": "^5.0.0",
 		"cross-env": "^10.1.0",
 		"esbuild": "^0.28.1",
 		"eslint": "^10.8.0"
 	},
 	"overrides": {
+		"@natlibfi/marc-record": "^11.0.3",
 		"@xmldom/xmldom": "^0.9.12",
 		"nanoid": "^3.3.8",
 		"nodemailer": "^10.1.7"
