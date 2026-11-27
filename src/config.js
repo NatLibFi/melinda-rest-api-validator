@@ -192,6 +192,7 @@ function generateStrategy(validatorMatchPackage) {
       return [
         matchDetection.features.bib.hostComponent(),
         matchDetection.features.bib.isbn(),
+        matchDetection.features.bib.setVolumeLevel(),
         matchDetection.features.bib.issn({positiveWeight: issnPositiveWeight}),
         matchDetection.features.bib.publisher(),
         matchDetection.features.bib.f338(),
