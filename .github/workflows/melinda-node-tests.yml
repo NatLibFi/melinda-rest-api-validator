@@ -38,7 +38,16 @@ jobs:
       - uses: actions/checkout@v7
       - uses: mikaelvesavuori/license-compliance-action@v1
         with:
-          exclude_pattern: /^@natlibfi/
+          # Defaults (MIT;ISC;0BSD;BSD-2-Clause;BSD-3-Clause;Apache-2.0) plus
+          # MIT-0 (nodemailer, via @natlibfi/melinda-backend-commons) and
+          # BlueOak-1.0.0 (sax, via @xmldom/xmldom). Note the input replaces
+          # the default list, so the defaults are repeated explicitly.
+          allow_licenses: MIT;ISC;0BSD;BSD-2-Clause;BSD-3-Clause;Apache-2.0;MIT-0;BlueOak-1.0.0
+          # sylvester is excluded: its package.json has no license field, so
+          # the scanner reports UNKNOWN, but it ships the verbatim MIT text
+          # in LICENSE.txt (repo: github.com/jcreeks/sylvester.js, MIT).
+          # False positive, not an unlicensed package.
+          exclude_pattern: /^@natlibfi/;sylvester
 
   njsscan:
     name: Njsscan check

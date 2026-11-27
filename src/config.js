@@ -38,6 +38,9 @@ const logResultRecord = readEnvironmentVariable('LOG_RESULT_RECORD', {defaultVal
 // Note: matchFailuresAsNew from operationSettings of the job overrides this default setting given in environmental variables
 const matchFailuresAsNew = readEnvironmentVariable('MATCH_FAILURES_AS_NEW', {defaultValue: false, format: v => parseBoolean(v)});
 
+// Positive score awarded by the ISSN feature for a shared ISSN in the STANDARD_IDS strategy
+const issnPositiveWeight = readEnvironmentVariable('ISSN_POSITIVE_WEIGHT', {defaultValue: 0.75, format: v => Number(v)});
+
 // We could have also settings matchValidation and merge here
 
 export const validatorOptions = {
@@ -74,7 +77,7 @@ function generateMatchOptions(validatorMatchPackage) {
       searchSpec: generateSearchSpec(validatorMatchPackage)
     },
     detection: {
-      treshold: generateThreshold(validatorMatchPackage),
+      threshold: generateThreshold(validatorMatchPackage),
       strategy: generateStrategy(validatorMatchPackage)
     }
   };
@@ -135,7 +138,7 @@ function generateMaxCandidates(validatorMatchPackage) {
 
 function generateThreshold(validatorMatchPackage) {
   debug(`Threshold for ${validatorMatchPackage} uses environment variable`);
-  return readEnvironmentVariable('MATCHING_TRESHOLD', {defaultValue: 0.9, format: v => Number(v)});
+  return readEnvironmentVariable('MATCHING_TRESHOLD', {defaultValue: 0.8999, format: v => Number(v)});
 }
 
 function generatePreValidationFixOptions() {
@@ -189,7 +192,11 @@ function generateStrategy(validatorMatchPackage) {
       return [
         matchDetection.features.bib.hostComponent(),
         matchDetection.features.bib.isbn(),
-        matchDetection.features.bib.issn(),
+        matchDetection.features.bib.setVolumeLevel(),
+        matchDetection.features.bib.issn({positiveWeight: issnPositiveWeight}),
+        matchDetection.features.bib.publisher(),
+        matchDetection.features.bib.f338(),
+        matchDetection.features.bib.serialLevel(),
         matchDetection.features.bib.publisherNumber(),
         matchDetection.features.bib.otherStandardIdentifier(),
         // Let's not use the same title matchDetection here
